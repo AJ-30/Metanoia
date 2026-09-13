@@ -1,0 +1,13 @@
+*raw
+*.pt
+*.mp4
+*.gz
+*.pth
+*.pt
+*.meta
+data_*
+*_batch*
+.trunk
+venv
+__pycache__
+old_outputs
