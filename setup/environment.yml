@@ -12,6 +12,8 @@ dependencies:
 - torchaudio
 - matplotlib
 - numpy
+- pillow
+- flask
 - pip
 
 - pip:
