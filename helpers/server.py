@@ -2,24 +2,37 @@
 Flask dashboard server for telemetry visualisation.
 
 Serves a single-page dashboard that lists every telemetry run (the CSV files
-produced by ``helpers/telemetry_writer.TelemetryWriter``) and plots the logged
-metrics (epoch vs train/recon/KL loss, etc.) using Chart.js.
+produced by ``helpers/telemetry_writer.TelemetryWriter``), plots the logged
+metrics (epoch vs train/test/recon/KL loss, etc.) using Chart.js, and displays
+the VAE's per-epoch reconstruction grids of the fixed test samples.
 
-The directory with the telemetry CSVs is configurable, so the same server can
-visualise any run: the main project's ``telemetry_logs/`` or the VAE's
-``VAE/telemetry_logs/``.
+The directories with the telemetry CSVs and the reconstruction PNGs are
+configurable, so the same server can visualise any run.
 
 Usage:
-    python helpers/server.py --telemetry-dir ./VAE/telemetry_logs --port 8080
+    python helpers/server.py --telemetry-dir ./VAE/telemetry_logs --recon-dir ./VAE/outputs --port 8080
 """
 
 import argparse
 import csv
 import os
+import re
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, Response, jsonify, render_template_string
+from flask import Flask, Response, jsonify, render_template_string, send_from_directory
+
+# Constant-ish tuning values: page title and Chart.js CDN source. Kept here
+# (module constants) since they are presentation defaults, not experiment knobs.
+PAGE_TITLE: str = "Telemetry Dashboard"
+
+# Skip this file name: run_scripts/server.sh may create an index.csv symlink
+# that just points at the latest run CSV and is not itself a telemetry run.
+SKIP_NAMES: set[str] = {"index.csv"}
+
+# Prefix of saved reconstruction grid filenames, used to recover the epoch
+# number from a name such as "reconstruction_epoch_7_<run>.png".
+RECON_EPOCH_PATTERN: str = r"reconstruction_epoch_(\d+)_"
 
 # Constant-ish tuning values: page title and Chart.js CDN source. Kept here
 # (module constants) since they are presentation defaults, not experiment knobs.
@@ -87,6 +100,22 @@ INDEX_HTML: str = """
   }
   .chart-card h3 { font-size: 14px; margin-bottom: 8px; }
   .chart-wrap { position: relative; height: 280px; }
+  .recon-panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 20px;
+  }
+  .recon-panel h3 { font-size: 14px; margin-bottom: 10px; }
+  .recon-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .recon-controls label { font-size: 12px; color: var(--muted); }
+  .recon-controls select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; font-size: 13px;
+  }
+  .recon-img-wrap {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px; text-align: center;
+  }
+  .recon-img-wrap img { max-width: 100%; max-height: 60vh; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -101,15 +130,45 @@ INDEX_HTML: str = """
 <script>
   const charts = {};
   const COLORS = ["#6c8cff", "#ffd166", "#06d6a0", "#ef476f", "#b388ff", "#4cc9f0"];
+  let currentRunId = null;   // run selected by the user (or newest, by default)
+  let lastDashboardKey = null; // JSON fingerprint used to skip identical redraws
+  let selectedRecon = null;  // reconstruction image chosen in the epoch dropdown
 
-  async function loadRuns() {
+  async function jsonFetch(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url} -> ${res.status}`);
+    return res.json();
+  }
+
+  // Poll the backend on a timer so the graphs update live while training runs.
+  async function refresh() {
     try {
-      const res = await fetch("/api/runs");
-      const runs = await res.json();
+      const runs = await jsonFetch("/api/runs");
+      if (runs.length === 0) {
+        currentRunId = null;
+        lastDashboardKey = null;
+        document.getElementById("run-list").innerHTML =
+          `<div class="empty">No telemetry runs yet.<br>Start training:<br><code>./train_VAE.sh</code></div>`;
+        document.getElementById("dashboard").className = "empty";
+        document.getElementById("dashboard").innerHTML =
+          `No telemetry found yet. Start training and this page refreshes automatically.`;
+        return;
+      }
+      // Default to the newest run, but keep the user's selection if still valid.
+      if (!currentRunId || !runs.some(r => r.run_id === currentRunId)) {
+        currentRunId = runs[0].run_id;
+      }
       renderRunList(runs);
-      if (runs.length > 0) selectRun(runs[0].run_id);
+
+      const data = await jsonFetch(`/api/runs/${currentRunId}`);
+      const key = JSON.stringify(data);
+      if (key !== lastDashboardKey) {
+        lastDashboardKey = key;
+        renderDashboard(data);
+      }
     } catch (err) {
-      document.getElementById("run-list").innerHTML = "<div class='empty'>Could not load runs.</div>";
+      document.getElementById("run-list").innerHTML =
+        "<div class='empty'>Could not reach the server.</div>";
     }
   }
 
@@ -118,31 +177,73 @@ INDEX_HTML: str = """
     list.innerHTML = "";
     for (const run of runs) {
       const btn = document.createElement("button");
-      btn.className = "run";
-      btn.dataset.runId = run.run_id;
+      btn.className = "run" + (run.run_id === currentRunId ? " active" : "");
       btn.innerHTML = `<div class="rid">${run.run_id}</div>
-        <div class="meta">${run.num_rows} rows · updated ${run.updated_at}</div>`;
-      btn.onclick = () => selectRun(run.run_id);
+        <div class="meta">${run.num_rows} rows · ${new Date(run.updated_at * 1000).toLocaleTimeString()}</div>`;
+      btn.onclick = () => { currentRunId = run.run_id; lastDashboardKey = null; refresh(); };
       list.appendChild(btn);
     }
   }
 
-  function selectRun(runId) {
-    document.querySelectorAll(".run").forEach(b =>
-      b.classList.toggle("active", b.dataset.runId === runId));
-    loadRun(runId);
+  // Load the available reconstruction grids and populate the epoch dropdown.
+  // A new grid is written after every epoch, so the newest one is highlighted.
+  async function loadRecons() {
+    try {
+      const list = await jsonFetch("/api/recs");
+      const select = document.getElementById("recon-select");
+      const img = document.getElementById("recon-img");
+      if (!select || !img) return;
+
+      select.innerHTML = "";
+      if (list.length === 0) {
+        img.removeAttribute("src");
+        img.alt = "No reconstruction images yet — generated after each epoch.";
+        return;
+      }
+
+      // Auto-advance to the newest grid (list is newest-first) unless the user
+      // explicitly picked a specific epoch.
+      if (selectedRecon === null || !list.some(r => r.file === selectedRecon)) {
+        selectedRecon = list[0].file;
+      }
+      for (const rec of list) {
+        const opt = document.createElement("option");
+        opt.value = rec.file;
+        opt.textContent = rec.epoch !== null ? `Epoch ${rec.epoch}` : rec.file;
+        opt.selected = rec.file === selectedRecon;
+        select.appendChild(opt);
+      }
+      select.onchange = () => { selectedRecon = select.value; showRecon(list); };
+      showRecon(list);
+    } catch (err) {
+      // No reconstructions available yet is fine; keep the panel quiet.
+    }
   }
 
-  async function loadRun(runId) {
-    const res = await fetch(`/api/runs/${runId}`);
-    const data = await res.json();
-    renderDashboard(data);
+  function showRecon(list) {
+    const img = document.getElementById("recon-img");
+    if (!img) return;
+    const rec = list.find(r => r.file === selectedRecon);
+    if (rec) {
+      img.src = rec.url;
+      img.alt = "Original (top) vs reconstructed (bottom) test samples";
+    }
   }
 
   function renderDashboard(data) {
     const container = document.getElementById("dashboard");
     container.className = "";
     container.innerHTML = "";
+
+    // A run whose CSV has only a header (training just started) has no rows yet.
+    if (data.rows.length === 0) {
+      container.className = "empty";
+      container.innerHTML = `<div>
+        Training started — waiting for the first telemetry row to be written.<br>
+        <span style="opacity:.7">The dashboard updates automatically.</span>
+      </div>`;
+      return;
+    }
 
     const stats = document.createElement("div");
     stats.className = "stats";
@@ -151,6 +252,19 @@ INDEX_HTML: str = """
       <div class="stat"><div class="label">Rows</div><div class="value">${data.rows.length}</div></div>
       <div class="stat"><div class="label">Metrics</div><div class="value">${data.metric_columns.length}</div></div>`;
     container.appendChild(stats);
+
+    // Reconstruction panel: shows the latest per-epoch grid and lets the user
+    // flip back through any previous epoch's grid.
+    const reconPanel = document.createElement("div");
+    reconPanel.className = "recon-panel";
+    reconPanel.innerHTML = `
+      <h3>Reconstructions (fixed test samples · original row / reconstruction row)</h3>
+      <div class="recon-controls">
+        <label for="recon-select">Epoch</label>
+        <select id="recon-select"></select>
+      </div>
+      <div class="recon-img-wrap"><img id="recon-img" alt="No reconstruction images yet."></div>`;
+    container.appendChild(reconPanel);
 
     const xCol = data.x_column;
     const labels = data.rows.map(r => (xCol ? r[xCol] : r.index));
@@ -196,9 +310,12 @@ INDEX_HTML: str = """
         },
       });
     }
+
+    loadRecons();
   }
 
-  loadRuns();
+  refresh();
+  setInterval(refresh, 3000); // live-updating dashboard while training runs
 </script>
 </body>
 </html>
@@ -243,20 +360,19 @@ def discover_runs(telemetry_dir: str) -> list[dict[str, Any]]:
         try:
             with open(file_path, newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
-                if reader.fieldnames is None:
+                fieldnames: list[str] | None = reader.fieldnames
+                if fieldnames is None:
                     continue
                 rows: list[dict[str, Any]] = [
                     {k: _safe_float(v) if k not in (TIMESTAMP_COLUMN,) else v for k, v in row.items()}
                     for row in reader
                 ]
-                if not rows:
-                    continue
         except (csv.Error, OSError):
             continue
 
         # Columns that look like a metric, i.e. every non-meta column.
         meta: set[str] = {TIMESTAMP_COLUMN, RUNTIME_COLUMN}
-        metric_columns: list[str] = [c for c in rows[0].keys() if c not in meta]
+        metric_columns: list[str] = [c for c in fieldnames if c not in meta]
 
         runs.append({
             "run_id": file_path.stem,
@@ -288,7 +404,8 @@ def read_run(telemetry_dir: str, run_id: str) -> dict[str, Any] | None:
 
     with open(telemetry_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        if reader.fieldnames is None:
+        fieldnames: list[str] | None = reader.fieldnames
+        if fieldnames is None:
             return None
         rows: list[dict[str, Any]] = [
             {k: _safe_float(v) if k != TIMESTAMP_COLUMN else v for k, v in row.items()}
@@ -297,13 +414,12 @@ def read_run(telemetry_dir: str, run_id: str) -> dict[str, Any] | None:
 
     # Pick the first available x-axis column among the preferred candidates.
     x_column: str | None = next(
-        (c for c in X_AXIS_PREFERENCES if c in rows[0]), None
-    ) if rows else None
+        (c for c in X_AXIS_PREFERENCES if c in fieldnames), None
+    )
 
     metric_columns: list[str] = [
-        c for c in rows[0].keys()
-        if c not in {TIMESTAMP_COLUMN, RUNTIME_COLUMN, x_column}
-    ] if rows else []
+        c for c in fieldnames if c not in {TIMESTAMP_COLUMN, RUNTIME_COLUMN, x_column}
+    ]
 
     return {
         "run_id": run_id,
@@ -313,16 +429,52 @@ def read_run(telemetry_dir: str, run_id: str) -> dict[str, Any] | None:
     }
 
 
-def create_app(telemetry_dir: str) -> Flask:
+def discover_recons(recon_dir: str) -> list[dict[str, Any]]:
+    """Scan a directory for reconstruction grid PNGs, newest first.
+
+    Args:
+        recon_dir (str): Directory holding the per-epoch reconstruction grids.
+
+    Returns:
+        list[dict[str, Any]]: One dict per grid with keys file, epoch and url.
+    """
+    recon_path: Path = Path(recon_dir)
+    if not recon_path.is_dir():
+        return []
+
+    grids: list[dict[str, Any]] = []
+    for file_path in sorted(recon_path.glob("reconstruction_*.png")):
+        # Recover the epoch number from the filename when possible.
+        match: re.Match[str] | None = re.search(RECON_EPOCH_PATTERN, file_path.name)
+        grids.append({
+            "file": file_path.name,
+            "epoch": int(match.group(1)) if match else None,
+            "url": f"/recon/{file_path.name}",
+            "updated_at": file_path.stat().st_mtime,
+        })
+
+    # Newest grid first (highest epoch / most recent) so the dashboard can
+    # auto-select the latest reconstruction.
+    grids.sort(key=lambda g: g["updated_at"], reverse=True)
+    return grids
+
+
+def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
     """Create and configure the Flask application.
 
     Args:
         telemetry_dir (str): Directory read for telemetry CSV files.
+        recon_dir (str): Directory read for reconstruction grid PNGs.
 
     Returns:
         Flask: Configured application with the dashboard routes.
     """
     app: Flask = Flask(__name__)
+
+    # send_from_directory requires an absolute directory, and discover_* works
+    # reliably with one too, so resolve both passed-in paths up front.
+    telemetry_path: Path = Path(telemetry_dir).resolve()
+    recon_path: Path = Path(recon_dir).resolve()
 
     @app.route("/")
     def index() -> str:
@@ -332,7 +484,7 @@ def create_app(telemetry_dir: str) -> Flask:
     @app.route("/api/runs")
     def api_runs() -> Response:
         """Return the list of runs as JSON."""
-        return jsonify(discover_runs(telemetry_dir))
+        return jsonify(discover_runs(str(telemetry_path)))
 
     @app.route("/api/runs/<run_id>")
     def api_run(run_id: str) -> Response:
@@ -341,10 +493,24 @@ def create_app(telemetry_dir: str) -> Flask:
         Args:
             run_id (str): CSV stem identifying the run.
         """
-        data: dict[str, Any] | None = read_run(telemetry_dir, run_id)
+        data: dict[str, Any] | None = read_run(str(telemetry_path), run_id)
         if data is None:
             return jsonify({"error": "Run not found"}), 404
         return jsonify(data)
+
+    @app.route("/api/recs")
+    def api_recs() -> Response:
+        """Return the list of reconstruction grids as JSON."""
+        return jsonify(discover_recons(str(recon_path)))
+
+    @app.route("/recon/<path:filename>")
+    def recon_images(filename: str) -> Response:
+        """Serve a reconstruction grid PNG file.
+
+        Args:
+            filename (str): Name of the grid image file.
+        """
+        return send_from_directory(str(recon_path), filename)
 
     return app
 
@@ -354,18 +520,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Serve the telemetry dashboard.")
     # Environment variables allow easy override without touching the script.
     default_dir: str = os.environ.get("TELEMETRY_DIR", "./telemetry_logs")
+    default_recon_dir: str = os.environ.get("TELEMETRY_RECON_DIR", "./VAE/outputs")
     default_port: int = int(os.environ.get("TELEMETRY_PORT", "8080"))
 
     parser.add_argument("--telemetry-dir", default=default_dir,
                         help="Directory with telemetry CSV files (default: ./telemetry_logs)")
+    parser.add_argument("--recon-dir", default=default_recon_dir,
+                        help="Directory with reconstruction grid PNGs (default: ./VAE/outputs)")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=default_port, help="Port to bind (default: 8080)")
     args: argparse.Namespace = parser.parse_args()
 
-    # The telemetry directory may not exist yet when start_server.sh runs.
+    # The telemetry/recon directories may not exist yet when start_server.sh runs.
     os.makedirs(args.telemetry_dir, exist_ok=True)
+    os.makedirs(args.recon_dir, exist_ok=True)
 
-    app: Flask = create_app(args.telemetry_dir)
+    app: Flask = create_app(args.telemetry_dir, args.recon_dir)
     print(f"Telemetry dashboard for '{args.telemetry_dir}': http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=False)
 

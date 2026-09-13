@@ -4,8 +4,8 @@ MODEL_SAVE_PATH = "./VAE/models/"
 TELEMETRY_LOG_DIRECTORY = "./VAE/telemetry_logs/"
 OUTPUT_SAMPLES_DIRECTORY = "./VAE/outputs/"
 DEVICE = "mps"
-SAVE_AFTER_INTERVAL = 5
-IMAGE_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_1/images"
+TRAIN_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/train/images"
+TEST_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/test/images"
 
 [debug]
 IS_DEBUG = true

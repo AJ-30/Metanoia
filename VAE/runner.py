@@ -1,10 +1,14 @@
 """
 Training runner for the VAE model.
 
-Loads configuration and hyperparameters from TOML files, builds the image
-dataset and dataloader, runs the training loop on the configured device
-(MPS / CUDA / CPU) and logs progress using the shared project logger and
-telemetry writer from the root `helpers/` package.
+Loads configuration and hyperparameters from TOML files, builds separate
+train and test dataloaders from the split dataset folders, runs the training
+loop on the configured device (MPS / CUDA / CPU), and evaluates the model on
+the test split after every epoch and once on the full test set at the end.
+
+Progress is logged with the shared project logger, written to telemetry CSVs
+via helpers/telemetry_writer, and reconstruction grids of fixed test samples
+are saved every epoch so the dashboard server can display them.
 """
 
 import argparse
@@ -17,7 +21,6 @@ from types import SimpleNamespace
 
 import torch
 from PIL import Image
-from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 from torchvision import transforms
@@ -44,6 +47,8 @@ class FloorPlanDataset(Dataset):
 
     Each RGBA image is composited onto a solid background (to drop the alpha
     channel), resized to a square and converted to a float tensor in [0, 1].
+    Optionally preloads every image into RAM (as uint8) to avoid disk I/O
+    during training and keep the GPU fed.
     """
 
     def __init__(
@@ -52,6 +57,7 @@ class FloorPlanDataset(Dataset):
         image_size: int,
         background_color: list[int],
         max_samples: int,
+        preload: bool = False,
     ) -> None:
         """Initialize the dataset.
 
@@ -62,6 +68,9 @@ class FloorPlanDataset(Dataset):
                 flattening the alpha channel.
             max_samples (int): Cap on the number of images loaded. Negative
                 values mean "use every image in the directory".
+            preload (bool): When True, decode every image into RAM once at
+                construction (as compact uint8 tensors) so training epochs no
+                longer hit the disk. This is the main fix for GPU starvation.
         """
         self.image_paths: list[str] = sorted(
             str(p) for p in Path(image_dir).iterdir()
@@ -78,6 +87,37 @@ class FloorPlanDataset(Dataset):
             transforms.ToTensor(),
         ])
         self.background: tuple[int, int, int, int] = tuple(background_color)
+
+        # Forward-reference so the cache list can be typed.
+        self.cache: list[torch.Tensor] | None = None
+        if preload:
+            # Decode all images once into RAM. Each image is 3*H*W bytes
+            # (uint8 instead of float32), so 15k x 128x128x3 is ~0.7 GB.
+            self.cache = [self._load_uint8(path) for path in self.image_paths]
+
+    def _load_float(self, image_path: str) -> torch.Tensor:
+        """Decode one image file into a [0, 1] float tensor.
+
+        Args:
+            image_path (str): Path of the image to load.
+
+        Returns:
+            torch.Tensor: Preprocessed tensor of shape (3, image_size, image_size) in [0, 1].
+        """
+        img: Image.Image = Image.open(image_path)
+        return self.transform(img)
+
+    def _load_uint8(self, image_path: str) -> torch.Tensor:
+        """Decode one image file into a compact uint8 tensor.
+
+        Args:
+            image_path (str): Path of the image to load.
+
+        Returns:
+            torch.Tensor: Preprocessed tensor of shape (3, image_size, image_size) in [0, 255].
+        """
+        # Rounding the float [0, 1] tensor to uint8 saves 4x memory vs float32.
+        return (self._load_float(image_path) * 255.0).round().to(torch.uint8)
 
     def _flatten_alpha(self, img: Image.Image) -> Image.Image:
         """Composite the RGBA image onto the configured background color.
@@ -104,14 +144,18 @@ class FloorPlanDataset(Dataset):
     def __getitem__(self, index: int) -> torch.Tensor:
         """Load and preprocess the image at the given index.
 
+        Serves from the preloaded RAM cache when available (avoids disk reads
+        and repeated PNG decoding during training), otherwise decodes on demand.
+
         Args:
             index (int): Index of the image to load.
 
         Returns:
             torch.Tensor: Tensor of shape (out_channels, image_size, image_size) in [0, 1].
         """
-        img: Image.Image = Image.open(self.image_paths[index])
-        return self.transform(img)
+        if self.cache is not None:
+            return self.cache[index].float() / 255.0
+        return self._load_float(self.image_paths[index])
 
 
 def resolve_device(requested_device: str, log: SimpleNamespace) -> torch.device:
@@ -148,6 +192,10 @@ def save_reconstruction_grid(
 ) -> None:
     """Reconstruct a sample batch and save an original-vs-reconstructed grid image.
 
+    The grid stacks the ground-truth test images in the top row and their
+    one-shot reconstructions in the bottom row, so training progress can be
+    inspected visually.
+
     Args:
         model (VAEModel): The VAE model used for reconstruction.
         sample_batch (torch.Tensor): Ground-truth image batch, shape (n, c, h, w) in [0, 1].
@@ -164,7 +212,6 @@ def save_reconstruction_grid(
     # Stack originals above their reconstructions so they are easy to compare.
     comparison: torch.Tensor = torch.cat([sample_batch, reconstruction], dim=0)
     grid: torch.Tensor = make_grid(comparison, nrow=sample_batch.shape[0], padding=2, normalize=True)
-    # make_grid returns a (3, h, w) tensor; de-normalize to 0-255 for saving.
     grid_img = transforms.ToPILImage()(grid)
     grid_img.save(str(save_path))
     model.train()
@@ -189,9 +236,10 @@ class VAERunner:
         self.hyperparams: SimpleNamespace = load_hyperparams(self.hyperparams_file)
         self.log = setup_logger(self.config)
 
-        # Telemetry fieldnames for the shared CSV telemetry writer.
+        # Telemetry fieldnames for the shared CSV telemetry writer. test_loss is
+        # written every epoch so the dashboard shows the test-loss curve too.
         self.telemetry_fieldnames: list[str] = [
-            "epoch", "train_loss", "recon_loss", "kl_loss",
+            "epoch", "train_loss", "recon_loss", "kl_loss", "test_loss",
         ]
 
         self.device: torch.device = resolve_device(self.config.DEVICE, self.log)
@@ -209,27 +257,64 @@ class VAERunner:
             config=self.config,
         )
 
-    def build_dataloader(self) -> DataLoader[FloorPlanDataset]:
-        """Build the dataset and dataloader from config/hyperparameters.
+    def _make_dataloader(
+        self,
+        image_dir: str,
+        max_samples: int,
+        shuffle: bool,
+    ) -> DataLoader[FloorPlanDataset]:
+        """Create a single dataset + dataloader for one split folder.
+
+        Args:
+            image_dir (str): Directory with the split's images.
+            max_samples (int): Cap on the dataset size (negative = all images).
+            shuffle (bool): Whether to shuffle batches (True for train).
 
         Returns:
-            DataLoader: Configured dataloader for the floor-plan images.
+            DataLoader: Configured dataloader for that split.
         """
+        preload: bool = bool(self.hyperparams.PRELOAD_IMAGES)
+        self.log.info(
+            f"Building dataset from {image_dir} (preload into RAM: {preload})..."
+        )
         dataset = FloorPlanDataset(
-            image_dir=self.config.IMAGE_DIR,
+            image_dir=image_dir,
             image_size=self.hyperparams.IMAGE_SIZE,
             background_color=self.hyperparams.BACKGROUND_COLOR,
-            max_samples=self.hyperparams.MAX_SAMPLES,
+            max_samples=max_samples,
+            preload=preload,
         )
-        self.log.info(f"Dataset size: {len(dataset)} images from {self.config.IMAGE_DIR}")
         return DataLoader(
             dataset,
             batch_size=self.hyperparams.BATCH_SIZE,
-            shuffle=True,
+            shuffle=shuffle,
             num_workers=self.hyperparams.NUM_WORKERS,
             # Only CUDA supports pinned host memory; MPS/silicon ignores it.
             pin_memory=self.device.type == "cuda",
         )
+
+    def build_dataloaders(self) -> tuple[DataLoader[FloorPlanDataset], DataLoader[FloorPlanDataset]]:
+        """Build the train and test dataloaders from the split dataset folders.
+
+        Returns:
+            tuple[DataLoader, DataLoader]: (train_dataloader, test_dataloader).
+        """
+        # Train uses all training images (MAX_SAMPLES caps it when debugging);
+        # test always uses every test image so the final evaluation is complete.
+        train_dl: DataLoader[FloorPlanDataset] = self._make_dataloader(
+            image_dir=self.config.TRAIN_IMAGES_DIR,
+            max_samples=self.hyperparams.MAX_SAMPLES,
+            shuffle=True,
+        )
+        test_dl: DataLoader[FloorPlanDataset] = self._make_dataloader(
+            image_dir=self.config.TEST_IMAGES_DIR,
+            max_samples=-1,
+            shuffle=False,  # deterministic subset for the per-epoch test loss
+        )
+        self.log.info(
+            f"Train images: {len(train_dl.dataset)} | Test images: {len(test_dl.dataset)}"
+        )
+        return train_dl, test_dl
 
     def training_step(self, batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Run one optimization step on a single batch.
@@ -279,6 +364,63 @@ class VAERunner:
             kl_loss_sum / num_batches,
         )
 
+    def evaluate_test(
+        self,
+        dataloader: DataLoader[FloorPlanDataset],
+        max_samples: int | None = None,
+    ) -> dict[str, float]:
+        """Average the VAE loss over test images in no-grad mode.
+
+        Args:
+            dataloader (DataLoader): The test dataloader (shuffle=False).
+            max_samples (int | None): Optional cap on how many test images to
+                evaluate (e.g. 100 for the per-epoch check). None = entire test set.
+
+        Returns:
+            dict[str, float]: Averaged {"test_loss", "recon_loss", "kl_loss",
+                "samples"} weighted by the number of evaluated images.
+        """
+        self.model.eval()
+        total_samples: int = 0
+        sum_total: float = 0.0
+        sum_recon: float = 0.0
+        sum_kl: float = 0.0
+
+        with torch.no_grad():
+            for batch in dataloader:
+                # Slice to exactly the remaining requested samples so the
+                # per-epoch test loss covers exactly TEST_LOSS_SAMPLES images.
+                if max_samples is not None:
+                    remaining: int = max_samples - total_samples
+                    if remaining <= 0:
+                        break
+                    batch = batch[:remaining]
+
+                batch = batch.to(self.device)
+                reconstruction, mu, logvar = self.model(batch)
+                total_loss, recon_loss, kl_loss = vae_loss(
+                    batch, reconstruction, mu, logvar, kl_weight=self.hyperparams.KL_WEIGHT
+                )
+                num_images: int = batch.shape[0]
+                sum_total += total_loss.item() * num_images
+                sum_recon += recon_loss.item() * num_images
+                sum_kl += kl_loss.item() * num_images
+                total_samples += num_images
+
+        self.model.train()
+
+        if total_samples == 0:
+            self.log.error("Test set is empty - cannot evaluate the model.")
+            return {"test_loss": 0.0, "recon_loss": 0.0, "kl_loss": 0.0, "samples": 0.0}
+
+        # Losses from vae_loss are already per-image averages; weight by count.
+        return {
+            "test_loss": sum_total / total_samples,
+            "recon_loss": sum_recon / total_samples,
+            "kl_loss": sum_kl / total_samples,
+            "samples": float(total_samples),
+        }
+
     def save_checkpoint(self, epoch: int) -> None:
         """Save the current model weights to the configured model directory.
 
@@ -302,43 +444,71 @@ class VAERunner:
         self.log.info(f"Saved checkpoint to {checkpoint_path}")
 
     def train(self) -> None:
-        """Run the full training loop and log telemetry at intervals."""
-        torch.autograd.set_detect_anomaly(self.config.IS_DEBUG_TORCH)
+        """Run the full training loop with per-epoch test evaluation.
 
-        dataloader: DataLoader[FloorPlanDataset] = self.build_dataloader()
+        Every epoch: train on all train images, evaluate test loss on a fixed
+        subset of TEST_LOSS_SAMPLES images, save a reconstruction grid of 10
+        fixed test samples, and write a telemetry row. After the last epoch the
+        final test loss is computed over the entire test set.
+        """
+        torch.autograd.set_detect_anomaly(self.config.IS_DEBUG_TORCH)
         os.makedirs(self.config.OUTPUT_SAMPLES_DIRECTORY, exist_ok=True)
 
-        # Hold onto one fixed batch for periodic reconstruction visualization.
-        fixed_batch: torch.Tensor = next(iter(dataloader))[: self.hyperparams.NUM_RECON_SAMPLES]
+        train_dl, test_dl = self.build_dataloaders()
 
-        self.log.info(f"Torch version: {torch.__version__}, total images: {len(dataloader.dataset)}")
+        # Hold onto one fixed batch of TEST images for the per-epoch
+        # reconstruction grids, so progress is always shown on the same samples.
+        fixed_batch: torch.Tensor = next(iter(test_dl))[: self.hyperparams.NUM_RECON_SAMPLES]
+
+        self.log.info(f"Torch version: {torch.__version__}")
         execution_start: float = time.time()
 
         for epoch in range(1, self.hyperparams.NUM_EPOCHS + 1):
             epoch_start: float = time.time()
-            train_loss, recon_loss, kl_loss = self.run_epoch(dataloader)
 
-            # Periodic telemetry + checkpointing as configured.
+            # 1) Train on all training images.
+            train_loss, recon_loss, kl_loss = self.run_epoch(train_dl)
+
+            # 2) Evaluate test loss on the configured sample subset (e.g. 100).
+            test_metrics: dict[str, float] = self.evaluate_test(
+                test_dl, max_samples=self.hyperparams.TEST_LOSS_SAMPLES
+            )
+
+            # 3) Write telemetry every epoch so the dashboard updates live.
+            self.telemetry_writer.log(
+                epoch=epoch,
+                train_loss=train_loss,
+                recon_loss=recon_loss,
+                kl_loss=kl_loss,
+                test_loss=test_metrics["test_loss"],
+            )
+
+            # 4) Save a reconstruction grid every epoch (visible in the server).
+            sample_path: Path = (
+                Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
+                / f"reconstruction_epoch_{epoch}_{self.config.runtime.RUN_ID}.png"
+            )
+            save_reconstruction_grid(self.model, fixed_batch, self.device, sample_path, self.log)
+
+            # 5) Periodic checkpoints.
             if epoch % self.config.TELEMETRY_INTERVAL == 0 or epoch == self.hyperparams.NUM_EPOCHS:
-                self.telemetry_writer.log(
-                    epoch=epoch, train_loss=train_loss, recon_loss=recon_loss, kl_loss=kl_loss
-                )
                 self.save_checkpoint(epoch)
-
-                # Save a reconstruction grid every SAVE_AFTER_INTERVAL epochs.
-                if epoch % self.config.SAVE_AFTER_INTERVAL == 0:
-                    sample_path: Path = (
-                        Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
-                        / f"reconstruction_epoch_{epoch}_{self.config.runtime.RUN_ID}.png"
-                    )
-                    save_reconstruction_grid(self.model, fixed_batch, self.device, sample_path, self.log)
 
             epoch_time: float = time.time() - epoch_start
             total_elapsed: float = time.time() - execution_start
             self.log.info(
                 f"Epoch {epoch}/{self.hyperparams.NUM_EPOCHS} | "
-                f"loss: {train_loss:.4f} | recon: {recon_loss:.4f} | kl: {kl_loss:.4f} | "
+                f"train_loss: {train_loss:.4f} | test_loss: {test_metrics['test_loss']:.4f} "
+                f"(N={int(test_metrics['samples'])}) | "
                 f"epoch_time: {epoch_time:.1f}s | total: {total_elapsed:.1f}s"
             )
 
-        self.log.success("VAE training finished.")
+        # Final evaluation over the ENTIRE test set.
+        final_metrics: dict[str, float] = self.evaluate_test(test_dl)
+        self.save_checkpoint(self.hyperparams.NUM_EPOCHS)
+        self.log.success(
+            f"FINAL TEST RESULT on full test set (N={int(final_metrics['samples'])}): "
+            f"test_loss={final_metrics['test_loss']:.4f} | "
+            f"recon_loss={final_metrics['recon_loss']:.4f} | "
+            f"kl_loss={final_metrics['kl_loss']:.4f}"
+        )
