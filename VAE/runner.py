@@ -218,6 +218,46 @@ def save_reconstruction_grid(
     log.info(f"Saved reconstruction grid to {save_path}")
 
 
+def save_generation_grid(
+    model: VAEModel,
+    num_samples: int,
+    latent_dim: int,
+    image_size: int,
+    device: torch.device,
+    save_path: Path,
+    log: SimpleNamespace,
+) -> None:
+    """Generate novel images by sampling latent vectors and save a single grid image.
+
+    Contrary to reconstructions (which pass fixed test images through the
+    encoder), generations draw ``num_samples`` vectors from the prior
+    N(0, I) latent distribution and decode them straight to images. This shows
+    what the trained latent space produces from scratch.
+
+    Args:
+        model (VAEModel): The VAE model used for generation.
+        num_samples (int): Number of images to generate.
+        latent_dim (int): Dimensionality of the model's latent space.
+        image_size (int): Side length of the generated images.
+        device (torch.device): Device the model lives on.
+        save_path (Path): Destination path for the saved grid PNG.
+        log (SimpleNamespace): Configured logger.
+    """
+    model.eval()
+    with torch.no_grad():
+        # Re-draw random latents each epoch so the generated content evolves.
+        z: torch.Tensor = torch.randn(num_samples, latent_dim, device=device)
+        generated: torch.Tensor = model.decode(z).cpu()
+
+    # Non-square / non-power-of-2 grid cell counts fall back to nrow=min(10, n).
+    nrow: int = min(num_samples, 10)
+    grid: torch.Tensor = make_grid(generated, nrow=nrow, padding=2, normalize=True)
+    grid_img = transforms.ToPILImage()(grid)
+    grid_img.save(str(save_path))
+    model.train()
+    log.info(f"Saved generation grid to {save_path}")
+
+
 class VAERunner:
     """Runner that wires together config, hyperparameters, model and training loop."""
 
@@ -329,7 +369,9 @@ class VAERunner:
         batch = batch.to(self.device)
         reconstruction, mu, logvar = self.model(batch)
         total_loss, recon_loss, kl_loss = vae_loss(
-            batch, reconstruction, mu, logvar, kl_weight=self.hyperparams.KL_WEIGHT
+            batch, reconstruction, mu, logvar,
+            kl_weight=self.hyperparams.KL_WEIGHT,
+            l1_weight=self.hyperparams.L1_WEIGHT,
         )
         self.optimizer.zero_grad()
         total_loss.backward()
@@ -399,7 +441,9 @@ class VAERunner:
                 batch = batch.to(self.device)
                 reconstruction, mu, logvar = self.model(batch)
                 total_loss, recon_loss, kl_loss = vae_loss(
-                    batch, reconstruction, mu, logvar, kl_weight=self.hyperparams.KL_WEIGHT
+                    batch, reconstruction, mu, logvar,
+                    kl_weight=self.hyperparams.KL_WEIGHT,
+                    l1_weight=self.hyperparams.L1_WEIGHT,
                 )
                 num_images: int = batch.shape[0]
                 sum_total += total_loss.item() * num_images
@@ -448,7 +492,8 @@ class VAERunner:
 
         Every epoch: train on all train images, evaluate test loss on a fixed
         subset of TEST_LOSS_SAMPLES images, save a reconstruction grid of 10
-        fixed test samples, and write a telemetry row. After the last epoch the
+        fixed test samples and a generation grid of NUM_GEN_SAMPLES fresh
+        latent samples, and write a telemetry row. After the last epoch the
         final test loss is computed over the entire test set.
         """
         torch.autograd.set_detect_anomaly(self.config.IS_DEBUG_TORCH)
@@ -474,24 +519,46 @@ class VAERunner:
                 test_dl, max_samples=self.hyperparams.TEST_LOSS_SAMPLES
             )
 
-            # 3) Write telemetry every epoch so the dashboard updates live.
-            self.telemetry_writer.log(
-                epoch=epoch,
-                train_loss=train_loss,
-                recon_loss=recon_loss,
-                kl_loss=kl_loss,
-                test_loss=test_metrics["test_loss"],
-            )
+            # 3) Write telemetry every TELEMETRY_INTERVAL epochs (plus the final
+            # epoch) so the dashboard updates live. With interval 1 a row is
+            # written after every single epoch.
+            if (
+                epoch % self.hyperparams.TELEMETRY_INTERVAL == 0
+                or epoch == self.hyperparams.NUM_EPOCHS
+            ):
+                self.telemetry_writer.log(
+                    epoch=epoch,
+                    train_loss=train_loss,
+                    recon_loss=recon_loss,
+                    kl_loss=kl_loss,
+                    test_loss=test_metrics["test_loss"],
+                )
 
-            # 4) Save a reconstruction grid every epoch (visible in the server).
+            # 4) Save reconstruction + generation grids every epoch (visible in
+            # the server dashboard).
             sample_path: Path = (
                 Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
                 / f"reconstruction_epoch_{epoch}_{self.config.runtime.RUN_ID}.png"
             )
             save_reconstruction_grid(self.model, fixed_batch, self.device, sample_path, self.log)
 
-            # 5) Periodic checkpoints.
-            if epoch % self.config.TELEMETRY_INTERVAL == 0 or epoch == self.hyperparams.NUM_EPOCHS:
+            gen_path: Path = (
+                Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
+                / f"generation_epoch_{epoch}_{self.config.runtime.RUN_ID}.png"
+            )
+            save_generation_grid(
+                model=self.model,
+                num_samples=self.hyperparams.NUM_GEN_SAMPLES,
+                latent_dim=self.hyperparams.LATENT_DIM,
+                image_size=self.hyperparams.IMAGE_SIZE,
+                device=self.device,
+                save_path=gen_path,
+                log=self.log,
+            )
+
+            # 5) Periodic checkpoints (saved every CHECKPOINT_INTERVAL epochs plus at the
+            # end of training).
+            if epoch % self.hyperparams.CHECKPOINT_INTERVAL == 0 or epoch == self.hyperparams.NUM_EPOCHS:
                 self.save_checkpoint(epoch)
 
             epoch_time: float = time.time() - epoch_start

@@ -30,9 +30,19 @@ PAGE_TITLE: str = "Telemetry Dashboard"
 # that just points at the latest run CSV and is not itself a telemetry run.
 SKIP_NAMES: set[str] = {"index.csv"}
 
-# Prefix of saved reconstruction grid filenames, used to recover the epoch
-# number from a name such as "reconstruction_epoch_7_<run>.png".
-RECON_EPOCH_PATTERN: str = r"reconstruction_epoch_(\d+)_"
+# Prefix of saved grid filenames, used to recover the epoch number from a name
+# such as "reconstruction_epoch_7_<run>.png" / "generation_epoch_7_<run>.png".
+# Plain "gridname" + regex builder below keeps this server agnostic to run ids.
+def _grid_epoch_pattern(kind: str) -> str:
+    """Return the regex used to read the epoch number from a grid filename.
+
+    Args:
+        kind (str): Grid kind, e.g. "reconstruction" or "generation".
+
+    Returns:
+        str: Regex with one capture group holding the epoch integer.
+    """
+    return rf"{kind}_epoch_(\d+)_"
 
 # Constant-ish tuning values: page title and Chart.js CDN source. Kept here
 # (module constants) since they are presentation defaults, not experiment knobs.
@@ -132,7 +142,8 @@ INDEX_HTML: str = """
   const COLORS = ["#6c8cff", "#ffd166", "#06d6a0", "#ef476f", "#b388ff", "#4cc9f0"];
   let currentRunId = null;   // run selected by the user (or newest, by default)
   let lastDashboardKey = null; // JSON fingerprint used to skip identical redraws
-  let selectedRecon = null;  // reconstruction image chosen in the epoch dropdown
+  let selectedRecon = { value: null };  // reconstruction grid chosen in the epoch dropdown
+  let selectedGen = { value: null };    // generation grid chosen in the epoch dropdown
 
   async function jsonFetch(url) {
     const res = await fetch(url);
@@ -185,48 +196,49 @@ INDEX_HTML: str = """
     }
   }
 
-  // Load the available reconstruction grids and populate the epoch dropdown.
-  // A new grid is written after every epoch, so the newest one is highlighted.
-  async function loadRecons() {
+  // Load the available image grids for a panel (reconstructions or generated
+  // samples) and populate its epoch dropdown. A new grid is written after every
+  // epoch, so the newest one is highlighted.
+  async function loadGrids(apiUrl, selectId, imgId, selectState, emptyText, altText) {
     try {
-      const list = await jsonFetch("/api/recs");
-      const select = document.getElementById("recon-select");
-      const img = document.getElementById("recon-img");
+      const list = await jsonFetch(apiUrl);
+      const select = document.getElementById(selectId);
+      const img = document.getElementById(imgId);
       if (!select || !img) return;
 
       select.innerHTML = "";
       if (list.length === 0) {
         img.removeAttribute("src");
-        img.alt = "No reconstruction images yet — generated after each epoch.";
+        img.alt = emptyText;
         return;
       }
 
       // Auto-advance to the newest grid (list is newest-first) unless the user
       // explicitly picked a specific epoch.
-      if (selectedRecon === null || !list.some(r => r.file === selectedRecon)) {
-        selectedRecon = list[0].file;
+      if (selectState.value === null || !list.some(r => r.file === selectState.value)) {
+        selectState.value = list[0].file;
       }
       for (const rec of list) {
         const opt = document.createElement("option");
         opt.value = rec.file;
         opt.textContent = rec.epoch !== null ? `Epoch ${rec.epoch}` : rec.file;
-        opt.selected = rec.file === selectedRecon;
+        opt.selected = rec.file === selectState.value;
         select.appendChild(opt);
       }
-      select.onchange = () => { selectedRecon = select.value; showRecon(list); };
-      showRecon(list);
+      select.onchange = () => { selectState.value = select.value; showGrid(list, imgId, selectState, altText); };
+      showGrid(list, imgId, selectState, altText);
     } catch (err) {
-      // No reconstructions available yet is fine; keep the panel quiet.
+      // No grids available yet is fine; keep the panel quiet.
     }
   }
 
-  function showRecon(list) {
-    const img = document.getElementById("recon-img");
+  function showGrid(list, imgId, selectState, altText) {
+    const img = document.getElementById(imgId);
     if (!img) return;
-    const rec = list.find(r => r.file === selectedRecon);
+    const rec = list.find(r => r.file === selectState.value);
     if (rec) {
       img.src = rec.url;
-      img.alt = "Original (top) vs reconstructed (bottom) test samples";
+      img.alt = altText;
     }
   }
 
@@ -263,8 +275,20 @@ INDEX_HTML: str = """
         <label for="recon-select">Epoch</label>
         <select id="recon-select"></select>
       </div>
-      <div class="recon-img-wrap"><img id="recon-img" alt="No reconstruction images yet."></div>`;
+      <div class="recon-img-wrap"><img id="recon-img" alt="No reconstructions yet — generated after each epoch."></div>`;
     container.appendChild(reconPanel);
+
+    // Generation panel: novel images decoded from random latent vectors.
+    const genPanel = document.createElement("div");
+    genPanel.className = "recon-panel";
+    genPanel.innerHTML = `
+      <h3>Generations (novel samples from the latent space)</h3>
+      <div class="recon-controls">
+        <label for="gen-select">Epoch</label>
+        <select id="gen-select"></select>
+      </div>
+      <div class="recon-img-wrap"><img id="gen-img" alt="No generations yet — generated after each epoch."></div>`;
+    container.appendChild(genPanel);
 
     const xCol = data.x_column;
     const labels = data.rows.map(r => (xCol ? r[xCol] : r.index));
@@ -311,7 +335,12 @@ INDEX_HTML: str = """
       });
     }
 
-    loadRecons();
+    loadGrids("/api/recs", "recon-select", "recon-img", selectedRecon,
+      "No reconstructions yet — generated after each epoch.",
+      "Original (top) vs reconstructed (bottom) test samples");
+    loadGrids("/api/gens", "gen-select", "gen-img", selectedGen,
+      "No generations yet — generated after each epoch.",
+      "Novel images decoded from random latent vectors");
   }
 
   refresh();
@@ -429,32 +458,34 @@ def read_run(telemetry_dir: str, run_id: str) -> dict[str, Any] | None:
     }
 
 
-def discover_recons(recon_dir: str) -> list[dict[str, Any]]:
-    """Scan a directory for reconstruction grid PNGs, newest first.
+def discover_grids(grid_dir: str, kind: str) -> list[dict[str, Any]]:
+    """Scan a directory for per-epoch grid PNGs of one kind, newest first.
 
     Args:
-        recon_dir (str): Directory holding the per-epoch reconstruction grids.
+        grid_dir (str): Directory holding the per-epoch grid images.
+        kind (str): Grid kind, e.g. "reconstruction" or "generation".
 
     Returns:
         list[dict[str, Any]]: One dict per grid with keys file, epoch and url.
     """
-    recon_path: Path = Path(recon_dir)
-    if not recon_path.is_dir():
+    grid_path: Path = Path(grid_dir)
+    if not grid_path.is_dir():
         return []
 
+    pattern: re.Pattern[str] = re.compile(_grid_epoch_pattern(kind))
     grids: list[dict[str, Any]] = []
-    for file_path in sorted(recon_path.glob("reconstruction_*.png")):
+    for file_path in sorted(grid_path.glob(f"{kind}_epoch_*.png")):
         # Recover the epoch number from the filename when possible.
-        match: re.Match[str] | None = re.search(RECON_EPOCH_PATTERN, file_path.name)
+        match: re.Match[str] | None = pattern.search(file_path.name)
         grids.append({
             "file": file_path.name,
             "epoch": int(match.group(1)) if match else None,
-            "url": f"/recon/{file_path.name}",
+            "url": f"/grid/{kind}/{file_path.name}",
             "updated_at": file_path.stat().st_mtime,
         })
 
     # Newest grid first (highest epoch / most recent) so the dashboard can
-    # auto-select the latest reconstruction.
+    # auto-select the latest image.
     grids.sort(key=lambda g: g["updated_at"], reverse=True)
     return grids
 
@@ -501,15 +532,24 @@ def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
     @app.route("/api/recs")
     def api_recs() -> Response:
         """Return the list of reconstruction grids as JSON."""
-        return jsonify(discover_recons(str(recon_path)))
+        return jsonify(discover_grids(str(recon_path), "reconstruction"))
 
-    @app.route("/recon/<path:filename>")
-    def recon_images(filename: str) -> Response:
-        """Serve a reconstruction grid PNG file.
+    @app.route("/api/gens")
+    def api_gens() -> Response:
+        """Return the list of generation grids as JSON."""
+        return jsonify(discover_grids(str(recon_path), "generation"))
+
+    @app.route("/grid/<kind>/<path:filename>")
+    def grid_images(kind: str, filename: str) -> Response:
+        """Serve a per-epoch grid image (reconstruction or generation).
 
         Args:
+            kind (str): Grid kind, "reconstruction" or "generation", used to keep
+                the static route somewhat self-documenting.
             filename (str): Name of the grid image file.
         """
+        if kind not in {"reconstruction", "generation"}:
+            return jsonify({"error": "Unknown grid kind"}), 404
         return send_from_directory(str(recon_path), filename)
 
     return app

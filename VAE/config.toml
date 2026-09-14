@@ -10,9 +10,7 @@ TEST_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_a
 [debug]
 IS_DEBUG = true
 IS_DEBUG_TORCH = false
-TELEMETRY_INTERVAL = 50
 
 [prod]
 IS_DEBUG = false
 IS_DEBUG_TORCH = false
-TELEMETRY_INTERVAL = 500
