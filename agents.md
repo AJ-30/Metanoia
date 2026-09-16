@@ -1,3 +1,4 @@
+
 ### Essential rules
 
 1. Provide detailed inline comments wherever there is any complex logic
@@ -12,9 +13,18 @@
 10. Add readme files whever applicable
 11. Change documentation and comments whenever changing functionality
 12. Ask questions whenever things are unclear. Dont assume things.
+13. Always Keep it Simple and Silly
+14. Prioritize ease of use
+15. Prioritize ease of change
+16. Prioritize reproducibility
 
+### ML specific rules
 
-
+1. Prevent data leakage at any cost
+2. Telemetry and visibility of telemetry is of utmost importance to the developer while training the model
+3. Each aspect of telemetry should be clearly visible and readable by the developer so that developer can take decisions
+4. Each run should be reproducible
+5. Proper logging should be done for everything using our custom logger
 
 ## Mandatory Rules
 
