@@ -1,0 +1,21 @@
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/diffusion.log"
+MODEL_SAVE_PATH = "./Diffusion/models/"
+TELEMETRY_LOG_DIRECTORY = "./Diffusion/telemetry_logs/"
+OUTPUT_SAMPLES_DIRECTORY = "./Diffusion/outputs/"
+DEVICE = "mps"
+TRAIN_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/train/images"
+TEST_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/test/images"
+# Frozen VAE checkpoint whose encoder supplies latents and whose decoder
+# renders diffusion samples back to images. Must be a fully trained VAE;
+# the default is the 500-epoch run (256-dim latents, old 4-stage arch),
+# which the runner rebuilds from the checkpoint's own hyperparameters.
+VAE_CHECKPOINT_PATH = "./VAE/models/vae_top-badger_epoch_500.pt"
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false
