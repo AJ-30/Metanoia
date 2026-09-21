@@ -1,7 +1,7 @@
 [default]
 # Must match the LATENT_DIM stored inside VAE_CHECKPOINT_PATH. The runner
 # fails fast on mismatch so a wrong checkpoint can never train silently.
-LATENT_DIM = 256
+LATENT_DIM = 512
 # Denoiser MLP capacity.
 HIDDEN_DIM = 1024
 NUM_LAYERS = 5

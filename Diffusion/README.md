@@ -86,9 +86,10 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 
 > `LATENT_DIM` in `Diffusion/hyperparameters.toml` must equal the latent dim
 > stored inside `VAE_CHECKPOINT_PATH`. The runner fails fast on mismatch.
-> The default checkpoint `vae_top-badger_epoch_500.pt` is 256-dim, matching
-> the default `LATENT_DIM = 256`. To use a 1024-dim VAE run instead, set
-> `LATENT_DIM = 1024` and point `VAE_CHECKPOINT_PATH` at that checkpoint.
+> The default points at the latest `rare-roughy` VAE run (512-dim latents,
+> 5-stage arch), so `LATENT_DIM` is `512`. To use another VAE run instead,
+> set `LATENT_DIM` to its latent size and point `VAE_CHECKPOINT_PATH` at that
+> checkpoint (e.g. the older `vae_top-badger_epoch_500.pt` is 256-dim).
 
 ### `hyperparameters.toml`
 
