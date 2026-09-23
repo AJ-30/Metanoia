@@ -19,3 +19,5 @@ dependencies:
 - pip:
   - petname
   - loguru
+  - tqdm  # progress bars for the YOLO augmentation loop
+  - ultralytics>=8.3.0  # YOLO26 finetune (Mac MPS/CPU compatible, Roboflow-supported)

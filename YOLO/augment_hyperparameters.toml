@@ -1,0 +1,56 @@
+# Augmentation-only hyperparameters for the independent augment runner
+# (YOLO/augment_runner.py, launched via ./run_augmentation.sh).
+# Every tunable constant for the frozen-VAE 15x dataset build lives here
+# (never hardcoded in .py files). The YOLO trainer never reads this file.
+#
+# NOTE: CLASS_NAMES is duplicated in YOLO/hyperparameters.toml (needed there
+# for overlay annotations). Keep both copies in sync.
+
+[default]
+# ---- Reproducibility ----
+BASE_SEED = 1234
+MAX_SAMPLES = -1
+
+# ---- 15x VAE-latent augmentation ----
+AUG_FACTOR = 15
+CHECKPOINT_EPOCHS = [75, 100, 200, 300, 400, 500]
+# Per-variant latent noise scale, drawn uniformly from this list (0.0 = clean
+# decode of mu). Recorded per row in the manifest's noise_std column.
+LATENT_NOISE_SCALES = [0.0, 0.01, 0.05, 0.075, 0.1]
+VAE_IMAGE_SIZE = 256
+
+# Random patch Gaussian blur (applied to decoded image, no geometry change).
+BLUR_MIN_PATCHES = 0
+BLUR_MAX_PATCHES = 2
+BLUR_MIN_SIZE_FRAC = 0.25
+BLUR_MAX_SIZE_FRAC = 0.50
+BLUR_SIGMA_MIN = 0.0
+BLUR_SIGMA_MAX = 1
+
+# Geometric augmentation: exact transforms for axis-aligned YOLO boxes.
+ROTATION_CHOICES = [0, 1, 2, 3]
+FLIP_H_PROB = 0.5
+FLIP_V_PROB = 0.5
+
+# ---- VAE batching (GPU saturation) ----
+# Variants are grouped by checkpoint epoch so weights load once per group, and
+# encode/decode runs in full batches instead of one image at a time (~452k
+# batch-1 launches for the full 15x run). Memory per batch ~ VAE_BATCH_SIZE x
+# 0.8MB input plus conv activations; 32 is safe on MPS unified memory.
+VAE_BATCH_SIZE = 128
+# Sources per processing chunk. Decoded outputs for one chunk are held in RAM:
+# chunk ≈ AUG_CHUNK_SOURCES x AUG_FACTOR x 0.8MB (32 x 15 x 0.8MB ≈ 380MB).
+AUG_CHUNK_SOURCES = 32
+
+# Parallel PNG/label writers. Only file encoding + writes are offloaded (the
+# VAE forward stays on the main thread — MPS is not thread-safe for concurrent
+# forwards), so output bytes are identical to a serial run.
+SAVE_WORKERS = 4
+# PNG zlib level 0-9. Level 1 encodes ~3x faster than the default 6 with
+# slightly larger files; decoded pixels are identical either way.
+PNG_COMPRESS_LEVEL = 1
+# Log images/sec + ETA every PROGRESS_LOG_SOURCES sources (tqdm shows live rate).
+PROGRESS_LOG_SOURCES = 200
+
+# ---- Dataset ontology (10 classes, IDs 0-9) ----
+CLASS_NAMES = ["couch", "chair", "sofa", "sofa_cum_bed", "center_table", "dining_set", "side_table", "showcase", "tv", "vase_table"]
