@@ -11,3 +11,4 @@ data_*
 venv
 __pycache__
 old_outputs
+YOLO/augmented_dataset

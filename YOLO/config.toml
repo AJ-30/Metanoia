@@ -1,0 +1,25 @@
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/yolo.log"
+MODEL_SAVE_PATH = "./YOLO/models/"
+TELEMETRY_LOG_DIRECTORY = "./YOLO/telemetry_logs/"
+OUTPUT_SAMPLES_DIRECTORY = "./YOLO/outputs/"
+AUGMENTED_DATASET_ROOT = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/"
+DATA_YAML_PATH = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/data.yaml"
+AUGMENT_MANIFEST_PATH = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/augment_manifest.csv"
+VAE_MODELS_DIR = "./VAE/models/"
+VAE_RUN_ID = "next-collie"
+DEVICE = "mps"
+SOURCE_TRAIN_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/train/images"
+SOURCE_TRAIN_LABELS_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/train/labels"
+SOURCE_VAL_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/validate/images"
+SOURCE_VAL_LABELS_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/validate/labels"
+SOURCE_TEST_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/test/images"
+SOURCE_TEST_LABELS_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/test/labels"
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false

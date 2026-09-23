@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Starts the Flask telemetry dashboard server that visualises the YOLO
+# training metrics read from YOLO/telemetry_logs (telemetry CSVs) with
+# GT-vs-pred overlays and training curves from YOLO/outputs.
+#
+# Usage:
+#   ./run_scripts/start_yolo_server.sh [port]
+
+set -e
+
+# Resolve the repo root so the script works from any working directory.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$ROOT_DIR"
+
+echo "Activating Conda environment..."
+CONDA_BASE=$(conda info --base)
+# shellcheck disable=SC1091
+. "$CONDA_BASE/etc/profile.d/conda.sh"
+conda activate ./venv
+
+PORT="${1:-8080}"
+
+echo "Starting YOLO telemetry dashboard..."
+echo "Dashboard: http://127.0.0.1:${PORT}"
+python helpers/server.py --telemetry-dir ./YOLO/telemetry_logs --recon-dir ./YOLO/outputs --host 127.0.0.1 --port "${PORT}"

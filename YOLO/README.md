@@ -95,6 +95,12 @@ so expect weak minority-class AP without further sampling/focal tuning.
 Smoke test: set `MAX_SAMPLES=64`, `AUG_FACTOR=2` in
 `YOLO/augment_hyperparameters.toml`, then `./run_augmentation.sh`.
 
+> **Mac note:** `train_YOLO.sh` exports `PYTORCH_ENABLE_MPS_FALLBACK=1`.
+> Ultralytics runs NMS (`torchvision::nms`) during validation, which has no
+> MPS kernel and raises `NotImplementedError` without this flag. Training
+> stays on MPS; only that op falls back to CPU. If you launch `YOLO/run.py`
+> manually (not via the script), export the flag first.
+
 ## Configuration
 
 `YOLO/config.toml`: device, source dataset dirs, VAE dir/run id, output dirs.

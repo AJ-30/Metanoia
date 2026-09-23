@@ -3,11 +3,16 @@ Flask dashboard server for telemetry visualisation.
 
 Serves a single-page dashboard that lists every telemetry run (the CSV files
 produced by ``helpers/telemetry_writer.TelemetryWriter``), plots the logged
-metrics (epoch vs train/test/recon/KL loss, etc.) using Chart.js, and displays
-the VAE's per-epoch reconstruction grids of the fixed test samples.
+metrics (epoch vs train/test/recon/KL loss, YOLO box/cls/dfl loss and mAP,
+etc.) using Chart.js, and displays per-run figures: the VAE's per-epoch
+reconstruction/generation grids plus the YOLO GT-vs-pred overlays and
+training-curve figures (results/PR/F1/confusion matrix).
 
-The directories with the telemetry CSVs and the reconstruction PNGs are
-configurable, so the same server can visualise any run.
+The directories with the telemetry CSVs and the images are configurable, so
+the same server visualises VAE runs (--telemetry-dir ./VAE/telemetry_logs
+--recon-dir ./VAE/outputs) and YOLO runs (--telemetry-dir
+./YOLO/telemetry_logs --recon-dir ./YOLO/outputs); panels belonging to the
+other pipeline simply show their empty state.
 
 Usage:
     python helpers/server.py --telemetry-dir ./VAE/telemetry_logs --recon-dir ./VAE/outputs --port 8080
@@ -32,25 +37,37 @@ SKIP_NAMES: set[str] = {"index.csv"}
 
 # Prefix of saved grid filenames, used to recover the epoch number from a name
 # such as "reconstruction_epoch_7_<run>.png" / "generation_epoch_7_<run>.png".
-# Plain "gridname" + regex builder below keeps this server agnostic to run ids.
-def _grid_epoch_pattern(kind: str) -> str:
-    """Return the regex used to read the epoch number from a grid filename.
+# YOLO runs instead save "val_pred_<tag>_<stem>_<run>.png" overlays (no epoch
+# number) and "<run>_results.png / _PR_curve.png / _F1_curve.png /
+# _confusion_matrix.png / labels" curve artifacts, matched by substring below.
+# Plain prefix lists keep this server agnostic to run ids.
+IMAGE_KIND_PREFIXES: dict[str, list[str]] = {
+    "reconstruction": ["reconstruction_epoch_"],
+    "generation": ["generation_epoch_"],
+    "pred": ["val_pred_"],
+    "curve": ["results", "PR_curve", "F1_curve", "confusion_matrix", "labels"],
+}
+
+# Image extensions served as dashboard figures.
+IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg")
+
+# Fallback epoch pattern: matches "_epoch_<N>_" or "epoch_<N>" anywhere in a
+# filename (VAE-style names); YOLO overlay/curve names carry no epoch number
+# and yield None, in which case the dashboard labels options by filename.
+EPOCH_PATTERN: str = r"epoch_(\d+)"
+
+
+def _image_epoch(filename: str) -> int | None:
+    """Recover the epoch number from an image filename when present.
 
     Args:
-        kind (str): Grid kind, e.g. "reconstruction" or "generation".
+        filename (str): Image file name to inspect.
 
     Returns:
-        str: Regex with one capture group holding the epoch integer.
+        int | None: Epoch integer, or None when the name carries no epoch.
     """
-    return rf"{kind}_epoch_(\d+)_"
-
-# Constant-ish tuning values: page title and Chart.js CDN source. Kept here
-# (module constants) since they are presentation defaults, not experiment knobs.
-PAGE_TITLE: str = "Telemetry Dashboard"
-
-# Skip this file name: run_scripts/server.sh may create an index.csv symlink
-# that just points at the latest run CSV and is not itself a telemetry run.
-SKIP_NAMES: set[str] = {"index.csv"}
+    match: re.Match[str] | None = re.search(EPOCH_PATTERN, filename)
+    return int(match.group(1)) if match else None
 
 # Identifiers of common non-metric columns stored in telemetry CSVs. These are
 # never plotted as training metrics but may be used as chart x-axes.
@@ -144,6 +161,8 @@ INDEX_HTML: str = """
   let lastDashboardKey = null; // JSON fingerprint used to skip identical redraws
   let selectedRecon = { value: null };  // reconstruction grid chosen in the epoch dropdown
   let selectedGen = { value: null };    // generation grid chosen in the epoch dropdown
+  let selectedPred = { value: null };   // YOLO overlay chosen in the file dropdown
+  let selectedCurve = { value: null };  // YOLO curve figure chosen in the file dropdown
 
   async function jsonFetch(url) {
     const res = await fetch(url);
@@ -290,6 +309,32 @@ INDEX_HTML: str = """
       <div class="recon-img-wrap"><img id="gen-img" alt="No generations yet — generated after each epoch."></div>`;
     container.appendChild(genPanel);
 
+    // Prediction panel: YOLO GT-vs-pred overlays (green GT + red predictions).
+    // Empty for VAE runs, which save no val_pred_*.png files.
+    const predPanel = document.createElement("div");
+    predPanel.className = "recon-panel";
+    predPanel.innerHTML = `
+      <h3>Predictions (green ground truth / red predictions + confidence)</h3>
+      <div class="recon-controls">
+        <label for="pred-select">Image</label>
+        <select id="pred-select"></select>
+      </div>
+      <div class="recon-img-wrap"><img id="pred-img" alt="No prediction overlays yet — saved during YOLO training."></div>`;
+    container.appendChild(predPanel);
+
+    // Curves panel: YOLO results/PR/F1/confusion-matrix figures copied to outputs.
+    // Empty for VAE runs.
+    const curvePanel = document.createElement("div");
+    curvePanel.className = "recon-panel";
+    curvePanel.innerHTML = `
+      <h3>Training curves (results / PR / F1 / confusion matrix)</h3>
+      <div class="recon-controls">
+        <label for="curve-select">Figure</label>
+        <select id="curve-select"></select>
+      </div>
+      <div class="recon-img-wrap"><img id="curve-img" alt="No curve figures yet — copied from the Ultralytics run dir."></div>`;
+    container.appendChild(curvePanel);
+
     const xCol = data.x_column;
     const labels = data.rows.map(r => (xCol ? r[xCol] : r.index));
 
@@ -341,6 +386,12 @@ INDEX_HTML: str = """
     loadGrids("/api/gens", "gen-select", "gen-img", selectedGen,
       "No generations yet — generated after each epoch.",
       "Novel images decoded from random latent vectors");
+    loadGrids("/api/preds", "pred-select", "pred-img", selectedPred,
+      "No prediction overlays yet — saved during YOLO training.",
+      "Ground truth (green) vs predicted (red) boxes");
+    loadGrids("/api/curves", "curve-select", "curve-img", selectedCurve,
+      "No curve figures yet — copied from the Ultralytics run dir.",
+      "YOLO training curve figure");
   }
 
   refresh();
@@ -459,33 +510,47 @@ def read_run(telemetry_dir: str, run_id: str) -> dict[str, Any] | None:
 
 
 def discover_grids(grid_dir: str, kind: str) -> list[dict[str, Any]]:
-    """Scan a directory for per-epoch grid PNGs of one kind, newest first.
+    """Scan a directory for dashboard images of one kind, newest first.
+
+    Matches files whose name starts with one of the kind's registered prefixes
+    (see ``IMAGE_KIND_PREFIXES``) and ends with a served image extension.
+    Keeps the historical name so the VAE ``/api/recs`` and ``/api/gens``
+    routes behave exactly as before.
 
     Args:
         grid_dir (str): Directory holding the per-epoch grid images.
-        kind (str): Grid kind, e.g. "reconstruction" or "generation".
+        kind (str): Image kind, one of "reconstruction", "generation", "pred"
+            (YOLO GT-vs-pred overlays) or "curve" (YOLO training curves).
 
     Returns:
-        list[dict[str, Any]]: One dict per grid with keys file, epoch and url.
+        list[dict[str, Any]]: One dict per image with keys file, epoch (None
+            when the filename carries no epoch number) and url.
     """
     grid_path: Path = Path(grid_dir)
     if not grid_path.is_dir():
         return []
 
-    pattern: re.Pattern[str] = re.compile(_grid_epoch_pattern(kind))
+    prefixes: list[str] = IMAGE_KIND_PREFIXES.get(kind, [])
     grids: list[dict[str, Any]] = []
-    for file_path in sorted(grid_path.glob(f"{kind}_epoch_*.png")):
-        # Recover the epoch number from the filename when possible.
-        match: re.Match[str] | None = pattern.search(file_path.name)
+    for file_path in sorted(grid_path.iterdir()):
+        if file_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            continue
+        # Curve artifacts carry a run-name prefix ("train_results.png"), so
+        # they match by substring; every other kind matches by filename prefix.
+        if kind == "curve":
+            if not any(s in file_path.name for s in prefixes):
+                continue
+        elif not any(file_path.name.startswith(p) for p in prefixes):
+            continue
         grids.append({
             "file": file_path.name,
-            "epoch": int(match.group(1)) if match else None,
+            "epoch": _image_epoch(file_path.name),
             "url": f"/grid/{kind}/{file_path.name}",
             "updated_at": file_path.stat().st_mtime,
         })
 
-    # Newest grid first (highest epoch / most recent) so the dashboard can
-    # auto-select the latest image.
+    # Newest image first (most recent write) so the dashboard can auto-select
+    # the latest figure.
     grids.sort(key=lambda g: g["updated_at"], reverse=True)
     return grids
 
@@ -539,16 +604,27 @@ def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
         """Return the list of generation grids as JSON."""
         return jsonify(discover_grids(str(recon_path), "generation"))
 
+    @app.route("/api/preds")
+    def api_preds() -> Response:
+        """Return the list of YOLO GT-vs-pred overlay images as JSON."""
+        return jsonify(discover_grids(str(recon_path), "pred"))
+
+    @app.route("/api/curves")
+    def api_curves() -> Response:
+        """Return the list of YOLO training-curve figures as JSON."""
+        return jsonify(discover_grids(str(recon_path), "curve"))
+
     @app.route("/grid/<kind>/<path:filename>")
     def grid_images(kind: str, filename: str) -> Response:
-        """Serve a per-epoch grid image (reconstruction or generation).
+        """Serve a dashboard image (reconstruction, generation, pred or curve).
 
         Args:
-            kind (str): Grid kind, "reconstruction" or "generation", used to keep
-                the static route somewhat self-documenting.
-            filename (str): Name of the grid image file.
+            kind (str): Image kind, one of "reconstruction", "generation",
+                "pred" or "curve", used to keep the static route somewhat
+                self-documenting.
+            filename (str): Name of the image file.
         """
-        if kind not in {"reconstruction", "generation"}:
+        if kind not in {"reconstruction", "generation", "pred", "curve"}:
             return jsonify({"error": "Unknown grid kind"}), 404
         return send_from_directory(str(recon_path), filename)
 

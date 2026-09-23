@@ -1,0 +1,48 @@
+# YOLO training-only hyperparameters (YOLO/runner.py, via ./train_YOLO.sh).
+# Every tunable constant lives here (never hardcoded in .py files).
+# The trainer never triggers augmentation; build the dataset first with
+# ./run_augmentation.sh (knobs in YOLO/augment_hyperparameters.toml).
+#
+# NOTE: CLASS_NAMES is duplicated in YOLO/augment_hyperparameters.toml
+# (needed there for data.yaml). Keep both copies in sync.
+
+[default]
+# ---- Reproducibility ----
+BASE_SEED = 1234
+
+# ---- Dataset ontology (10 classes, IDs 0-9) ----
+CLASS_NAMES = ["couch", "chair", "sofa", "sofa_cum_bed", "center_table", "dining_set", "side_table", "showcase", "tv", "vase_table"]
+
+# ---- YOLO26 finetune ----
+# NOTE on scale: train images are VAE-native 256px, so IMG_SIZE=416 (not 640)
+# avoids a 2.5x upscaling of VAE blur artifacts and cuts MPS/CPU cost.
+# NOTE on budget: 15075 sources x AUG_FACTOR=15 ~= 226k images; NUM_EPOCHS=30
+# with early-stopping PATIENCE=10 bounds the ~1.4M-step worst case of 100 epochs.
+YOLO_MODEL = "yolo26n.pt"
+IMG_SIZE = 416
+BATCH_SIZE = 16
+NUM_EPOCHS = 30
+# LR0=0.01 is the Ultralytics default tuned for OPTIMIZER="auto" (MuSGD/SGD
+# family for YOLO26); keep the pair pinned together, change jointly.
+LR0 = 0.01
+OPTIMIZER = "auto"
+PATIENCE = 10
+WORKERS = 0
+CONF_THRESHOLD = 0.25
+VAL_PLOT_EVERY = 5
+NUM_OVERLAY_SAMPLES = 16
+TELEMETRY_INTERVAL = 1
+
+# ---- Ultralytics internal augmentation overrides ----
+# The VAE pipeline above already applies exact rot90/flip/blur augmentation,
+# so Ultralytics mosaic/mixup (multi-image composites) and its own flips are
+# disabled to keep the geometric distribution exactly as designed. Photometric
+# hsv jitter is kept at Ultralytics defaults.
+MOSAIC = 0.0
+MIXUP = 0.0
+COPY_PASTE = 0.0
+FLIPLR = 0.0
+FLIPUD = 0.0
+HSV_H = 0.015
+HSV_S = 0.7
+HSV_V = 0.4

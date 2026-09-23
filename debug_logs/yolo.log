@@ -1,0 +1,95 @@
+[living-pony] 2026-09-23 15:07:48 | INFO | YOLO.augment_runner:40 - Starting VAE augmentation run_id: living-pony (factor=15, checkpoints=[75, 100, 200, 300, 400, 500], noise_scales=[0.0, 0.05, 0.075, 0.1])
+[living-pony] 2026-09-23 15:07:48 | INFO | YOLO.augment:659 - VAE augmentation running on device: mps
+[living-pony] 2026-09-23 15:07:49 | INFO | YOLO.augment:696 - Augmenting 15075 source images x15 = 226125 outputs.
+[equal-urchin] 2026-09-23 15:08:53 | INFO | YOLO.augment_runner:40 - Starting VAE augmentation run_id: equal-urchin (factor=15, checkpoints=[75, 100, 200, 300, 400, 500], noise_scales=[0.0, 0.05, 0.075, 0.1])
+[equal-urchin] 2026-09-23 15:08:53 | INFO | YOLO.augment:659 - VAE augmentation running on device: mps
+[equal-urchin] 2026-09-23 15:08:54 | INFO | YOLO.augment:696 - Augmenting 15075 source images x15 = 226125 outputs.
+[equal-urchin] 2026-09-23 15:10:24 | INFO | YOLO.augment:828 - Augmented 224/15075 sources (3360 outputs, 37.2 img/s, ETA 99.7 min).
+[alive-newt] 2026-09-23 15:17:31 | INFO | YOLO.augment_runner:40 - Starting VAE augmentation run_id: alive-newt (factor=15, checkpoints=[75, 100, 200, 300, 400, 500], noise_scales=[0.0, 0.01, 0.05, 0.075, 0.1])
+[alive-newt] 2026-09-23 15:17:31 | INFO | YOLO.augment:654 - VAE augmentation running on device: mps
+[alive-newt] 2026-09-23 15:17:32 | INFO | YOLO.augment:691 - Augmenting 15075 source images x15 = 226125 outputs.
+[alive-newt] 2026-09-23 15:17:42 | INFO | YOLO.augment:825 - Augmented 224/15075 sources (3360 outputs, 325.5 img/s, ETA 11.4 min).
+[alive-newt] 2026-09-23 15:17:51 | INFO | YOLO.augment:825 - Augmented 416/15075 sources (6240 outputs, 333.6 img/s, ETA 11.0 min).
+[alive-newt] 2026-09-23 15:17:59 | INFO | YOLO.augment:825 - Augmented 608/15075 sources (9120 outputs, 338.2 img/s, ETA 10.7 min).
+[alive-newt] 2026-09-23 15:18:07 | INFO | YOLO.augment:825 - Augmented 800/15075 sources (12000 outputs, 339.6 img/s, ETA 10.5 min).
+[alive-newt] 2026-09-23 15:18:17 | INFO | YOLO.augment:825 - Augmented 1024/15075 sources (15360 outputs, 340.4 img/s, ETA 10.3 min).
+[alive-newt] 2026-09-23 15:18:25 | INFO | YOLO.augment:825 - Augmented 1216/15075 sources (18240 outputs, 342.5 img/s, ETA 10.1 min).
+[alive-newt] 2026-09-23 15:18:34 | INFO | YOLO.augment:825 - Augmented 1408/15075 sources (21120 outputs, 340.2 img/s, ETA 10.0 min).
+[alive-newt] 2026-09-23 15:18:42 | INFO | YOLO.augment:825 - Augmented 1600/15075 sources (24000 outputs, 339.6 img/s, ETA 9.9 min).
+[alive-newt] 2026-09-23 15:18:52 | INFO | YOLO.augment:825 - Augmented 1824/15075 sources (27360 outputs, 341.8 img/s, ETA 9.7 min).
+[alive-newt] 2026-09-23 15:19:00 | INFO | YOLO.augment:825 - Augmented 2016/15075 sources (30240 outputs, 342.8 img/s, ETA 9.5 min).
+[alive-newt] 2026-09-23 15:19:08 | INFO | YOLO.augment:825 - Augmented 2208/15075 sources (33120 outputs, 343.0 img/s, ETA 9.4 min).
+[alive-newt] 2026-09-23 15:19:17 | INFO | YOLO.augment:825 - Augmented 2400/15075 sources (36000 outputs, 342.9 img/s, ETA 9.2 min).
+[alive-newt] 2026-09-23 15:19:27 | INFO | YOLO.augment:825 - Augmented 2624/15075 sources (39360 outputs, 340.7 img/s, ETA 9.1 min).
+[alive-newt] 2026-09-23 15:19:36 | INFO | YOLO.augment:825 - Augmented 2816/15075 sources (42240 outputs, 340.7 img/s, ETA 9.0 min).
+[alive-newt] 2026-09-23 15:19:45 | INFO | YOLO.augment:825 - Augmented 3008/15075 sources (45120 outputs, 338.8 img/s, ETA 8.9 min).
+[alive-newt] 2026-09-23 15:19:54 | INFO | YOLO.augment:825 - Augmented 3200/15075 sources (48000 outputs, 337.6 img/s, ETA 8.8 min).
+[alive-newt] 2026-09-23 15:20:05 | INFO | YOLO.augment:825 - Augmented 3424/15075 sources (51360 outputs, 335.6 img/s, ETA 8.7 min).
+[alive-newt] 2026-09-23 15:20:14 | INFO | YOLO.augment:825 - Augmented 3616/15075 sources (54240 outputs, 335.4 img/s, ETA 8.5 min).
+[alive-newt] 2026-09-23 15:20:22 | INFO | YOLO.augment:825 - Augmented 3808/15075 sources (57120 outputs, 335.0 img/s, ETA 8.4 min).
+[alive-newt] 2026-09-23 15:20:31 | INFO | YOLO.augment:825 - Augmented 4000/15075 sources (60000 outputs, 335.3 img/s, ETA 8.3 min).
+[alive-newt] 2026-09-23 15:20:41 | INFO | YOLO.augment:825 - Augmented 4224/15075 sources (63360 outputs, 334.8 img/s, ETA 8.1 min).
+[alive-newt] 2026-09-23 15:20:50 | INFO | YOLO.augment:825 - Augmented 4416/15075 sources (66240 outputs, 334.4 img/s, ETA 8.0 min).
+[alive-newt] 2026-09-23 15:20:58 | INFO | YOLO.augment:825 - Augmented 4608/15075 sources (69120 outputs, 334.7 img/s, ETA 7.8 min).
+[alive-newt] 2026-09-23 15:21:07 | INFO | YOLO.augment:825 - Augmented 4800/15075 sources (72000 outputs, 334.6 img/s, ETA 7.7 min).
+[alive-newt] 2026-09-23 15:21:18 | INFO | YOLO.augment:825 - Augmented 5024/15075 sources (75360 outputs, 333.4 img/s, ETA 7.5 min).
+[alive-newt] 2026-09-23 15:21:27 | INFO | YOLO.augment:825 - Augmented 5216/15075 sources (78240 outputs, 333.1 img/s, ETA 7.4 min).
+[alive-newt] 2026-09-23 15:21:36 | INFO | YOLO.augment:825 - Augmented 5408/15075 sources (81120 outputs, 332.2 img/s, ETA 7.3 min).
+[alive-newt] 2026-09-23 15:21:45 | INFO | YOLO.augment:825 - Augmented 5600/15075 sources (84000 outputs, 332.2 img/s, ETA 7.1 min).
+[alive-newt] 2026-09-23 15:21:55 | INFO | YOLO.augment:825 - Augmented 5824/15075 sources (87360 outputs, 332.2 img/s, ETA 7.0 min).
+[alive-newt] 2026-09-23 15:22:03 | INFO | YOLO.augment:825 - Augmented 6016/15075 sources (90240 outputs, 332.3 img/s, ETA 6.8 min).
+[alive-newt] 2026-09-23 15:22:12 | INFO | YOLO.augment:825 - Augmented 6208/15075 sources (93120 outputs, 332.3 img/s, ETA 6.7 min).
+[alive-newt] 2026-09-23 15:22:21 | INFO | YOLO.augment:825 - Augmented 6400/15075 sources (96000 outputs, 332.3 img/s, ETA 6.5 min).
+[alive-newt] 2026-09-23 15:22:31 | INFO | YOLO.augment:825 - Augmented 6624/15075 sources (99360 outputs, 332.1 img/s, ETA 6.4 min).
+[alive-newt] 2026-09-23 15:22:40 | INFO | YOLO.augment:825 - Augmented 6816/15075 sources (102240 outputs, 332.0 img/s, ETA 6.2 min).
+[alive-newt] 2026-09-23 15:22:49 | INFO | YOLO.augment:825 - Augmented 7008/15075 sources (105120 outputs, 331.8 img/s, ETA 6.1 min).
+[alive-newt] 2026-09-23 15:22:58 | INFO | YOLO.augment:825 - Augmented 7200/15075 sources (108000 outputs, 331.4 img/s, ETA 5.9 min).
+[alive-newt] 2026-09-23 15:23:08 | INFO | YOLO.augment:825 - Augmented 7424/15075 sources (111360 outputs, 331.5 img/s, ETA 5.8 min).
+[alive-newt] 2026-09-23 15:23:17 | INFO | YOLO.augment:825 - Augmented 7616/15075 sources (114240 outputs, 331.2 img/s, ETA 5.6 min).
+[alive-newt] 2026-09-23 15:23:26 | INFO | YOLO.augment:825 - Augmented 7808/15075 sources (117120 outputs, 331.1 img/s, ETA 5.5 min).
+[alive-newt] 2026-09-23 15:23:34 | INFO | YOLO.augment:825 - Augmented 8000/15075 sources (120000 outputs, 331.3 img/s, ETA 5.3 min).
+[alive-newt] 2026-09-23 15:23:44 | INFO | YOLO.augment:825 - Augmented 8224/15075 sources (123360 outputs, 331.5 img/s, ETA 5.2 min).
+[alive-newt] 2026-09-23 15:23:52 | INFO | YOLO.augment:825 - Augmented 8416/15075 sources (126240 outputs, 331.6 img/s, ETA 5.0 min).
+[alive-newt] 2026-09-23 15:24:01 | INFO | YOLO.augment:825 - Augmented 8608/15075 sources (129120 outputs, 331.9 img/s, ETA 4.9 min).
+[alive-newt] 2026-09-23 15:24:09 | INFO | YOLO.augment:825 - Augmented 8800/15075 sources (132000 outputs, 331.9 img/s, ETA 4.7 min).
+[alive-newt] 2026-09-23 15:24:20 | INFO | YOLO.augment:825 - Augmented 9024/15075 sources (135360 outputs, 331.9 img/s, ETA 4.6 min).
+[alive-newt] 2026-09-23 15:24:28 | INFO | YOLO.augment:825 - Augmented 9216/15075 sources (138240 outputs, 332.3 img/s, ETA 4.4 min).
+[alive-newt] 2026-09-23 15:24:36 | INFO | YOLO.augment:825 - Augmented 9408/15075 sources (141120 outputs, 332.5 img/s, ETA 4.3 min).
+[alive-newt] 2026-09-23 15:24:45 | INFO | YOLO.augment:825 - Augmented 9600/15075 sources (144000 outputs, 332.7 img/s, ETA 4.1 min).
+[alive-newt] 2026-09-23 15:24:55 | INFO | YOLO.augment:825 - Augmented 9824/15075 sources (147360 outputs, 332.8 img/s, ETA 3.9 min).
+[alive-newt] 2026-09-23 15:25:03 | INFO | YOLO.augment:825 - Augmented 10016/15075 sources (150240 outputs, 333.0 img/s, ETA 3.8 min).
+[alive-newt] 2026-09-23 15:25:11 | INFO | YOLO.augment:825 - Augmented 10208/15075 sources (153120 outputs, 333.1 img/s, ETA 3.7 min).
+[alive-newt] 2026-09-23 15:25:20 | INFO | YOLO.augment:825 - Augmented 10400/15075 sources (156000 outputs, 333.3 img/s, ETA 3.5 min).
+[alive-newt] 2026-09-23 15:25:30 | INFO | YOLO.augment:825 - Augmented 10624/15075 sources (159360 outputs, 333.5 img/s, ETA 3.3 min).
+[alive-newt] 2026-09-23 15:25:38 | INFO | YOLO.augment:825 - Augmented 10816/15075 sources (162240 outputs, 333.6 img/s, ETA 3.2 min).
+[alive-newt] 2026-09-23 15:25:47 | INFO | YOLO.augment:825 - Augmented 11008/15075 sources (165120 outputs, 333.5 img/s, ETA 3.0 min).
+[alive-newt] 2026-09-23 15:25:56 | INFO | YOLO.augment:825 - Augmented 11200/15075 sources (168000 outputs, 333.3 img/s, ETA 2.9 min).
+[alive-newt] 2026-09-23 15:26:06 | INFO | YOLO.augment:825 - Augmented 11424/15075 sources (171360 outputs, 333.2 img/s, ETA 2.7 min).
+[alive-newt] 2026-09-23 15:26:15 | INFO | YOLO.augment:825 - Augmented 11616/15075 sources (174240 outputs, 332.8 img/s, ETA 2.6 min).
+[alive-newt] 2026-09-23 15:26:24 | INFO | YOLO.augment:825 - Augmented 11808/15075 sources (177120 outputs, 332.7 img/s, ETA 2.5 min).
+[alive-newt] 2026-09-23 15:26:33 | INFO | YOLO.augment:825 - Augmented 12000/15075 sources (180000 outputs, 332.9 img/s, ETA 2.3 min).
+[alive-newt] 2026-09-23 15:26:43 | INFO | YOLO.augment:825 - Augmented 12224/15075 sources (183360 outputs, 332.9 img/s, ETA 2.1 min).
+[alive-newt] 2026-09-23 15:26:52 | INFO | YOLO.augment:825 - Augmented 12416/15075 sources (186240 outputs, 332.7 img/s, ETA 2.0 min).
+[alive-newt] 2026-09-23 15:27:00 | INFO | YOLO.augment:825 - Augmented 12608/15075 sources (189120 outputs, 332.6 img/s, ETA 1.9 min).
+[alive-newt] 2026-09-23 15:27:10 | INFO | YOLO.augment:825 - Augmented 12800/15075 sources (192000 outputs, 332.3 img/s, ETA 1.7 min).
+[alive-newt] 2026-09-23 15:27:19 | INFO | YOLO.augment:825 - Augmented 13024/15075 sources (195360 outputs, 332.5 img/s, ETA 1.5 min).
+[alive-newt] 2026-09-23 15:27:28 | INFO | YOLO.augment:825 - Augmented 13216/15075 sources (198240 outputs, 332.5 img/s, ETA 1.4 min).
+[alive-newt] 2026-09-23 15:27:36 | INFO | YOLO.augment:825 - Augmented 13408/15075 sources (201120 outputs, 332.7 img/s, ETA 1.3 min).
+[alive-newt] 2026-09-23 15:27:45 | INFO | YOLO.augment:825 - Augmented 13600/15075 sources (204000 outputs, 332.8 img/s, ETA 1.1 min).
+[alive-newt] 2026-09-23 15:27:55 | INFO | YOLO.augment:825 - Augmented 13824/15075 sources (207360 outputs, 332.8 img/s, ETA 0.9 min).
+[alive-newt] 2026-09-23 15:28:03 | INFO | YOLO.augment:825 - Augmented 14016/15075 sources (210240 outputs, 332.8 img/s, ETA 0.8 min).
+[alive-newt] 2026-09-23 15:28:12 | INFO | YOLO.augment:825 - Augmented 14208/15075 sources (213120 outputs, 333.1 img/s, ETA 0.7 min).
+[alive-newt] 2026-09-23 15:28:20 | INFO | YOLO.augment:825 - Augmented 14400/15075 sources (216000 outputs, 333.2 img/s, ETA 0.5 min).
+[alive-newt] 2026-09-23 15:28:30 | INFO | YOLO.augment:825 - Augmented 14624/15075 sources (219360 outputs, 333.5 img/s, ETA 0.3 min).
+[alive-newt] 2026-09-23 15:28:38 | INFO | YOLO.augment:825 - Augmented 14816/15075 sources (222240 outputs, 333.5 img/s, ETA 0.2 min).
+[alive-newt] 2026-09-23 15:28:47 | INFO | YOLO.augment:825 - Augmented 15008/15075 sources (225120 outputs, 333.4 img/s, ETA 0.1 min).
+[alive-newt] 2026-09-23 15:28:51 | INFO | YOLO.augment:836 - Wrote 226125 augmented train images + manifest /Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/augment_manifest.csv in 11.3 min (333.2 img/s).
+[alive-newt] 2026-09-23 15:29:45 | INFO | YOLO.augment:851 - Mirrored 4347 val images.
+[alive-newt] 2026-09-23 15:30:11 | INFO | YOLO.augment:862 - Mirrored 2118 test images.
+[alive-newt] 2026-09-23 15:30:11 | INFO | YOLO.augment_runner:54 - Augmentation complete: {'train_images': 226125, 'val_images': 4347, 'test_images': 2118}; data.yaml at /Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/data.yaml
+[mature-gecko] 2026-09-23 15:32:13 | INFO | YOLO.runner:163 - Starting YOLO training run_id: mature-gecko on device: mps
+[mature-gecko] 2026-09-23 15:32:40 | INFO | YOLO.runner:227 - Dataset OK: 226125 train images, manifest 226125 rows.
+[mature-gecko] 2026-09-23 15:32:51 | INFO | YOLO.runner:332 - Loaded pretrained weights: yolo26n.pt
+[social-hornet] 2026-09-23 18:32:15 | INFO | YOLO.runner:163 - Starting YOLO training run_id: social-hornet on device: mps
+[social-hornet] 2026-09-23 18:32:17 | INFO | YOLO.runner:227 - Dataset OK: 226125 train images, manifest 226125 rows.
+[social-hornet] 2026-09-23 18:32:18 | INFO | YOLO.runner:332 - Loaded pretrained weights: yolo26n.pt
