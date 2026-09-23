@@ -47,17 +47,18 @@ class Encoder(nn.Module):
         # Dropout2d drops whole feature maps, which regularizes more strongly
         # than pixel-wise dropout for convolutional features.
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(in_channels, base_channels // 8, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
+            
+            nn.Conv2d(in_channels, base_channels // 8, kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
+            
+            nn.Conv2d(base_channels // 8, base_channels // 4, kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
+            
+            nn.Conv2d(base_channels // 4, base_channels//2, kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
             nn.Dropout2d(dropout),
-            nn.Conv2d(base_channels // 8, base_channels // 4, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Dropout2d(dropout),
-            nn.Conv2d(base_channels // 4, base_channels // 2, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Dropout2d(dropout),
-            nn.Conv2d(base_channels // 2, base_channels, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
+            nn.Conv2d(base_channels // 2, base_channels, kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
             nn.Dropout2d(dropout),
         )
 
@@ -112,7 +113,7 @@ class Decoder(nn.Module):
 
         # Store the feature-map geometry so the flat fc output can be reshaped
         # back into a spatial tensor without any float arithmetic.
-        self.spatial_size: int = image_size // 16
+        self.spatial_size: int = image_size //16
         self.base_channels: int = base_channels
         self.fc_dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(latent_dim, base_channels * self.spatial_size * self.spatial_size)
@@ -121,16 +122,19 @@ class Decoder(nn.Module):
         # original spatial size. Sigmoid keeps outputs in the [0, 1] range.
         # Dropout2d again regularizes the feature maps while training.
         self.deconv_layers = nn.Sequential(
-            nn.ConvTranspose2d(base_channels, base_channels // 2, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
+            nn.ConvTranspose2d(base_channels, base_channels // 2, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.SiLU(),
             nn.Dropout2d(dropout),
-            nn.ConvTranspose2d(base_channels // 2, base_channels // 4, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
+            nn.ConvTranspose2d(base_channels // 2, base_channels // 4, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.SiLU(),
             nn.Dropout2d(dropout),
-            nn.ConvTranspose2d(base_channels // 4, base_channels // 8, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Dropout2d(dropout),
-            nn.ConvTranspose2d(base_channels // 8, out_channels, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(base_channels // 4, base_channels // 8, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.SiLU(),
+            
+            nn.ConvTranspose2d(base_channels // 8, out_channels, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.SiLU(),
+            
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1), #sharpness increasing layer
             nn.Sigmoid(),
         )
 
@@ -164,6 +168,7 @@ class VAEModel(nn.Module):
         """
         super().__init__()
         self.latent_dim: int = archparams.LATENT_DIM
+        self.latent_additional_noise: float = archparams.LATENT_ADDITIONAL_NOISE
 
         self.encoder = Encoder(
             in_channels=archparams.OUT_CHANNELS,
@@ -208,6 +213,11 @@ class VAEModel(nn.Module):
         """
         mu, logvar = self.encoder(x)
         z: torch.Tensor = self.reparameterize(mu, logvar)
+
+        # Add small Gaussian noise to the latent vector during training to regularize the decoder.
+        if self.training:
+            noise: torch.Tensor = torch.randn_like(z) * self.latent_additional_noise  # Small noise for regularization
+            z = z + noise
         reconstruction: torch.Tensor = self.decoder(z)
         return reconstruction, mu, logvar
 
