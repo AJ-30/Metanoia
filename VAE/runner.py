@@ -6,6 +6,12 @@ train and test dataloaders from the split dataset folders, runs the training
 loop on the configured device (MPS / CUDA / CPU), and evaluates the model on
 the test split after every epoch and once on the full test set at the end.
 
+The dataset is folder-per-sample (one folder holding every render of a layout).
+Which render is learned — the full render (``full_png``) or the floorplan-only
+render (``layout_only``) — is selected by ``TRAIN_IMAGE_VARIANT`` in
+``hyperparameters.toml``; the render name itself lives in the
+``[default.IMAGE_VARIANTS]`` table, never hardcoded here.
+
 Progress is logged with the shared project logger, written to telemetry CSVs
 via helpers/telemetry_writer, and reconstruction grids of fixed test samples
 are saved every epoch so the dashboard server can display them.
@@ -45,15 +51,35 @@ SCRIPT_DIR: Path = Path(__file__).resolve().parent
 class FloorPlanDataset(Dataset):
     """PyTorch Dataset that lazy-loads and preprocesses floor-plan images.
 
-    Each RGBA image is composited onto a solid background (to drop the alpha
-    channel), resized to a square and converted to a float tensor in [0, 1].
-    Optionally preloads every image into RAM (as uint8) to avoid disk I/O
-    during training and keep the GPU fed.
+    Expected on-disk layout (one folder per sample, see the dataset README):
+
+    .. code-block:: text
+
+        <split_dir>/
+          <hash>_original/            # or <hash>_augmented_<NNN>
+            full.png                  # image_file_name = "full.png"
+            floorplan_only.png        # image_file_name = "floorplan_only.png"
+            no_tv.png
+            ground_truth.svg
+            labels.txt
+
+    Each sample folder holds every render of that layout, so ``image_file_name``
+    selects which one this dataset reads (``full_png`` or ``layout_only`` in
+    the TOML; the mapping lives in ``hyperparameters.toml`` under
+    ``[default.IMAGE_VARIANTS]``). Each RGBA image is composited onto a solid
+    background (to drop the alpha channel), resized to a square and converted
+    to a float tensor in [0, 1]. Optionally preloads every image into RAM (as
+    uint8) to avoid disk I/O during training and keep the GPU fed.
+
+    This class is the single source of truth for image preprocessing and is
+    reused as-is by the Diffusion runner, which takes its ``image_size`` from
+    the frozen VAE checkpoint.
     """
 
     def __init__(
         self,
-        image_dir: str,
+        split_dir: str,
+        image_file_name: str,
         image_size: int,
         background_color: list[int],
         max_samples: int,
@@ -62,20 +88,45 @@ class FloorPlanDataset(Dataset):
         """Initialize the dataset.
 
         Args:
-            image_dir (str): Directory containing the PNG/JPEG images.
+            split_dir (str): Split folder (e.g. ``.../dataset/train``) holding
+                one sub-folder per sample.
+            image_file_name (str): Render to read from inside every sample
+                folder (e.g. ``"full.png"`` or ``"floorplan_only.png"``). A
+                sample folder that lacks it is skipped.
             image_size (int): Target side length of the resized square images.
             background_color (list[int]): RGBA tuple used as the backdrop when
                 flattening the alpha channel.
             max_samples (int): Cap on the number of images loaded. Negative
-                values mean "use every image in the directory".
+                values mean "use every sample folder in the split".
             preload (bool): When True, decode every image into RAM once at
                 construction (as compact uint8 tensors) so training epochs no
                 longer hit the disk. This is the main fix for GPU starvation.
+
+        Raises:
+            FileNotFoundError: If ``split_dir`` does not exist, or if no sample
+                folder in it provides ``image_file_name``. Failing loudly here
+                is essential: a silently empty dataset only surfaces much later
+                as a division by zero inside the training loop.
         """
+        self.split_dir: str = split_dir
+        self.image_file_name: str = image_file_name
+        split_path: Path = Path(split_dir)
+        if not split_path.is_dir():
+            raise FileNotFoundError(f"Dataset split directory missing: {split_dir}")
+
+        # One image per sample folder: enumerate sub-directories and keep those
+        # that actually carry the selected render. Iterdir() is deliberately
+        # non-recursive so a stray nested folder is never mistaken for a sample.
         self.image_paths: list[str] = sorted(
-            str(p) for p in Path(image_dir).iterdir()
-            if p.suffix.lower() in {".png", ".jpg", ".jpeg"}
+            str(sample_dir / image_file_name)
+            for sample_dir in split_path.iterdir()
+            if sample_dir.is_dir() and (sample_dir / image_file_name).is_file()
         )
+        if not self.image_paths:
+            raise FileNotFoundError(
+                f"No sample folder under {split_dir} provides '{image_file_name}'. "
+                "Check the split path and the configured image variant."
+            )
         # Optionally cap the dataset size, so quick debug runs stay cheap.
         if max_samples >= 0 and len(self.image_paths) > max_samples:
             self.image_paths = self.image_paths[:max_samples]
@@ -91,8 +142,9 @@ class FloorPlanDataset(Dataset):
         # Forward-reference so the cache list can be typed.
         self.cache: list[torch.Tensor] | None = None
         if preload:
-            # Decode all images once into RAM. Each image is 3*H*W bytes
-            # (uint8 instead of float32), so 15k x 128x128x3 is ~0.7 GB.
+            # Decode all images once into RAM. Each cached image is 3*S*S bytes
+            # (uint8 instead of float32), so 15k x 3*256*256 is ~2.9 GB. Turn
+            # PRELOAD_IMAGES off when the split outgrows the machine's RAM.
             self.cache = [self._load_uint8(path) for path in self.image_paths]
 
     def _load_float(self, image_path: str) -> torch.Tensor:
@@ -156,6 +208,48 @@ class FloorPlanDataset(Dataset):
         if self.cache is not None:
             return self.cache[index].float() / 255.0
         return self._load_float(self.image_paths[index])
+
+
+def resolve_image_file_name(hyperparams: SimpleNamespace) -> str:
+    """Resolve the configured render variant to a filename inside a sample folder.
+
+    Reads two TOML keys, so no render filename is ever hardcoded in Python:
+    ``TRAIN_IMAGE_VARIANT`` (e.g. ``"full_png"``) selects an entry of the
+    ``IMAGE_VARIANTS`` table (e.g. ``{full_png = "full.png", ...}``) declared as
+    ``[default.IMAGE_VARIANTS]`` in the TOML file.
+
+    Args:
+        hyperparams (SimpleNamespace): Hyperparameters namespace holding
+            ``TRAIN_IMAGE_VARIANT`` (str) and ``IMAGE_VARIANTS`` (dict[str, str]).
+
+    Returns:
+        str: Filename of the selected render, e.g. ``"full.png"``.
+
+    Raises:
+        KeyError: If the variant is missing or is not a key of the
+            ``IMAGE_VARIANTS`` table (fail fast on TOML typos).
+        TypeError: If ``IMAGE_VARIANTS`` is not a mapping of variant name to
+            filename, or the selected entry is not a non-empty string.
+    """
+    variant: str = str(hyperparams.TRAIN_IMAGE_VARIANT)
+    variants: object = getattr(hyperparams, "IMAGE_VARIANTS", None)
+    if not isinstance(variants, dict):
+        raise TypeError(
+            "hyperparameters must define a [default.IMAGE_VARIANTS] table mapping "
+            f"variant name -> render filename, got {type(variants).__name__}."
+        )
+    if variant not in variants:
+        raise KeyError(
+            f"TRAIN_IMAGE_VARIANT='{variant}' is not in the [default.IMAGE_VARIANTS] "
+            f"table. Known variants: {sorted(variants.keys())}."
+        )
+    file_name: object = variants[variant]
+    if not isinstance(file_name, str) or not file_name:
+        raise TypeError(
+            f"[default.IMAGE_VARIANTS].{variant} must be a non-empty filename, "
+            f"got {file_name!r}."
+        )
+    return file_name
 
 
 def resolve_device(requested_device: str, log: SimpleNamespace) -> torch.device:
@@ -299,14 +393,14 @@ class VAERunner:
 
     def _make_dataloader(
         self,
-        image_dir: str,
+        split_dir: str,
         max_samples: int,
         shuffle: bool,
     ) -> DataLoader[FloorPlanDataset]:
         """Create a single dataset + dataloader for one split folder.
 
         Args:
-            image_dir (str): Directory with the split's images.
+            split_dir (str): Split folder holding one sub-folder per sample.
             max_samples (int): Cap on the dataset size (negative = all images).
             shuffle (bool): Whether to shuffle batches (True for train).
 
@@ -314,11 +408,15 @@ class VAERunner:
             DataLoader: Configured dataloader for that split.
         """
         preload: bool = bool(self.hyperparams.PRELOAD_IMAGES)
+        image_file_name: str = resolve_image_file_name(self.hyperparams)
         self.log.info(
-            f"Building dataset from {image_dir} (preload into RAM: {preload})..."
+            f"Building dataset from {split_dir} using render '{image_file_name}' "
+            f"(variant '{self.hyperparams.TRAIN_IMAGE_VARIANT}', "
+            f"preload into RAM: {preload})..."
         )
         dataset = FloorPlanDataset(
-            image_dir=image_dir,
+            split_dir=split_dir,
+            image_file_name=image_file_name,
             image_size=self.hyperparams.IMAGE_SIZE,
             background_color=self.hyperparams.BACKGROUND_COLOR,
             max_samples=max_samples,
@@ -342,12 +440,12 @@ class VAERunner:
         # Train uses all training images (MAX_SAMPLES caps it when debugging);
         # test always uses every test image so the final evaluation is complete.
         train_dl: DataLoader[FloorPlanDataset] = self._make_dataloader(
-            image_dir=self.config.TRAIN_IMAGES_DIR,
+            split_dir=self.config.TRAIN_IMAGES_DIR,
             max_samples=self.hyperparams.MAX_SAMPLES,
             shuffle=True,
         )
         test_dl: DataLoader[FloorPlanDataset] = self._make_dataloader(
-            image_dir=self.config.TEST_IMAGES_DIR,
+            split_dir=self.config.TEST_IMAGES_DIR,
             max_samples=-1,
             shuffle=False,  # deterministic subset for the per-epoch test loss
         )

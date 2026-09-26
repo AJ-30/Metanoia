@@ -1,7 +1,23 @@
-"""Frozen-VAE latent augmentation pipeline producing a 5x YOLO dataset.
+"""Frozen-VAE latent augmentation pipeline producing a 2x YOLO dataset.
+
+Source layout is folder-per-sample (one folder holds every render of a layout):
+
+.. code-block:: text
+
+    <split_dir>/<hash>_original/            # or <hash>_augmented_<NNN>
+        full.png                            # the only render YOLO reads
+        floorplan_only.png                  # ignored
+        no_tv.png                           # ignored: labels.txt still lists the
+                                           # tv box, so boxes would mismatch pixels
+        ground_truth.svg                    # ignored
+        labels.txt                          # "<Class_Name> cx cy w h", normalized
+
+``labels.txt`` names its class, so every line is resolved to a numeric id
+through ``CLASS_NAMES`` before being written out in Ultralytics' id format.
 
 Pipeline per source image (repeated AUG_FACTOR times with distinct seeds):
-  1. Load RGBA image, flatten alpha onto white, resize to VAE_IMAGE_SIZE square.
+  1. Load the RGBA ``full.png``, flatten alpha onto white, resize to
+     VAE_IMAGE_SIZE square.
   2. Pick a frozen VAE checkpoint uniformly from CHECKPOINT_EPOCHS, encode to
      the latent mean ``mu`` (deterministic; no reparameterization sampling).
   3. Add Gaussian noise ``N(0, s^2)`` to ``mu`` and decode, where the scale ``s``
@@ -13,8 +29,8 @@ from the source: the VAE resize is a full-image warp so normalized YOLO
 ``cx cy w h`` coordinates are invariant to it.
 
 Reproducibility: every output index derives ``seed = BASE_SEED + global_index``
-so the full 5x run is exactly reproducible from the TOML files plus a
-per-row manifest (source file, checkpoint epoch, blur, seed).
+so the full 2x run is exactly reproducible from the TOML files plus a
+per-row manifest (source sample, checkpoint epoch, blur, seed).
 """
 
 import csv
@@ -41,24 +57,69 @@ if str(ROOT_DIR) not in sys.path:
 from VAE.model import VAEModel
 
 
-def parse_box_line(line: str) -> tuple[int, float, float, float, float]:
-    """Parse one YOLO label line into typed components.
+def resolve_class_name_to_id(class_names: list[str]) -> dict[str, int]:
+    """Build the label class-name -> numeric-id map from the TOML vocabulary.
+
+    Ultralytics' label format stores a numeric class id, but the source
+    ``labels.txt`` stores the furniture display name. The id is the index of
+    the name in ``CLASS_NAMES``, so the generated ``data.yaml`` and the written
+    label ids always agree.
 
     Args:
-        line (str): Raw line of form ``"<cls> <cx> <cy> <w> <h>"`` with
+        class_names (list[str]): Ordered class vocabulary; index == class id.
+
+    Returns:
+        dict[str, int]: Mapping of class name to class id.
+
+    Raises:
+        ValueError: If the vocabulary is empty or contains a duplicate name
+            (a duplicate would silently drop one of the two classes).
+    """
+    if not class_names:
+        raise ValueError("CLASS_NAMES must list at least one class.")
+    name_to_id: dict[str, int] = {}
+    for class_id, name in enumerate(class_names):
+        if name in name_to_id:
+            raise ValueError(
+                f"CLASS_NAMES contains duplicate name {name!r} "
+                f"(ids {name_to_id[name]} and {class_id}).")
+        name_to_id[name] = class_id
+    return name_to_id
+
+
+def parse_box_line(
+    line: str,
+    class_name_to_id: dict[str, int],
+) -> tuple[int, float, float, float, float]:
+    """Parse one source label line into typed components.
+
+    Source format is ``"<Class_Name> <cx> <cy> <w> <h>"`` with normalized
+    coordinates in [0, 1]; the class id is looked up in ``class_name_to_id``.
+
+    Args:
+        line (str): Raw line of form ``"<Class_Name> <cx> <cy> <w> <h>"`` with
             normalized coordinates in [0, 1].
+        class_name_to_id (dict[str, int]): Class name to class id map from
+            :func:`resolve_class_name_to_id`.
 
     Returns:
         tuple[int, float, float, float, float]: (cls_id, cx, cy, w, h).
 
     Raises:
-        ValueError: If the line does not have exactly 5 fields or the
-            coordinates fall outside [0, 1].
+        ValueError: If the line does not have exactly 5 fields, the class name
+            is not in ``class_name_to_id``, or the coordinates fall outside
+            [0, 1] / have a non-positive size.
     """
     parts: list[str] = line.strip().split()
     if len(parts) != 5:
         raise ValueError(f"Expected 5 fields per label line, got {len(parts)}: {line!r}")
-    cls_id: int = int(parts[0])
+    class_name: str = parts[0]
+    if class_name not in class_name_to_id:
+        raise ValueError(
+            f"Unknown class name {class_name!r} in label line: {line!r}. "
+            f"Known classes: {sorted(class_name_to_id.keys())}. "
+            "Add it to CLASS_NAMES or regenerate the dataset.")
+    cls_id: int = class_name_to_id[class_name]
     cx: float
     cy: float
     w: float
@@ -76,7 +137,7 @@ def format_box_line(cls_id: int, cx: float, cy: float, w: float, h: float) -> st
     """Format typed box components back into a YOLO label line.
 
     Args:
-        cls_id (int): Class id (0-9).
+        cls_id (int): Class id, the index of the class in ``CLASS_NAMES``.
         cx (float): Normalized center x.
         cy (float): Normalized center y.
         w (float): Normalized width.
@@ -88,26 +149,35 @@ def format_box_line(cls_id: int, cx: float, cy: float, w: float, h: float) -> st
     return f"{cls_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}"
 
 
-def clean_label_lines(lines: list[str]) -> list[str]:
-    """Copy a label file's lines without any geometric change.
+def clean_label_lines(
+    lines: list[str],
+    class_name_to_id: dict[str, int],
+) -> list[str]:
+    """Rewrite name-based source labels into Ultralytics id-based lines.
 
     No rotation or flip is applied: normalized boxes are invariant to the
-    full-image VAE resize, so source boxes stay valid. Lines are still
-    parsed and reformatted to fail fast on invalid coordinates and to drop
-    blank lines / degenerate zero-area boxes.
+    full-image VAE resize, so source boxes stay valid. Lines are still parsed
+    and reformatted to fail fast on unknown class names or invalid coordinates
+    and to drop blank lines / degenerate zero-area boxes.
 
     Args:
-        lines (list[str]): Raw YOLO label lines (may include blanks).
+        lines (list[str]): Raw source label lines (may include blanks).
+        class_name_to_id (dict[str, int]): Class name to class id map from
+            :func:`resolve_class_name_to_id`.
 
     Returns:
-        list[str]: Validated label lines (blank lines dropped;
-            degenerate zero-area boxes dropped).
+        list[str]: Validated label lines with numeric class ids (blank lines
+            dropped; degenerate zero-area boxes dropped).
+
+    Raises:
+        ValueError: Propagated from :func:`parse_box_line` for malformed lines,
+            unknown class names or out-of-range coordinates.
     """
     out_lines: list[str] = []
     for raw in lines:
         if not raw.strip():
             continue
-        cls_id, cx, cy, w, h = parse_box_line(raw)
+        cls_id, cx, cy, w, h = parse_box_line(raw, class_name_to_id)
         # No geometric transform: copy boxes as-is.
         if w <= 0.0 or h <= 0.0:
             continue
@@ -313,6 +383,79 @@ class FrozenVAEPool:
             return decoded.detach().cpu()
 
 
+def list_sample_dirs(
+    split_dir: str,
+    image_file_name: str,
+    label_file_name: str,
+) -> list[Path]:
+    """Enumerate the per-sample folders of a split that hold an image and a label.
+
+    The source dataset is folder-per-sample: each folder carries every render of
+    one layout plus its ``labels.txt``. Only folders providing *both* the
+    selected render and the label file are returned, so a partially written
+    sample can never reach the pipeline. Enumeration is a single non-recursive
+    readdir, sorted by folder name for reproducible seeding.
+
+    Args:
+        split_dir (str): Split folder holding one sub-folder per sample.
+        image_file_name (str): Render required inside every sample folder
+            (e.g. ``"full.png"``).
+        label_file_name (str): Label file required inside every sample folder
+            (e.g. ``"labels.txt"``).
+
+    Returns:
+        list[Path]: Sorted sample folders, each holding the image and the label.
+
+    Raises:
+        FileNotFoundError: If ``split_dir`` does not exist.
+    """
+    split_path: Path = Path(split_dir)
+    if not split_path.is_dir():
+        raise FileNotFoundError(f"Source split directory missing: {split_dir}")
+    return sorted(
+        sample_dir
+        for sample_dir in split_path.iterdir()
+        if sample_dir.is_dir()
+        and (sample_dir / image_file_name).is_file()
+        and (sample_dir / label_file_name).is_file()
+    )
+
+
+def read_sample_labels(
+    sample_dir: Path,
+    label_file_name: str,
+    class_name_to_id: dict[str, int],
+) -> list[str]:
+    """Read one sample's label file and convert it to Ultralytics id format.
+
+    The source file names its classes; the returned lines carry the numeric ids
+    that match ``CLASS_NAMES``, so the same file can be written straight into
+    the generated ``labels/`` tree.
+
+    Args:
+        sample_dir (Path): Sample folder holding the label file.
+        label_file_name (str): Label filename inside the sample folder
+            (e.g. ``"labels.txt"``).
+        class_name_to_id (dict[str, int]): Class name to class id map from
+            :func:`resolve_class_name_to_id`.
+
+    Returns:
+        list[str]: YOLO label lines with numeric class ids. May be empty for a
+            layout with no furniture.
+
+    Raises:
+        FileNotFoundError: If the sample folder has no label file.
+        ValueError: Propagated from :func:`clean_label_lines` for malformed
+            lines, unknown class names or out-of-range coordinates.
+    """
+    label_path: Path = sample_dir / label_file_name
+    if not label_path.is_file():
+        raise FileNotFoundError(f"Label file missing: {label_path}")
+    with open(label_path, encoding="utf-8") as f:
+        raw_lines: list[str] = f.read().splitlines()
+    return clean_label_lines(raw_lines, class_name_to_id)
+
+
 def preprocess_for_vae(image_path: str, image_size: int) -> torch.Tensor:
     """Load an RGBA floor-plan image into a VAE-ready tensor batch.
 
@@ -414,56 +557,69 @@ def clear_generated_split(img_dir: Path, lbl_dir: Path) -> None:
 
 
 def mirror_split(
-    src_img_dir: str,
-    src_lbl_dir: str,
+    src_split_dir: str,
     dst_img_dir: Path,
     dst_lbl_dir: Path,
     vae_size: int,
+    image_file_name: str,
+    label_file_name: str,
+    class_name_to_id: dict[str, int],
 ) -> int:
-    """Mirror a source split resized to the VAE square domain, labels verbatim.
+    """Mirror a source split resized to the VAE square domain, labels converted.
 
-    Normalized YOLO boxes are invariant to full-image resize, so label files
-    are copied unchanged; images are flattened from RGBA and resized.
+    Normalized YOLO boxes are invariant to full-image resize, so only the class
+    field changes (name -> id); images are flattened from RGBA and resized.
 
     Args:
-        src_img_dir (str): Source images directory.
-        src_lbl_dir (str): Source labels directory.
+        src_split_dir (str): Source split folder holding one sub-folder per
+            sample.
         dst_img_dir (Path): Destination images directory (created if needed).
         dst_lbl_dir (Path): Destination labels directory (created if needed).
         vae_size (int): Square side length both domains share.
+        image_file_name (str): Render to mirror out of each sample folder.
+        label_file_name (str): Label file inside each sample folder.
+        class_name_to_id (dict[str, int]): Class name to class id map used to
+            convert the labels.
 
     Returns:
         int: Number of images mirrored.
     """
+    sample_dirs: list[Path] = list_sample_dirs(
+        src_split_dir, image_file_name, label_file_name)
     dst_img_dir.mkdir(parents=True, exist_ok=True)
     dst_lbl_dir.mkdir(parents=True, exist_ok=True)
     clear_generated_split(dst_img_dir, dst_lbl_dir)
     count: int = 0
-    for src in sorted(
-        p for p in Path(src_img_dir).iterdir()
-        if p.suffix.lower() in {".png", ".jpg", ".jpeg"}
-    ):
-        img_v: Image.Image = flatten_alpha(Image.open(src)).resize(
-            (vae_size, vae_size), Image.BILINEAR)
-        img_v.save(str(dst_img_dir / f"{src.stem}.png"))
-        src_lbl: Path = Path(src_lbl_dir) / f"{src.stem}.txt"
-        if src_lbl.is_file():
-            with open(src_lbl, encoding="utf-8") as f:
-                content: str = f.read()
-            with open(dst_lbl_dir / f"{src.stem}.txt", "w", encoding="utf-8") as out:
-                out.write(content)
+    for sample_dir in sample_dirs:
+        stem: str = sample_dir.name
+        img_v: Image.Image = flatten_alpha(
+            Image.open(sample_dir / image_file_name)).resize(
+                (vae_size, vae_size), Image.BILINEAR)
+        img_v.save(str(dst_img_dir / f"{stem}.png"))
+        out_lines: list[str] = read_sample_labels(
+            sample_dir, label_file_name, class_name_to_id)
+        with open(dst_lbl_dir / f"{stem}.txt", "w", encoding="utf-8") as out:
+            out.write("\n".join(out_lines) + ("\n" if out_lines else ""))
         count += 1
     return count
 
 
-def split_complete(src_img_dir: str, dst_img_dir: Path) -> bool:
-    """Check whether every source image already has a mirrored PNG.
+def split_complete(
+    src_split_dir: str,
+    image_file_name: str,
+    label_file_name: str,
+    dst_img_dir: Path,
+) -> bool:
+    """Check whether every source sample already has a mirrored PNG.
 
-    Compares filename stem sets (cheap readdir, no image reads) so a completed
-    val/test mirror is skipped instead of re-encoded on every regen.
+    Compares sample-folder name sets (cheap readdir, no image reads) so a
+    completed val/test mirror is skipped instead of re-encoded on every regen.
 
     Args:
-        src_img_dir (str): Source images directory.
+        src_split_dir (str): Source split folder holding one sub-folder per
+            sample.
+        image_file_name (str): Render required inside every sample folder.
+        label_file_name (str): Label file required inside every sample folder.
         dst_img_dir (Path): Mirrored destination images directory.
 
     Returns:
@@ -471,10 +627,9 @@ def split_complete(src_img_dir: str, dst_img_dir: Path) -> bool:
     """
     if not dst_img_dir.is_dir():
         return False
-    valid_suffixes: set[str] = {".png", ".jpg", ".jpeg"}
     src_stems: set[str] = {
-        p.stem for p in Path(src_img_dir).iterdir()
-        if p.suffix.lower() in valid_suffixes
+        p.name for p in list_sample_dirs(
+            src_split_dir, image_file_name, label_file_name)
     }
     if not src_stems:
         return False
@@ -510,12 +665,13 @@ def run_augmentation(
 ) -> dict[str, int]:
     """Generate the full AUG_FACTOR x augmented YOLO dataset from frozen VAE latents.
 
-    For each source train image, AUG_FACTOR variants are produced. Each
+    For each source train sample, AUG_FACTOR variants are produced. Each
     variant draws an independent seed, a uniform checkpoint epoch, seeded VAE
     latent noise and blur patches. No rotation or flip is applied. Images land
     in ``<root>/images/train`` and labels in ``<root>/labels/train``; the val
-    and test splits are mirrored resized to the VAE square domain with labels
-    copied verbatim (normalized boxes are resize-invariant). A manifest CSV
+    and test splits are mirrored from the same folder-per-sample source layout,
+    resized to the VAE square domain with boxes copied verbatim (normalized
+    boxes are resize-invariant) and class names resolved to ids. A manifest CSV
     records every train variant's provenance. Train/val/test output dirs are
     cleared first so re-runs with smaller configs leave no orphaned files.
 
@@ -523,22 +679,17 @@ def run_augmentation(
         config (SimpleNamespace): Runtime config with source/dest directories,
             VAE location, run id and device string.
         hyperparams (SimpleNamespace): All augmentation knobs (factor, seeds,
-            noise std, blur ranges, class names).
+            noise std, blur ranges, source render/label filenames, class names).
         log (SimpleNamespace): Configured project logger.
 
     Returns:
         dict[str, int]: Counts {"train_images", "val_images", "test_images"}.
 
     Raises:
-        FileNotFoundError: If a required source image/label directory is missing.
+        FileNotFoundError: If a required source split directory is missing.
         ValueError: If VAE_IMAGE_SIZE disagrees with the checkpoint architecture.
     """
-    for key in (
-        "SOURCE_TRAIN_IMAGES_DIR",
-        "SOURCE_TRAIN_LABELS_DIR",
-        "SOURCE_VAL_IMAGES_DIR",
-        "SOURCE_VAL_LABELS_DIR",
-    ):
+    for key in ("SOURCE_TRAIN_SPLIT_DIR", "SOURCE_VAL_SPLIT_DIR"):
         if not os.path.isdir(getattr(config, key)):
             raise FileNotFoundError(f"Source directory missing: {getattr(config, key)}")
 
@@ -581,16 +732,24 @@ def run_augmentation(
     # source set cannot leave orphans that Ultralytics would glob into training.
     clear_generated_split(train_img_dir, train_lbl_dir)
 
-    source_images: list[str] = sorted(
-        str(p) for p in Path(config.SOURCE_TRAIN_IMAGES_DIR).iterdir()
-        if p.suffix.lower() in {".png", ".jpg", ".jpeg"}
+    source_samples: list[Path] = list_sample_dirs(
+        config.SOURCE_TRAIN_SPLIT_DIR,
+        str(hyperparams.SOURCE_IMAGE_FILE_NAME),
+        str(hyperparams.SOURCE_LABEL_FILE_NAME),
     )
     max_samples: int = int(hyperparams.MAX_SAMPLES)
     if max_samples >= 0:
-        source_images = source_images[:max_samples]
+        source_samples = source_samples[:max_samples]
     aug_factor: int = int(hyperparams.AUG_FACTOR)
-    log.info(f"Augmenting {len(source_images)} source images x{aug_factor} "
-             f"= {len(source_images) * aug_factor} outputs.")
+    image_file_name: str = str(hyperparams.SOURCE_IMAGE_FILE_NAME)
+    label_file_name: str = str(hyperparams.SOURCE_LABEL_FILE_NAME)
+    class_name_to_id: dict[str, int] = resolve_class_name_to_id(
+        list(hyperparams.CLASS_NAMES))
+    log.info(
+        f"Found {len(source_samples)} labeled train samples using "
+        f"'{image_file_name}' + '{label_file_name}'; augmenting x{aug_factor} "
+        f"= {len(source_samples) * aug_factor} outputs over "
+        f"{len(class_name_to_id)} classes.")
 
     manifest_path: Path = Path(config.AUGMENT_MANIFEST_PATH)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -609,7 +768,7 @@ def run_augmentation(
     progress_every: int = max(1, int(getattr(hyperparams, "PROGRESS_LOG_SOURCES", 200)))
     vae_batch: int = max(1, int(getattr(hyperparams, "VAE_BATCH_SIZE", 32)))
     chunk_sources: int = max(1, int(getattr(hyperparams, "AUG_CHUNK_SOURCES", 32)))
-    total_outputs: int = len(source_images) * aug_factor
+    total_outputs: int = len(source_samples) * aug_factor
     loop_start: float = time.time()
     # VAE forwards stay on the main thread (MPS is not thread-safe for
     # concurrent forwards) but run in full batches grouped by checkpoint epoch
@@ -620,27 +779,24 @@ def run_augmentation(
     noise_list: list[float] = [float(s) for s in hyperparams.LATENT_NOISE_SCALES]
     executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=save_workers)
     try:
-        with tqdm(total=len(source_images), desc="VAE augment", unit="img") as bar:
+        with tqdm(total=len(source_samples), desc="VAE augment", unit="sample") as bar:
             sources_done: int = 0
             next_log_at: int = progress_every
-            for chunk_start in range(0, len(source_images), chunk_sources):
-                chunk_paths: list[str] = source_images[chunk_start:chunk_start + chunk_sources]
+            for chunk_start in range(0, len(source_samples), chunk_sources):
+                chunk_samples: list[Path] = source_samples[chunk_start:chunk_start + chunk_sources]
                 # Phase 1: preprocess each labeled source once; draw each
                 # variant's checkpoint + noise scale from its seeded RNG.
+                # list_sample_dirs already guaranteed full.png + labels.txt
+                # exist, so a missing label here is a genuine read failure and
+                # propagates instead of being silently skipped.
                 chunk_inputs: list[torch.Tensor] = []
                 chunk_specs: list[_ChunkVariant] = []
-                for src_idx, src_path in enumerate(chunk_paths, start=chunk_start):
-                    stem: str = Path(src_path).stem
-                    label_path: Path = Path(config.SOURCE_TRAIN_LABELS_DIR) / f"{stem}.txt"
-                    if not label_path.is_file():
-                        log.warning(f"No label file for {stem}; skipping.")
-                        bar.update(1)
-                        sources_done += 1
-                        continue
-                    with open(label_path, encoding="utf-8") as f:
-                        src_label_lines: list[str] = f.read().splitlines()
+                for src_idx, sample_dir in enumerate(chunk_samples, start=chunk_start):
+                    stem: str = sample_dir.name
+                    src_label_lines: list[str] = read_sample_labels(
+                        sample_dir, label_file_name, class_name_to_id)
                     vae_input: torch.Tensor = preprocess_for_vae(
-                        src_path, int(hyperparams.VAE_IMAGE_SIZE))
+                        str(sample_dir / image_file_name), int(hyperparams.VAE_IMAGE_SIZE))
                     input_index: int = len(chunk_inputs)
                     chunk_inputs.append(vae_input)
                     for rep in range(aug_factor):
@@ -652,7 +808,7 @@ def run_augmentation(
                         chunk_specs.append(_ChunkVariant(
                             src_idx=src_idx, rep=rep, seed=seed,
                             epoch_choice=epoch_choice, noise_std=noise_std,
-                            input_index=input_index, src_path=src_path,
+                            input_index=input_index, src_path=str(sample_dir),
                             stem=stem, label_lines=src_label_lines,
                         ))
                     bar.update(1)
@@ -694,8 +850,10 @@ def run_augmentation(
                         float(hyperparams.BLUR_MIN_SIZE_FRAC), float(hyperparams.BLUR_MAX_SIZE_FRAC),
                         float(hyperparams.BLUR_SIGMA_MIN), float(hyperparams.BLUR_SIGMA_MAX),
                     )
-                    # No geometric augmentation: labels copied from the source.
-                    out_lines: list[str] = clean_label_lines(spec.label_lines)
+                    # No geometric augmentation: boxes are copied from the
+                    # source. read_sample_labels already resolved the class
+                    # names to ids in phase 1, so no second pass is needed.
+                    out_lines: list[str] = list(spec.label_lines)
                     out_stem: str = f"{spec.stem}_vae{spec.rep:02d}"
                     pending_saves.append(executor.submit(
                         save_variant_files, img, out_lines,
@@ -704,7 +862,7 @@ def run_augmentation(
                         compress_level,
                     ))
                     manifest_writer.writerow({
-                        "output": f"{out_stem}.png", "source": Path(spec.src_path).name,
+                        "output": f"{out_stem}.png", "source": spec.stem,
                         "checkpoint_epoch": spec.epoch_choice, "noise_std": spec.noise_std,
                         "blur_patches": num_blur, "seed": spec.seed,
                     })
@@ -717,7 +875,7 @@ def run_augmentation(
                     rate: float = train_count / elapsed if elapsed > 0 else 0.0
                     remaining: float = (total_outputs - train_count) / rate if rate > 0 else 0.0
                     log.info(
-                        f"Augmented {sources_done}/{len(source_images)} sources "
+                        f"Augmented {sources_done}/{len(source_samples)} sources "
                         f"({train_count} outputs, {rate:.1f} img/s, ETA {remaining / 60.0:.1f} min).")
         # Final blocking drain: every save must land before we report counts.
         for fut in pending_saves:
@@ -731,31 +889,36 @@ def run_augmentation(
              f"in {total_time / 60.0:.1f} min ({train_count / total_time:.1f} img/s).")
 
     # Mirror val (required) and test (optional) resized to the shared square
-    # domain. Normalized boxes are resize-invariant, hence copied verbatim.
-    # The untouched test split backs the final unbiased evaluation.
+    # domain. Normalized boxes are resize-invariant, so only class names are
+    # resolved to ids. The untouched test split backs the final unbiased
+    # evaluation.
     vae_size: int = int(hyperparams.VAE_IMAGE_SIZE)
-    if split_complete(config.SOURCE_VAL_IMAGES_DIR, val_img_dir):
+    if split_complete(
+        config.SOURCE_VAL_SPLIT_DIR, image_file_name, label_file_name, val_img_dir
+    ):
         val_count: int = len(list(val_img_dir.glob("*.png")))
         log.info(f"Val mirror complete ({val_count} images); skipping re-encode.")
     else:
         val_count = mirror_split(
-            config.SOURCE_VAL_IMAGES_DIR, config.SOURCE_VAL_LABELS_DIR,
-            val_img_dir, val_lbl_dir, vae_size,
+            config.SOURCE_VAL_SPLIT_DIR, val_img_dir, val_lbl_dir, vae_size,
+            image_file_name, label_file_name, class_name_to_id,
         )
         log.info(f"Mirrored {val_count} val images.")
     test_count: int = 0
-    test_img_src: str = str(getattr(config, "SOURCE_TEST_IMAGES_DIR", ""))
-    test_lbl_src: str = str(getattr(config, "SOURCE_TEST_LABELS_DIR", ""))
-    if test_img_src and test_lbl_src and os.path.isdir(test_img_src) and os.path.isdir(test_lbl_src):
-        if split_complete(test_img_src, test_img_dir):
+    test_split_src: str = str(getattr(config, "SOURCE_TEST_SPLIT_DIR", ""))
+    if test_split_src and os.path.isdir(test_split_src):
+        if split_complete(
+            test_split_src, image_file_name, label_file_name, test_img_dir
+        ):
             test_count = len(list(test_img_dir.glob("*.png")))
             log.info(f"Test mirror complete ({test_count} images); skipping re-encode.")
         else:
             test_count = mirror_split(
-                test_img_src, test_lbl_src, test_img_dir, test_lbl_dir, vae_size)
+                test_split_src, test_img_dir, test_lbl_dir, vae_size,
+                image_file_name, label_file_name, class_name_to_id)
             log.info(f"Mirrored {test_count} test images.")
     else:
-        log.warning("Test source dirs missing; skipping test mirroring.")
+        log.warning("Test source dir missing; skipping test mirroring.")
     return {"train_images": train_count, "val_images": val_count, "test_images": test_count}
 
 
@@ -767,7 +930,9 @@ def write_data_yaml(
 
     Args:
         config (SimpleNamespace): Runtime config with dataset root + yaml path.
-        hyperparams (SimpleNamespace): Holds CLASS_NAMES (10 furniture names).
+        hyperparams (SimpleNamespace): Holds CLASS_NAMES (the furniture
+            vocabulary; the list index is the numeric class id written to
+            ``data.yaml`` and to every generated label file).
 
     Returns:
         str: Absolute path of the written yaml file.

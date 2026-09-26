@@ -19,3 +19,16 @@ NUM_GEN_SAMPLES = 10
 TEST_LOSS_SAMPLES = 100
 KL_WEIGHT = 0.75
 L1_WEIGHT = 0.75
+
+# Which render of each sample folder the VAE learns from. The dataset stores
+# every render of a layout side by side, so this key is the only switch needed.
+#   "full_png"    -> full.png           (furniture + floorplan)
+#   "layout_only" -> floorplan_only.png (rooms only, no furniture)
+TRAIN_IMAGE_VARIANT = "full_png"
+
+# Variant name -> render filename inside each sample folder. Kept in TOML so the
+# filenames are never hardcoded in Python.
+# NOTE: Diffusion/hyperparameters.toml carries a copy of this table; keep in sync.
+[default.IMAGE_VARIANTS]
+full_png = "full.png"
+layout_only = "floorplan_only.png"

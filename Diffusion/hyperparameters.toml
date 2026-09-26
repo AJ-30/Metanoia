@@ -1,7 +1,9 @@
 [default]
 # Must match the LATENT_DIM stored inside VAE_CHECKPOINT_PATH. The runner
 # fails fast on mismatch so a wrong checkpoint can never train silently.
-LATENT_DIM = 512
+# VAE_CHECKPOINT_PATH points at the next-collie run (256-dim, 3x3 kernels),
+# the same frozen encoder YOLO augments with, so both stages share one domain.
+LATENT_DIM = 256
 # Denoiser MLP capacity.
 HIDDEN_DIM = 1024
 NUM_LAYERS = 5
@@ -39,3 +41,17 @@ USE_MU_ONLY = true
 NORMALIZE_LATENTS = true
 LATENT_STATS_SAMPLES = 2048
 LATENT_STD_MIN = 0.001
+
+# Which render of each sample folder the diffusion model learns from. The
+# dataset stores every render of a layout side by side, so this key is the only
+# switch needed. Diffusion is trained on the full render:
+#   "full_png"    -> full.png           (furniture + floorplan)
+#   "layout_only" -> floorplan_only.png (rooms only, no furniture)
+TRAIN_IMAGE_VARIANT = "full_png"
+
+# Variant name -> render filename inside each sample folder. Kept in TOML so the
+# filenames are never hardcoded in Python.
+# NOTE: VAE/hyperparameters.toml carries a copy of this table; keep in sync.
+[default.IMAGE_VARIANTS]
+full_png = "full.png"
+layout_only = "floorplan_only.png"

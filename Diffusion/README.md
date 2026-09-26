@@ -6,7 +6,7 @@ each floor-plan image once to a flat `LATENT_DIM` vector; the diffusion
 denoiser (time-conditioned MLP) learns that latent distribution. Sampling runs
 the reverse chain from pure noise and decodes with the frozen VAE decoder.
 
-Training uses **all** images in the `train/` folder (encoded once and cached
+Training uses **all** samples in the `train/` split (encoded once and cached
 in RAM as latents, ~15 MB for 15k x 256). After **every epoch** the runner:
 
 - evaluates the composite noise-prediction loss (MSE + `L1_WEIGHT` * L1) on
@@ -19,17 +19,54 @@ generations only (its "Reconstructions" panel stays empty by design).
 
 At the end of training the model is evaluated once on **all** test latents.
 
+## Source dataset layout
+
+The dataset is **folder-per-sample**: a split folder holds one sub-folder per
+layout, and each sub-folder carries every render of that layout.
+
+```
+<split>/<hash>_original/            # or <hash>_augmented_<NNN>
+    full.png                        # 854 x H, RGBA — all furniture + floorplan
+    floorplan_only.png              # 854 x H, RGBA — rooms only, no furniture
+    no_tv.png                       # all furniture except the tv
+    ground_truth.svg                # reloadable layout with embedded metadata
+    labels.txt                      # "<Class_Name> cx cy w h", normalized
+```
+
+The dataset stores every render side by side, so which one the diffusion model
+learns is a single TOML switch, not a code change:
+
+```toml
+TRAIN_IMAGE_VARIANT = "full_png"    # or "layout_only"
+
+[default.IMAGE_VARIANTS]
+full_png    = "full.png"
+layout_only = "floorplan_only.png"
+```
+
+Diffusion is trained on the **full render** (`full.png`). `FloorPlanDataset` is
+imported from `VAE.runner` — single source of truth for image preprocessing —
+and only `image_size` differs: Diffusion takes it from the frozen VAE checkpoint
+while the VAE takes it from its own TOML. `VAE/hyperparameters.toml` carries a
+copy of the variant table; keep it in sync.
+
+The model is unconditional: it reads no labels, masks or room types. The only
+conditioning is the DDPM timestep. `labels.txt` is used solely by the YOLO
+pipeline, and `no_tv.png` is never read (it omits the tv pixels while
+`labels.txt` still lists the tv box).
+
 ## Files
 
 - `model.py` — `LatentDenoiser` (time-conditioned residual MLP),
   `LatentDiffusion` (DDPM schedule buffers, `q_sample`, `reverse_step`,
   `sample`) and the linear beta schedule builder.
 - `runner.py` — `DiffusionRunner`: frozen-VAE loading (rebuilt from the
-  checkpoint's own hyperparameters, with `NUM_STAGES` inference for older
-  checkpoints), latent caching + standardization, composite MSE+L1 training
-  loop, per-epoch test evaluation, checkpoints, telemetry, generation grids.
+  checkpoint's own hyperparameters, with `NUM_STAGES` inference and
+  `LATENT_ADDITIONAL_NOISE` back-fill for older checkpoints), latent caching +
+  standardization, composite MSE+L1 training loop, per-epoch test evaluation,
+  checkpoints, telemetry, generation grids.
 - `run.py` — Entry point. Just calls `DiffusionRunner().train()`.
-- `config.toml` — Non-model config (device, paths, frozen `VAE_CHECKPOINT_PATH`).
+- `config.toml` — Non-model config (device, split paths, frozen `VAE_CHECKPOINT_PATH`).
 - `hyperparameters.toml` — Denoiser architecture + diffusion schedule knobs.
 - `README.md` — This file.
 
@@ -74,8 +111,8 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 | Key                        | Meaning                                          |
 | -------------------------- | ------------------------------------------------ |
 | `DEVICE`                   | `mps`, `cuda` or `cpu` (falls back to CPU)       |
-| `TRAIN_IMAGES_DIR`         | Folder of images to train on                     |
-| `TEST_IMAGES_DIR`          | Folder of images used for evaluation             |
+| `TRAIN_IMAGES_DIR`         | Split folder of samples to train on             |
+| `TEST_IMAGES_DIR`          | Split folder of samples used for evaluation     |
 | `VAE_CHECKPOINT_PATH`      | Frozen VAE checkpoint supplying latents + decoder|
 | `DEBUG_LOG_FILE_PATH`      | Log file written by the shared logger            |
 | `MODEL_SAVE_PATH`          | Where `.pt` checkpoints are saved                |
@@ -84,12 +121,20 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 
 `[debug]` / `[prod]` sections follow the same convention as `config.toml`.
 
-> `LATENT_DIM` in `Diffusion/hyperparameters.toml` must equal the latent dim
-> stored inside `VAE_CHECKPOINT_PATH`. The runner fails fast on mismatch.
-> The default points at the latest `rare-roughy` VAE run (512-dim latents,
-> 5-stage arch), so `LATENT_DIM` is `512`. To use another VAE run instead,
-> set `LATENT_DIM` to its latent size and point `VAE_CHECKPOINT_PATH` at that
-> checkpoint (e.g. the older `vae_top-badger_epoch_500.pt` is 256-dim).
+> **Frozen VAE checkpoint.** `LATENT_DIM` in `Diffusion/hyperparameters.toml`
+> must equal the latent dim stored inside `VAE_CHECKPOINT_PATH`. The runner
+> fails fast on mismatch.
+>
+> The `rare-roughy` run (512-dim latents, 5-stage arch) is **not loadable by the
+> current `VAE/model.py`** — it was trained with 4×4 stride-2 conv kernels and an
+> extra `3x3` stage, while `model.py` now builds 3×3 kernels and 4 stages, so
+> `load_state_dict` rejects it on both key names and shapes. The
+> `LATENT_ADDITIONAL_NOISE` back-fill in `resolve_latent_additional_noise()`
+> fixes the *missing key* half of that, but not the architecture half.
+>
+> `next-collie` (256-dim, 3×3, 4 stages) **is** loadable and is what the YOLO
+> pipeline freezes, so to train diffusion today point `VAE_CHECKPOINT_PATH` at
+> e.g. `vae_next-collie_epoch_500.pt` and set `LATENT_DIM = 256`.
 
 ### `hyperparameters.toml`
 
@@ -109,7 +154,7 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 | `TELEMETRY_INTERVAL`  | Epochs between telemetry CSV rows (1 = every epoch)                 |
 | `CHECKPOINT_INTERVAL` | Epochs between checkpoint saves                                     |
 | `NUM_WORKERS`         | Image DataLoader workers                                            |
-| `MAX_SAMPLES`         | Cap on train images used (negative = use all)                       |
+| `MAX_SAMPLES`         | Cap on train samples used (negative = use all)                       |
 | `PRELOAD_IMAGES`      | Cache decoded images in RAM for the one-time encoding pass          |
 | `BACKGROUND_COLOR`    | RGBA backdrop used to flatten the alpha channel                     |
 | `NUM_GEN_SAMPLES`     | Novel latents sampled per generation grid                           |
@@ -120,6 +165,8 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 | `NORMALIZE_LATENTS`   | Standardize latents with dataset mean/std (recommended)             |
 | `LATENT_STATS_SAMPLES`| Images used to estimate the latent mean/std                         |
 | `LATENT_STD_MIN`      | Floor for the latent std (avoids div-by-zero)                       |
+| `TRAIN_IMAGE_VARIANT` | Which render to learn: `full_png` or `layout_only`                  |
+| `IMAGE_VARIANTS`      | Variant → filename table (`[default.IMAGE_VARIANTS]`)               |
 
 ## Outputs
 

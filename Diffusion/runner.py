@@ -15,7 +15,9 @@ VAE run. No reconstruction grids are produced; the dashboard shows
 diffusion generations only.
 
 Dataset and device helpers are reused from ``VAE.runner`` (single source of
-truth for image preprocessing) instead of being duplicated here.
+truth for image preprocessing) instead of being duplicated here. The dataset
+is folder-per-sample and the render is selected by ``TRAIN_IMAGE_VARIANT`` in
+``hyperparameters.toml`` (diffusion is trained on the full render).
 """
 
 import argparse
@@ -45,7 +47,7 @@ from helpers.telemetry_writer import TelemetryWriter
 
 from Diffusion.model import LatentDiffusion
 from VAE.model import VAEModel
-from VAE.runner import FloorPlanDataset, resolve_device
+from VAE.runner import FloorPlanDataset, resolve_device, resolve_image_file_name
 
 # Directory of this file, used to resolve relative TOML / output paths.
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
@@ -87,6 +89,29 @@ def infer_vae_num_stages(state_dict: dict[str, torch.Tensor]) -> int:
     return len(conv_weight_keys)
 
 
+def resolve_latent_additional_noise(saved_hyperparams: dict[str, object]) -> float:
+    """Resolve LATENT_ADDITIONAL_NOISE for a checkpoint that may predate the key.
+
+    Checkpoints written before the key existed do not record it. It is a
+    sampling-time noise scale rather than an architecture-shaping parameter, so
+    the current ``VAE/hyperparameters.toml`` default is the correct stand-in
+    and lets the frozen ``state_dict`` load. The value is read from TOML, never
+    hardcoded here.
+
+    Args:
+        saved_hyperparams (dict[str, object]): Hyperparameters embedded in the
+            VAE checkpoint.
+
+    Returns:
+        float: The checkpoint's own value, or the current configured default.
+    """
+    if "LATENT_ADDITIONAL_NOISE" in saved_hyperparams:
+        return float(saved_hyperparams["LATENT_ADDITIONAL_NOISE"])
+    current: SimpleNamespace = load_hyperparams(
+        str(Path(__file__).resolve().parent.parent / "VAE" / "hyperparameters.toml"))
+    return float(current.LATENT_ADDITIONAL_NOISE)
+
+
 def build_vae_from_checkpoint(
     checkpoint_path: str, device: torch.device
 ) -> tuple[VAEModel, SimpleNamespace]:
@@ -96,7 +121,10 @@ def build_vae_from_checkpoint(
     checkpoint itself (not from the current ``VAE/hyperparameters.toml``), so
     fully trained older runs stay usable even after the VAE config moved on.
     Checkpoints saved before ``NUM_STAGES`` existed fall back to inferring the
-    depth from the encoder weights.
+    depth from the encoder weights; checkpoints saved before
+    ``LATENT_ADDITIONAL_NOISE`` existed fall back to the current
+    ``VAE/hyperparameters.toml`` default. Neither key changes the tensor
+    shapes, so back-filling keeps the frozen ``state_dict`` loadable.
 
     Args:
         checkpoint_path (str): Path to the ``.pt`` VAE checkpoint.
@@ -120,6 +148,7 @@ def build_vae_from_checkpoint(
         BASE_CHANNELS=saved_hyperparams["BASE_CHANNELS"],
         NUM_STAGES=num_stages,
         DROPOUT=saved_hyperparams["DROPOUT"],
+        LATENT_ADDITIONAL_NOISE=resolve_latent_additional_noise(saved_hyperparams),
     )
     vae = VAEModel(archparams)
     vae.load_state_dict(state_dict)
@@ -212,14 +241,14 @@ class DiffusionRunner:
 
     def _make_image_dataloader(
         self,
-        image_dir: str,
+        split_dir: str,
         max_samples: int,
         shuffle: bool,
     ) -> DataLoader[FloorPlanDataset]:
         """Create a dataloader over one image split folder.
 
         Args:
-            image_dir (str): Directory with the split's images.
+            split_dir (str): Split folder holding one sub-folder per sample.
             max_samples (int): Cap on the dataset size (negative = all images).
             shuffle (bool): Whether to shuffle batches (True for train).
 
@@ -227,11 +256,15 @@ class DiffusionRunner:
             DataLoader: Configured image dataloader for that split.
         """
         preload: bool = bool(self.hyperparams.PRELOAD_IMAGES)
+        image_file_name: str = resolve_image_file_name(self.hyperparams)
         self.log.info(
-            f"Building image dataset from {image_dir} (preload into RAM: {preload})..."
+            f"Building image dataset from {split_dir} using render "
+            f"'{image_file_name}' (variant '{self.hyperparams.TRAIN_IMAGE_VARIANT}', "
+            f"preload into RAM: {preload})..."
         )
         dataset = FloorPlanDataset(
-            image_dir=image_dir,
+            split_dir=split_dir,
+            image_file_name=image_file_name,
             image_size=self.vae_archparams.IMAGE_SIZE,
             background_color=self.hyperparams.BACKGROUND_COLOR,
             max_samples=max_samples,
@@ -359,12 +392,12 @@ class DiffusionRunner:
             tuple[DataLoader, DataLoader]: (train latent loader, test latent loader).
         """
         train_img_dl: DataLoader[FloorPlanDataset] = self._make_image_dataloader(
-            image_dir=self.config.TRAIN_IMAGES_DIR,
+            split_dir=self.config.TRAIN_IMAGES_DIR,
             max_samples=self.hyperparams.MAX_SAMPLES,
             shuffle=True,
         )
         test_img_dl: DataLoader[FloorPlanDataset] = self._make_image_dataloader(
-            image_dir=self.config.TEST_IMAGES_DIR,
+            split_dir=self.config.TEST_IMAGES_DIR,
             max_samples=-1,
             shuffle=False,
         )

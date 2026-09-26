@@ -1,6 +1,6 @@
 """Independent frozen-VAE augmentation runner (no YOLO dependency).
 
-Builds the 5x YOLO dataset from frozen VAE latents and writes ``data.yaml``.
+Builds the 2x YOLO dataset from frozen VAE latents and writes ``data.yaml``.
 Launched via ``./run_augmentation.sh`` (or ``python YOLO/run_augment.py``).
 Reads only ``YOLO/config.toml`` + ``YOLO/augment_hyperparameters.toml``; the
 YOLO trainer never triggers this runner.
@@ -57,7 +57,7 @@ class AugmentRunner:
 
 def main() -> None:
     """Parse CLI args and launch the augmentation run."""
-    parser = argparse.ArgumentParser(description="Build the 5x VAE-augmented YOLO dataset.")
+    parser = argparse.ArgumentParser(description="Build the 2x VAE-augmented YOLO dataset.")
     parser.add_argument("--mode", choices=["debug", "prod"], default="debug")
     args: argparse.Namespace = parser.parse_args()
     AugmentRunner(mode=args.mode).run()

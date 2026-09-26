@@ -3,18 +3,23 @@ DEBUG_LOG_FILE_PATH = "./debug_logs/yolo.log"
 MODEL_SAVE_PATH = "./YOLO/models/"
 TELEMETRY_LOG_DIRECTORY = "./YOLO/telemetry_logs/"
 OUTPUT_SAMPLES_DIRECTORY = "./YOLO/outputs/"
-AUGMENTED_DATASET_ROOT = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/"
-DATA_YAML_PATH = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/data.yaml"
-AUGMENT_MANIFEST_PATH = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/augment_manifest.csv"
+# Generated YOLO dataset (2x augmented train + mirrored val/test) and its
+# Ultralytics index files. This root is separate from any earlier build so a
+# stale labels/*.cache or data.yaml from a different AUG_FACTOR is never reused.
+AUGMENTED_DATASET_ROOT = "/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented"
+DATA_YAML_PATH = "/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented/data.yaml"
+AUGMENT_MANIFEST_PATH = "/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented/augment_manifest.csv"
 VAE_MODELS_DIR = "./VAE/models/"
 VAE_RUN_ID = "next-collie"
 DEVICE = "mps"
-SOURCE_TRAIN_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/train/images"
-SOURCE_TRAIN_LABELS_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/train/labels"
-SOURCE_VAL_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/validate/images"
-SOURCE_VAL_LABELS_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/validate/labels"
-SOURCE_TEST_IMAGES_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/test/images"
-SOURCE_TEST_LABELS_DIR = "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main/super_augmentation_2/dataset/test/labels"
+# Source split folders of the folder-per-sample dataset. Each holds one
+# sub-folder per sample containing full.png, floorplan_only.png and
+# labels.txt — there is no separate images/ or labels/ directory anymore.
+# Which render is read is set by SOURCE_IMAGE_FILE_NAME in
+# YOLO/augment_hyperparameters.toml.
+SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
+SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/validate"
+SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 
 [debug]
 IS_DEBUG = true

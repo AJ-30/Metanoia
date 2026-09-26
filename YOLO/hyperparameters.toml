@@ -10,14 +10,15 @@
 # ---- Reproducibility ----
 BASE_SEED = 1234
 
-# ---- Dataset ontology (10 classes, IDs 0-9) ----
-CLASS_NAMES = ["couch", "chair", "sofa", "sofa_cum_bed", "center_table", "dining_set", "side_table", "showcase", "tv", "vase_table"]
+# ---- Dataset ontology (11 classes, IDs 0-10) ----
+CLASS_NAMES = ["Center_table", "Chair", "Couch", "Dining_table_big", "Dining_table_round", "Showcase", "Side_table", "Sofa", "Sofa_cum_bed", "TV", "Vase_table"]
 
 # ---- YOLO26 finetune ----
 # NOTE on scale: train images are VAE-native 256px, so IMG_SIZE=416 (not 640)
 # avoids a 2.5x upscaling of VAE blur artifacts and cuts MPS/CPU cost.
-# NOTE on budget: 15075 sources x AUG_FACTOR=5 ~= 75k images; NUM_EPOCHS=30
-# with early-stopping PATIENCE=10 bounds the worst case of 100 epochs.
+# NOTE on budget: every source sample yields AUG_FACTOR=2 variants
+# (YOLO/augment_hyperparameters.toml); NUM_EPOCHS=30 with early-stopping
+# PATIENCE=10 bounds the worst case of 100 epochs.
 YOLO_MODEL = "yolo26n.pt"
 IMG_SIZE = 416
 BATCH_SIZE = 16

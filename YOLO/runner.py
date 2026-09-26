@@ -37,6 +37,7 @@ from helpers.config import load_config
 from helpers.hyperparams import load_hyperparams
 from helpers.logger import setup_logger
 from helpers.telemetry_writer import TelemetryWriter
+from YOLO.augment import list_sample_dirs
 
 # Telemetry columns mirror Ultralytics results.csv (B = box branch).
 TELEMETRY_FIELDS: list[str] = [
@@ -191,23 +192,23 @@ class YOLORunner:
         # covers every labeled source (read-only use of the augment knobs).
         aug_hyperparams: SimpleNamespace = load_hyperparams(
             str(SCRIPT_DIR / "augment_hyperparameters.toml"))
-        src_images: list[Path] = sorted(
-            p for p in Path(self.config.SOURCE_TRAIN_IMAGES_DIR).iterdir()
-            if p.suffix.lower() in {".png", ".jpg", ".jpeg"}
+        # list_sample_dirs only returns folders that carry BOTH the render and
+        # the label file, so its length is already the labeled-source count.
+        src_samples: list[Path] = list_sample_dirs(
+            str(self.config.SOURCE_TRAIN_SPLIT_DIR),
+            str(aug_hyperparams.SOURCE_IMAGE_FILE_NAME),
+            str(aug_hyperparams.SOURCE_LABEL_FILE_NAME),
         )
         max_samples: int = int(aug_hyperparams.MAX_SAMPLES)
         if max_samples >= 0:
-            src_images = src_images[:max_samples]
-        labeled_sources: int = sum(
-            1 for p in src_images
-            if (Path(self.config.SOURCE_TRAIN_LABELS_DIR) / f"{p.stem}.txt").is_file()
-        )
-        expected_rows: int = labeled_sources * int(aug_hyperparams.AUG_FACTOR)
+            src_samples = src_samples[:max_samples]
+        aug_factor: int = int(aug_hyperparams.AUG_FACTOR)
+        expected_rows: int = len(src_samples) * aug_factor
         if manifest_rows != expected_rows:
             raise FileNotFoundError(
                 f"Incomplete augmentation: manifest has {manifest_rows} rows, "
-                f"expected {expected_rows} ({labeled_sources} labeled sources x "
-                f"{aug_hyperparams.AUG_FACTOR}). Finish it: ./run_augmentation.sh")
+                f"expected {expected_rows} ({len(src_samples)} labeled sources x "
+                f"{aug_factor}). Finish it: ./run_augmentation.sh")
         train_imgs: list[Path] = list(
             (Path(self.config.AUGMENTED_DATASET_ROOT) / "images" / "train").glob("*.png"))
         if len(train_imgs) != manifest_rows:
