@@ -1,4 +1,4 @@
-"""Frozen-VAE latent augmentation pipeline producing a 15x YOLO dataset.
+"""Frozen-VAE latent augmentation pipeline producing a 5x YOLO dataset.
 
 Pipeline per source image (repeated AUG_FACTOR times with distinct seeds):
   1. Load RGBA image, flatten alpha onto white, resize to VAE_IMAGE_SIZE square.
@@ -6,17 +6,15 @@ Pipeline per source image (repeated AUG_FACTOR times with distinct seeds):
      the latent mean ``mu`` (deterministic; no reparameterization sampling).
   3. Add Gaussian noise ``N(0, s^2)`` to ``mu`` and decode, where the scale ``s``
      is drawn uniformly per variant from ``LATENT_NOISE_SCALES`` (0.0 = no noise).
-  4. Apply Gaussian blur to 1-3 random patches (photometric only; boxes untouched).
-  5. Rotate by k*90 degrees CW (exact box transform, no approximation).
-  6. Randomly flip horizontally / vertically (exact box transform).
+  4. Apply Gaussian blur to random patches (photometric only; boxes untouched).
 
-All geometry stays in normalized YOLO ``cx cy w h`` coordinates. The VAE
-resize is a full-image warp so normalized boxes are invariant to it; only the
-explicit rot90 + flip steps below change the boxes, and each has a closed form.
+No geometric augmentation is applied (no rotation, no flip). Labels are copied
+from the source: the VAE resize is a full-image warp so normalized YOLO
+``cx cy w h`` coordinates are invariant to it.
 
 Reproducibility: every output index derives ``seed = BASE_SEED + global_index``
-so the full 226k-image run is exactly reproducible from the TOML files plus a
-per-row manifest (source file, checkpoint epoch, k, flips, blur, seed).
+so the full 5x run is exactly reproducible from the TOML files plus a
+per-row manifest (source file, checkpoint epoch, blur, seed).
 """
 
 import csv
@@ -90,80 +88,19 @@ def format_box_line(cls_id: int, cx: float, cy: float, w: float, h: float) -> st
     return f"{cls_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}"
 
 
-def transform_box_rot90_flip(
-    cx: float,
-    cy: float,
-    w: float,
-    h: float,
-    rot_k: int,
-    flip_h: bool,
-    flip_v: bool,
-) -> tuple[float, float, float, float]:
-    """Apply the exact rot90-then-flip transform to one normalized box.
+def clean_label_lines(lines: list[str]) -> list[str]:
+    """Copy a label file's lines without any geometric change.
 
-    Rotation is k * 90 degrees clockwise about the image center, applied
-    FIRST; flips are applied AFTER rotation. All operations are exact on
-    axis-aligned boxes because angles are multiples of 90 degrees.
-
-    Args:
-        cx (float): Normalized center x in [0, 1].
-        cy (float): Normalized center y in [0, 1].
-        w (float): Normalized width.
-        h (float): Normalized height.
-        rot_k (int): Clockwise quarter-turns, one of {0, 1, 2, 3}.
-        flip_h (bool): Whether a horizontal flip follows the rotation.
-        flip_v (bool): Whether a vertical flip follows the rotation.
-
-    Returns:
-        tuple[float, float, float, float]: Transformed (cx, cy, w, h),
-            clipped to [0, 1].
-
-    Raises:
-        ValueError: If rot_k is not in {0, 1, 2, 3}.
-    """
-    if rot_k not in (0, 1, 2, 3):
-        raise ValueError(f"rot_k must be 0-3 (quarter turns CW), got {rot_k}")
-    # Closed-form rotation about the unit-square center (x right, y DOWN,
-    # matching PIL image coordinates). Verified against PIL transposes:
-    # k=1 (90 CW, PIL ROTATE_270) sends TL(0,0) -> TR(1,0): (x,y) -> (1-y,x).
-    # k=2 (180, PIL ROTATE_180) sends TL -> BR: (x,y) -> (1-x,1-y).
-    # k=3 (270 CW = 90 CCW, PIL ROTATE_90) sends TL -> BL: (x,y) -> (y,1-x).
-    # Quarter turns swap w/h; half turns leave sizes unchanged.
-    if rot_k == 1:
-        cx, cy, w, h = 1.0 - cy, cx, h, w
-    elif rot_k == 2:
-        cx, cy = 1.0 - cx, 1.0 - cy
-    elif rot_k == 3:
-        cx, cy, w, h = cy, 1.0 - cx, h, w
-    # Flips mirror the center coordinate; sizes are unaffected.
-    if flip_h:
-        cx = 1.0 - cx
-    if flip_v:
-        cy = 1.0 - cy
-    # Clip defensively against float drift at the borders.
-    cx = min(max(cx, 0.0), 1.0)
-    cy = min(max(cy, 0.0), 1.0)
-    w = min(max(w, 0.0), 1.0)
-    h = min(max(h, 0.0), 1.0)
-    return cx, cy, w, h
-
-
-def transform_label_lines(
-    lines: list[str],
-    rot_k: int,
-    flip_h: bool,
-    flip_v: bool,
-) -> list[str]:
-    """Transform a full label file's lines through rot90 + flip.
+    No rotation or flip is applied: normalized boxes are invariant to the
+    full-image VAE resize, so source boxes stay valid. Lines are still
+    parsed and reformatted to fail fast on invalid coordinates and to drop
+    blank lines / degenerate zero-area boxes.
 
     Args:
         lines (list[str]): Raw YOLO label lines (may include blanks).
-        rot_k (int): Clockwise quarter-turns {0, 1, 2, 3}.
-        flip_h (bool): Horizontal flip after rotation.
-        flip_v (bool): Vertical flip after rotation.
 
     Returns:
-        list[str]: Transformed label lines (blank lines dropped;
+        list[str]: Validated label lines (blank lines dropped;
             degenerate zero-area boxes dropped).
     """
     out_lines: list[str] = []
@@ -171,47 +108,11 @@ def transform_label_lines(
         if not raw.strip():
             continue
         cls_id, cx, cy, w, h = parse_box_line(raw)
-        cx, cy, w, h = transform_box_rot90_flip(cx, cy, w, h, rot_k, flip_h, flip_v)
-        # Drop boxes that collapsed to zero area (can happen at exact borders).
+        # No geometric transform: copy boxes as-is.
         if w <= 0.0 or h <= 0.0:
             continue
         out_lines.append(format_box_line(cls_id, cx, cy, w, h))
     return out_lines
-
-
-def rotate_pil_image(img: Image.Image, rot_k: int) -> Image.Image:
-    """Rotate a square PIL image by k * 90 degrees clockwise.
-
-    Args:
-        img (Image.Image): Square input image.
-        rot_k (int): Clockwise quarter-turns {0, 1, 2, 3}.
-
-    Returns:
-        Image.Image: Rotated image (same size; square so no canvas change).
-    """
-    if rot_k == 0:
-        return img
-    # PIL's ROTATE_90/180/270 are counter-clockwise; 90 CW == 270 CCW.
-    method = {1: Image.ROTATE_270, 2: Image.ROTATE_180, 3: Image.ROTATE_90}[rot_k]
-    return img.transpose(method)
-
-
-def flip_pil_image(img: Image.Image, flip_h: bool, flip_v: bool) -> Image.Image:
-    """Apply horizontal / vertical flips to a PIL image.
-
-    Args:
-        img (Image.Image): Input image.
-        flip_h (bool): Mirror left-right.
-        flip_v (bool): Mirror top-bottom.
-
-    Returns:
-        Image.Image: Flipped image (may be the original object if no flips).
-    """
-    if flip_h:
-        img = img.transpose(Image.FLIP_LEFT_RIGHT)
-    if flip_v:
-        img = img.transpose(Image.FLIP_TOP_BOTTOM)
-    return img
 
 
 def apply_patch_blur(
@@ -611,9 +512,9 @@ def run_augmentation(
 
     For each source train image, AUG_FACTOR variants are produced. Each
     variant draws an independent seed, a uniform checkpoint epoch, seeded VAE
-    latent noise, blur patches, a rot90 quarter-turn and flips. Images land in
-    ``<root>/images/train`` and labels in ``<root>/labels/train``; the val and
-    test splits are mirrored resized to the VAE square domain with labels
+    latent noise and blur patches. No rotation or flip is applied. Images land
+    in ``<root>/images/train`` and labels in ``<root>/labels/train``; the val
+    and test splits are mirrored resized to the VAE square domain with labels
     copied verbatim (normalized boxes are resize-invariant). A manifest CSV
     records every train variant's provenance. Train/val/test output dirs are
     cleared first so re-runs with smaller configs leave no orphaned files.
@@ -622,7 +523,7 @@ def run_augmentation(
         config (SimpleNamespace): Runtime config with source/dest directories,
             VAE location, run id and device string.
         hyperparams (SimpleNamespace): All augmentation knobs (factor, seeds,
-            noise std, blur ranges, flip probabilities, class names).
+            noise std, blur ranges, class names).
         log (SimpleNamespace): Configured project logger.
 
     Returns:
@@ -696,8 +597,8 @@ def run_augmentation(
     manifest_file = open(manifest_path, "w", newline="", encoding="utf-8")
     manifest_writer = csv.DictWriter(
         manifest_file,
-        fieldnames=["output", "source", "checkpoint_epoch", "noise_std", "rot_k",
-                    "flip_h", "flip_v", "blur_patches", "seed"],
+        fieldnames=["output", "source", "checkpoint_epoch", "noise_std",
+                    "blur_patches", "seed"],
     )
     manifest_writer.writeheader()
 
@@ -717,7 +618,6 @@ def run_augmentation(
     # so output bytes are identical to a serial run.
     checkpoint_list: list[int] = list(hyperparams.CHECKPOINT_EPOCHS)
     noise_list: list[float] = [float(s) for s in hyperparams.LATENT_NOISE_SCALES]
-    rotation_list: list[int] = list(hyperparams.ROTATION_CHOICES)
     executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=save_workers)
     try:
         with tqdm(total=len(source_images), desc="VAE augment", unit="img") as bar:
@@ -778,7 +678,7 @@ def run_augmentation(
                         for p, row in zip(group, range(decoded_batch.shape[0])):
                             chunk_specs[p].decoded = decoded_batch[row:row + 1]
                 # Phase 3: global order — replay the two phase-1 RNG draws so
-                # the blur/rot/flip draws match the serial order exactly, then
+                # the blur draws match the serial order exactly, then
                 # the unchanged CPU post-processing, threaded saves, manifest.
                 for spec in chunk_specs:
                     rng = random.Random(spec.seed)
@@ -787,20 +687,15 @@ def run_augmentation(
                     if spec.decoded is None:
                         raise RuntimeError(f"Phase 2 missed variant {spec.stem} rep {spec.rep}.")
                     img: Image.Image = decoded_tensor_to_pil(spec.decoded)
-                    # 4: photometric patch blur (boxes unaffected).
+                    # 4: photometric patch blur (boxes unaffected, no geometry).
                     img, num_blur = apply_patch_blur(
                         img, rng,
                         int(hyperparams.BLUR_MIN_PATCHES), int(hyperparams.BLUR_MAX_PATCHES),
                         float(hyperparams.BLUR_MIN_SIZE_FRAC), float(hyperparams.BLUR_MAX_SIZE_FRAC),
                         float(hyperparams.BLUR_SIGMA_MIN), float(hyperparams.BLUR_SIGMA_MAX),
                     )
-                    # 5-6: geometric steps with exact box counterparts.
-                    rot_k: int = rng.choice(rotation_list)
-                    flip_h: bool = rng.random() < float(hyperparams.FLIP_H_PROB)
-                    flip_v: bool = rng.random() < float(hyperparams.FLIP_V_PROB)
-                    img = flip_pil_image(rotate_pil_image(img, rot_k), flip_h, flip_v)
-                    out_lines: list[str] = transform_label_lines(
-                        spec.label_lines, rot_k, flip_h, flip_v)
+                    # No geometric augmentation: labels copied from the source.
+                    out_lines: list[str] = clean_label_lines(spec.label_lines)
                     out_stem: str = f"{spec.stem}_vae{spec.rep:02d}"
                     pending_saves.append(executor.submit(
                         save_variant_files, img, out_lines,
@@ -811,7 +706,6 @@ def run_augmentation(
                     manifest_writer.writerow({
                         "output": f"{out_stem}.png", "source": Path(spec.src_path).name,
                         "checkpoint_epoch": spec.epoch_choice, "noise_std": spec.noise_std,
-                        "rot_k": rot_k, "flip_h": flip_h, "flip_v": flip_v,
                         "blur_patches": num_blur, "seed": spec.seed,
                     })
                     train_count += 1

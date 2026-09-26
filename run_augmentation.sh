@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Builds the 15x frozen-VAE augmented YOLO dataset (no training involved).
+# Builds the 5x frozen-VAE augmented YOLO dataset (no training involved).
 # Output lands in the YOLO Augmented Dataset folder per YOLO/config.toml.
 # Knobs live in YOLO/augment_hyperparameters.toml.
 #

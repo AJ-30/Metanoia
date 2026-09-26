@@ -1,6 +1,6 @@
 """Entry point for the independent augmentation pipeline.
 
-Builds the 15x frozen-VAE YOLO dataset (no YOLO/training involved):
+Builds the 5x frozen-VAE YOLO dataset (no YOLO/training involved):
 
     python YOLO/run_augment.py --mode debug
     python YOLO/run_augment.py --mode prod

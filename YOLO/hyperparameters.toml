@@ -16,8 +16,8 @@ CLASS_NAMES = ["couch", "chair", "sofa", "sofa_cum_bed", "center_table", "dining
 # ---- YOLO26 finetune ----
 # NOTE on scale: train images are VAE-native 256px, so IMG_SIZE=416 (not 640)
 # avoids a 2.5x upscaling of VAE blur artifacts and cuts MPS/CPU cost.
-# NOTE on budget: 15075 sources x AUG_FACTOR=15 ~= 226k images; NUM_EPOCHS=30
-# with early-stopping PATIENCE=10 bounds the ~1.4M-step worst case of 100 epochs.
+# NOTE on budget: 15075 sources x AUG_FACTOR=5 ~= 75k images; NUM_EPOCHS=30
+# with early-stopping PATIENCE=10 bounds the worst case of 100 epochs.
 YOLO_MODEL = "yolo26n.pt"
 IMG_SIZE = 416
 BATCH_SIZE = 16
@@ -34,9 +34,9 @@ NUM_OVERLAY_SAMPLES = 16
 TELEMETRY_INTERVAL = 1
 
 # ---- Ultralytics internal augmentation overrides ----
-# The VAE pipeline above already applies exact rot90/flip/blur augmentation,
+# The VAE pipeline above already applies VAE-latent + blur augmentation,
 # so Ultralytics mosaic/mixup (multi-image composites) and its own flips are
-# disabled to keep the geometric distribution exactly as designed. Photometric
+# disabled to keep the data distribution exactly as designed. Photometric
 # hsv jitter is kept at Ultralytics defaults.
 MOSAIC = 0.0
 MIXUP = 0.0

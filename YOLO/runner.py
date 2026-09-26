@@ -345,7 +345,7 @@ class YOLORunner:
             workers=int(self.hyperparams.WORKERS),
             seed=int(self.hyperparams.BASE_SEED),
             # Internal augmentation is pinned off for geometry (our VAE
-            # pipeline already applies exact rot90/flip/blur); hsv kept.
+            # pipeline already applies VAE-latent + blur); hsv kept.
             mosaic=float(self.hyperparams.MOSAIC),
             mixup=float(self.hyperparams.MIXUP),
             copy_paste=float(self.hyperparams.COPY_PASTE),
