@@ -9,8 +9,8 @@ the test split after every epoch and once on the full test set at the end.
 The dataset is folder-per-sample (one folder holding every render of a layout).
 Which render is learned — the full render (``full_png``) or the floorplan-only
 render (``layout_only``) — is selected by ``TRAIN_IMAGE_VARIANT`` in
-``hyperparameters.toml``; the render name itself lives in the
-``[default.IMAGE_VARIANTS]`` table, never hardcoded here.
+``config.toml``; the render name itself lives in the
+``[default.IMAGE_VARIANTS]`` table of the same file, never hardcoded here.
 
 Progress is logged with the shared project logger, written to telemetry CSVs
 via helpers/telemetry_writer, and reconstruction grids of fixed test samples
@@ -47,6 +47,11 @@ from VAE.model import VAEModel, vae_loss
 # Directory of this file, used to resolve relative TOML / output paths.
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
 
+# Name of the config.toml key holding the selected render variant for the two
+# trainers (VAE, Diffusion). The YOLO augmentation pipeline reads source samples
+# and uses its own key, SOURCE_IMAGE_VARIANT (YOLO/config.toml).
+TRAIN_IMAGE_VARIANT_KEY: str = "TRAIN_IMAGE_VARIANT"
+
 
 class FloorPlanDataset(Dataset):
     """PyTorch Dataset that lazy-loads and preprocesses floor-plan images.
@@ -65,7 +70,7 @@ class FloorPlanDataset(Dataset):
 
     Each sample folder holds every render of that layout, so ``image_file_name``
     selects which one this dataset reads (``full_png`` or ``layout_only`` in
-    the TOML; the mapping lives in ``hyperparameters.toml`` under
+    the TOML; the mapping lives in ``config.toml`` under
     ``[default.IMAGE_VARIANTS]``). Each RGBA image is composited onto a solid
     background (to drop the alpha channel), resized to a square and converted
     to a float tensor in [0, 1]. Optionally preloads every image into RAM (as
@@ -210,37 +215,54 @@ class FloorPlanDataset(Dataset):
         return self._load_float(self.image_paths[index])
 
 
-def resolve_image_file_name(hyperparams: SimpleNamespace) -> str:
+def resolve_image_file_name(config: SimpleNamespace, variant_key: str) -> str:
     """Resolve the configured render variant to a filename inside a sample folder.
 
-    Reads two TOML keys, so no render filename is ever hardcoded in Python:
-    ``TRAIN_IMAGE_VARIANT`` (e.g. ``"full_png"``) selects an entry of the
+    Reads two keys of the model ``config.toml`` (not ``hyperparameters.toml``),
+    so no render filename is ever hardcoded in Python: the variant key (e.g.
+    ``TRAIN_IMAGE_VARIANT = "full_png"``) selects an entry of the
     ``IMAGE_VARIANTS`` table (e.g. ``{full_png = "full.png", ...}``) declared as
-    ``[default.IMAGE_VARIANTS]`` in the TOML file.
+    ``[default.IMAGE_VARIANTS]`` in the TOML file. Shared by the VAE, Diffusion
+    and YOLO runners, which each keep their own copy of the table and name their
+    variant key after what they read (``TRAIN_IMAGE_VARIANT`` for the two
+    trainers, ``SOURCE_IMAGE_VARIANT`` for the YOLO augmentation pipeline).
 
     Args:
-        hyperparams (SimpleNamespace): Hyperparameters namespace holding
-            ``TRAIN_IMAGE_VARIANT`` (str) and ``IMAGE_VARIANTS`` (dict[str, str]).
+        config (SimpleNamespace): Config namespace produced by
+            ``helpers.config.load_config``, holding ``variant_key`` (str) and
+            ``IMAGE_VARIANTS`` (dict[str, str]).
+        variant_key (str): Name of the ``config.toml`` key holding the selected
+            variant name, e.g. ``"TRAIN_IMAGE_VARIANT"``. A wrong or missing key
+            raises ``AttributeError`` naming it, so TOML drift fails fast.
 
     Returns:
         str: Filename of the selected render, e.g. ``"full.png"``.
 
     Raises:
-        KeyError: If the variant is missing or is not a key of the
-            ``IMAGE_VARIANTS`` table (fail fast on TOML typos).
+        AttributeError: If the config file does not define ``variant_key`` (the
+            key must live in the ``[default]`` table of ``config.toml``, not in a
+            ``[debug]``/``[prod]`` table).
+        KeyError: If the variant is not a key of the ``IMAGE_VARIANTS`` table
+            (fail fast on TOML typos).
         TypeError: If ``IMAGE_VARIANTS`` is not a mapping of variant name to
             filename, or the selected entry is not a non-empty string.
     """
-    variant: str = str(hyperparams.TRAIN_IMAGE_VARIANT)
-    variants: object = getattr(hyperparams, "IMAGE_VARIANTS", None)
+    if not hasattr(config, variant_key):
+        raise AttributeError(
+            f"config.toml must define {variant_key} in its [default] table "
+            "(a key placed after [debug]/[prod] belongs to that mode's table, "
+            "not to [default])."
+        )
+    variant: str = str(getattr(config, variant_key))
+    variants: object = getattr(config, "IMAGE_VARIANTS", None)
     if not isinstance(variants, dict):
         raise TypeError(
-            "hyperparameters must define a [default.IMAGE_VARIANTS] table mapping "
+            "config.toml must define a [default.IMAGE_VARIANTS] table mapping "
             f"variant name -> render filename, got {type(variants).__name__}."
         )
     if variant not in variants:
         raise KeyError(
-            f"TRAIN_IMAGE_VARIANT='{variant}' is not in the [default.IMAGE_VARIANTS] "
+            f"{variant_key}='{variant}' is not in the [default.IMAGE_VARIANTS] "
             f"table. Known variants: {sorted(variants.keys())}."
         )
     file_name: object = variants[variant]
@@ -408,10 +430,10 @@ class VAERunner:
             DataLoader: Configured dataloader for that split.
         """
         preload: bool = bool(self.hyperparams.PRELOAD_IMAGES)
-        image_file_name: str = resolve_image_file_name(self.hyperparams)
+        image_file_name: str = resolve_image_file_name(self.config, TRAIN_IMAGE_VARIANT_KEY)
         self.log.info(
             f"Building dataset from {split_dir} using render '{image_file_name}' "
-            f"(variant '{self.hyperparams.TRAIN_IMAGE_VARIANT}', "
+            f"(variant '{self.config.TRAIN_IMAGE_VARIANT}', "
             f"preload into RAM: {preload})..."
         )
         dataset = FloorPlanDataset(

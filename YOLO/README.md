@@ -32,9 +32,24 @@ Split folders are configured in `YOLO/config.toml`
 Note the source split is named `validate` while the generated output split is
 named `val`.
 
-Only `full.png` is read, because the boxes in `labels.txt` describe the **full**
-furniture set: `no_tv.png` omits the tv pixels while `labels.txt` still lists the
-tv box, so its boxes would not match its pixels.
+Which render is read is also a `YOLO/config.toml` switch, never a hardcoded
+filename: `SOURCE_IMAGE_VARIANT` selects an entry of the
+`[default.IMAGE_VARIANTS]` table (the same table the VAE and Diffusion configs
+carry), and `SOURCE_LABEL_FILE_NAME` names the annotation file that must sit
+next to it.
+
+```toml
+SOURCE_IMAGE_VARIANT = "full_png"     # or "layout_only"
+SOURCE_LABEL_FILE_NAME = "labels.txt"
+
+[default.IMAGE_VARIANTS]
+full_png    = "full.png"
+layout_only = "floorplan_only.png"
+```
+
+Only the full render is used, because the boxes in `labels.txt` describe the
+**full** furniture set: `no_tv.png` omits the tv pixels while `labels.txt` still
+lists the tv box, so its boxes would not match its pixels.
 
 `labels.txt` names its class rather than numbering it, so every line is resolved
 to a numeric id through `CLASS_NAMES` before being written to the generated
@@ -135,11 +150,11 @@ Smoke test: set `MAX_SAMPLES=64` in `YOLO/augment_hyperparameters.toml`, then
 
 ## Configuration
 
-`YOLO/config.toml`: device, source split dirs, generated dataset root, VAE
-dir/run id, output dirs.
+`YOLO/config.toml`: device, source split dirs, source render variant
+(`SOURCE_IMAGE_VARIANT` + `SOURCE_LABEL_FILE_NAME` + `[default.IMAGE_VARIANTS]`),
+generated dataset root, VAE dir/run id, output dirs.
 `YOLO/augment_hyperparameters.toml`: augmentation knobs (seeds, `AUG_FACTOR`,
-source render/label filenames, noise std, blur ranges, save workers, class
-names).
+noise std, blur ranges, save workers, class names).
 `YOLO/hyperparameters.toml`: training knobs (YOLO model/imgsz/batch/epochs/lr,
 Ultralytics augmentation overrides, class names). `CLASS_NAMES` is duplicated in
 both hyperparameter files — keep in sync.

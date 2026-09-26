@@ -37,7 +37,8 @@ from helpers.config import load_config
 from helpers.hyperparams import load_hyperparams
 from helpers.logger import setup_logger
 from helpers.telemetry_writer import TelemetryWriter
-from YOLO.augment import list_sample_dirs
+from VAE.runner import resolve_image_file_name
+from YOLO.augment import SOURCE_IMAGE_VARIANT_KEY, list_sample_dirs
 
 # Telemetry columns mirror Ultralytics results.csv (B = box branch).
 TELEMETRY_FIELDS: list[str] = [
@@ -196,8 +197,8 @@ class YOLORunner:
         # the label file, so its length is already the labeled-source count.
         src_samples: list[Path] = list_sample_dirs(
             str(self.config.SOURCE_TRAIN_SPLIT_DIR),
-            str(aug_hyperparams.SOURCE_IMAGE_FILE_NAME),
-            str(aug_hyperparams.SOURCE_LABEL_FILE_NAME),
+            resolve_image_file_name(self.config, SOURCE_IMAGE_VARIANT_KEY),
+            str(self.config.SOURCE_LABEL_FILE_NAME),
         )
         max_samples: int = int(aug_hyperparams.MAX_SAMPLES)
         if max_samples >= 0:

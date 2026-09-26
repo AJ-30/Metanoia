@@ -34,7 +34,7 @@ layout, and each sub-folder carries every render of that layout.
 ```
 
 The dataset stores every render side by side, so which one the diffusion model
-learns is a single TOML switch, not a code change:
+learns is a single TOML switch in `Diffusion/config.toml`, not a code change:
 
 ```toml
 TRAIN_IMAGE_VARIANT = "full_png"    # or "layout_only"
@@ -47,8 +47,8 @@ layout_only = "floorplan_only.png"
 Diffusion is trained on the **full render** (`full.png`). `FloorPlanDataset` is
 imported from `VAE.runner` — single source of truth for image preprocessing —
 and only `image_size` differs: Diffusion takes it from the frozen VAE checkpoint
-while the VAE takes it from its own TOML. `VAE/hyperparameters.toml` carries a
-copy of the variant table; keep it in sync.
+while the VAE takes it from its own TOML. `VAE/config.toml` and `YOLO/config.toml`
+each carry a copy of the variant table; keep them in sync.
 
 The model is unconditional: it reads no labels, masks or room types. The only
 conditioning is the DDPM timestep. `labels.txt` is used solely by the YOLO
@@ -66,7 +66,8 @@ pipeline, and `no_tv.png` is never read (it omits the tv pixels while
   standardization, composite MSE+L1 training loop, per-epoch test evaluation,
   checkpoints, telemetry, generation grids.
 - `run.py` — Entry point. Just calls `DiffusionRunner().train()`.
-- `config.toml` — Non-model config (device, split paths, frozen `VAE_CHECKPOINT_PATH`).
+- `config.toml` — Non-model config (device, split paths, frozen `VAE_CHECKPOINT_PATH`,
+  `TRAIN_IMAGE_VARIANT` + `IMAGE_VARIANTS`).
 - `hyperparameters.toml` — Denoiser architecture + diffusion schedule knobs.
 - `README.md` — This file.
 
@@ -114,6 +115,8 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 | `TRAIN_IMAGES_DIR`         | Split folder of samples to train on             |
 | `TEST_IMAGES_DIR`          | Split folder of samples used for evaluation     |
 | `VAE_CHECKPOINT_PATH`      | Frozen VAE checkpoint supplying latents + decoder|
+| `TRAIN_IMAGE_VARIANT`      | Which render to learn: `full_png` or `layout_only`|
+| `IMAGE_VARIANTS`           | Variant → filename table (`[default.IMAGE_VARIANTS]`)|
 | `DEBUG_LOG_FILE_PATH`      | Log file written by the shared logger            |
 | `MODEL_SAVE_PATH`          | Where `.pt` checkpoints are saved                |
 | `TELEMETRY_LOG_DIRECTORY`  | Where the run's `*.csv` telemetry goes           |
@@ -165,8 +168,6 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 | `NORMALIZE_LATENTS`   | Standardize latents with dataset mean/std (recommended)             |
 | `LATENT_STATS_SAMPLES`| Images used to estimate the latent mean/std                         |
 | `LATENT_STD_MIN`      | Floor for the latent std (avoids div-by-zero)                       |
-| `TRAIN_IMAGE_VARIANT` | Which render to learn: `full_png` or `layout_only`                  |
-| `IMAGE_VARIANTS`      | Variant → filename table (`[default.IMAGE_VARIANTS]`)               |
 
 ## Outputs
 

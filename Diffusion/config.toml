@@ -6,8 +6,7 @@ OUTPUT_SAMPLES_DIRECTORY = "./Diffusion/outputs/"
 DEVICE = "mps"
 # Split folders of the folder-per-sample dataset: each holds one sub-folder per
 # sample (e.g. <hash>_original/) containing full.png, floorplan_only.png and
-# labels.txt. Which render is read is set by TRAIN_IMAGE_VARIANT in
-# Diffusion/hyperparameters.toml.
+# labels.txt. Which render is read is set by TRAIN_IMAGE_VARIANT below.
 TRAIN_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
 TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 # Frozen VAE checkpoint whose encoder supplies latents and whose decoder
@@ -17,6 +16,21 @@ TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 # The rare-roughy run (512-dim, 5-stage) can no longer be loaded by the current
 # VAE/model.py, which builds 3x3 kernels and 4 stages.
 VAE_CHECKPOINT_PATH = "./VAE/models/vae_next-collie_epoch_500.pt"
+
+# Which render of each sample folder the diffusion model learns from. The
+# dataset stores every render of a layout side by side, so this key is the only
+# switch needed. Diffusion is trained on the full render:
+#   "full_png"    -> full.png           (furniture + floorplan)
+#   "layout_only" -> floorplan_only.png (rooms only, no furniture)
+TRAIN_IMAGE_VARIANT = "full_png"
+
+# Variant name -> render filename inside each sample folder. Kept in TOML so the
+# filenames are never hardcoded in Python. Both stages of the pipeline read this
+# table, so each model keeps its own copy: VAE/config.toml and YOLO/config.toml
+# carry the same entries. Keep them in sync.
+[default.IMAGE_VARIANTS]
+full_png = "full.png"
+layout_only = "floorplan_only.png"
 
 [debug]
 IS_DEBUG = true

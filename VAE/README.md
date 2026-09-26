@@ -29,7 +29,7 @@ layout, and each sub-folder carries every render of that layout.
 ```
 
 The dataset stores every render side by side, so which one the VAE learns is a
-single TOML switch, not a code change:
+single TOML switch in `VAE/config.toml`, not a code change:
 
 ```toml
 TRAIN_IMAGE_VARIANT = "full_png"    # or "layout_only"
@@ -40,9 +40,11 @@ layout_only = "floorplan_only.png"
 ```
 
 `TRAIN_IMAGE_VARIANT` picks an entry of the `[default.IMAGE_VARIANTS]` table, so
-no render filename is hardcoded in Python. A sample folder that does not
-provide the selected render is skipped, and an empty split raises
-`FileNotFoundError` rather than failing later inside the training loop.
+no render filename is hardcoded in Python. Both keys live in the `[default]`
+table: a key written after `[debug]`/`[prod]` belongs to that mode's table, not
+to `[default]`. A sample folder that does not provide the selected render is
+skipped, and an empty split raises `FileNotFoundError` rather than failing later
+inside the training loop.
 
 The VAE is unsupervised, so `labels.txt` is never read here — it is only used by
 the YOLO pipeline. `no_tv.png` is never read: it omits the tv pixels while
@@ -55,7 +57,8 @@ the YOLO pipeline. `no_tv.png` is never read: it omits the tv pixels while
   dataset building, training loop, per-epoch test evaluation, checkpoints,
   telemetry, reconstruction and generation grids.
 - `run.py` — Entry point. Just calls `VAERunner().train()`.
-- `config.toml` — Non-model configuration (device, paths, logging, telemetry).
+- `config.toml` — Non-model configuration (device, paths, logging, telemetry,
+  `TRAIN_IMAGE_VARIANT` + `IMAGE_VARIANTS`).
 - `hyperparameters.toml` — Model architecture and training hyperparameters.
 - `README.md` — This file.
 
@@ -109,6 +112,8 @@ epoch's grid, and the dashboard auto-refreshes so the newest images and the
 | `MODEL_SAVE_PATH`        | Where `.pt` checkpoints are saved                |
 | `TELEMETRY_LOG_DIRECTORY`| Where the run's `*.csv` telemetry goes           |
 | `OUTPUT_SAMPLES_DIRECTORY`| Where reconstruction grid images are saved      |
+| `TRAIN_IMAGE_VARIANT`    | Which render to learn: `full_png` or `layout_only`|
+| `IMAGE_VARIANTS`         | Variant → filename table (`[default.IMAGE_VARIANTS]`)|
 
 `[debug]` / `[prod]` sections follow the same convention as the root `config.toml`.
 
@@ -135,11 +140,11 @@ epoch's grid, and the dashboard auto-refreshes so the newest images and the
 | `TEST_LOSS_SAMPLES`  | Test images used for the per-epoch `test_loss`        |
 | `KL_WEIGHT`          | Beta-VAE weight on the KL-divergence term             |
 | `L1_WEIGHT`          | Weight on L1 next to MSE in the reconstruction term   |
-| `TRAIN_IMAGE_VARIANT`| Which render to learn: `full_png` or `layout_only`    |
-| `IMAGE_VARIANTS`     | Variant → filename table (`[default.IMAGE_VARIANTS]`) |
 
-`Diffusion/hyperparameters.toml` carries a copy of `TRAIN_IMAGE_VARIANT` and
-`IMAGE_VARIANTS`; keep them in sync.
+`resolve_image_file_name()` in `runner.py` is the single implementation of the
+variant lookup, shared by the Diffusion and YOLO pipelines. `Diffusion/config.toml`
+and `YOLO/config.toml` each carry a copy of `TRAIN_IMAGE_VARIANT` /
+`SOURCE_IMAGE_VARIANT` and the `IMAGE_VARIANTS` table; keep them in sync.
 
 ## Outputs
 

@@ -3,6 +3,10 @@
 # Every tunable constant for the frozen-VAE 2x dataset build lives here
 # (never hardcoded in .py files). The YOLO trainer never reads this file.
 #
+# The source render variant (SOURCE_IMAGE_VARIANT), the source label filename
+# (SOURCE_LABEL_FILE_NAME) and the variant -> filename table live in
+# YOLO/config.toml, not here.
+#
 # NOTE: CLASS_NAMES is duplicated in YOLO/hyperparameters.toml (needed there
 # for overlay annotations). Keep both copies in sync.
 
@@ -14,11 +18,7 @@ MAX_SAMPLES = -1
 # ---- Source dataset layout (folder-per-sample) ----
 # Each split folder holds one sub-folder per sample, e.g.
 #   <SPLIT>/<hash>_original/full.png and <SPLIT>/<hash>_original/labels.txt
-# YOLO is trained on the full render only, so full.png is the image here.
-# floorplan_only.png / no_tv.png are never read: no_tv.png drops the tv pixels
-# while labels.txt still lists the tv box, so its boxes would mismatch.
-SOURCE_IMAGE_FILE_NAME = "full.png"
-SOURCE_LABEL_FILE_NAME = "labels.txt"
+# Which of those files is read is set in YOLO/config.toml.
 
 # ---- 2x VAE-latent augmentation ----
 AUG_FACTOR = 2

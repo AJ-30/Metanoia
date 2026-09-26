@@ -55,6 +55,13 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from VAE.model import VAEModel
+from VAE.runner import resolve_image_file_name
+
+# Name of the config.toml key holding the render variant this pipeline reads from
+# each source sample folder (YOLO/config.toml). Distinct from the trainers'
+# TRAIN_IMAGE_VARIANT only because the augment stage reads source samples, not
+# the render it is about to write.
+SOURCE_IMAGE_VARIANT_KEY: str = "SOURCE_IMAGE_VARIANT"
 
 
 def resolve_class_name_to_id(class_names: list[str]) -> dict[str, int]:
@@ -677,9 +684,10 @@ def run_augmentation(
 
     Args:
         config (SimpleNamespace): Runtime config with source/dest directories,
-            VAE location, run id and device string.
+            VAE location, run id, device string, and the source render variant
+            (``SOURCE_IMAGE_VARIANT`` + ``IMAGE_VARIANTS``) and label filename.
         hyperparams (SimpleNamespace): All augmentation knobs (factor, seeds,
-            noise std, blur ranges, source render/label filenames, class names).
+            noise std, blur ranges, class names).
         log (SimpleNamespace): Configured project logger.
 
     Returns:
@@ -688,6 +696,7 @@ def run_augmentation(
     Raises:
         FileNotFoundError: If a required source split directory is missing.
         ValueError: If VAE_IMAGE_SIZE disagrees with the checkpoint architecture.
+        AttributeError: If config.toml lacks the source render/label keys.
     """
     for key in ("SOURCE_TRAIN_SPLIT_DIR", "SOURCE_VAL_SPLIT_DIR"):
         if not os.path.isdir(getattr(config, key)):
@@ -732,22 +741,25 @@ def run_augmentation(
     # source set cannot leave orphans that Ultralytics would glob into training.
     clear_generated_split(train_img_dir, train_lbl_dir)
 
+    # Which render of each source folder is read comes from config.toml, so no
+    # source filename is hardcoded here. Resolve it once and reuse it below.
+    image_file_name: str = resolve_image_file_name(config, SOURCE_IMAGE_VARIANT_KEY)
+    label_file_name: str = str(config.SOURCE_LABEL_FILE_NAME)
     source_samples: list[Path] = list_sample_dirs(
         config.SOURCE_TRAIN_SPLIT_DIR,
-        str(hyperparams.SOURCE_IMAGE_FILE_NAME),
-        str(hyperparams.SOURCE_LABEL_FILE_NAME),
+        image_file_name,
+        label_file_name,
     )
     max_samples: int = int(hyperparams.MAX_SAMPLES)
     if max_samples >= 0:
         source_samples = source_samples[:max_samples]
     aug_factor: int = int(hyperparams.AUG_FACTOR)
-    image_file_name: str = str(hyperparams.SOURCE_IMAGE_FILE_NAME)
-    label_file_name: str = str(hyperparams.SOURCE_LABEL_FILE_NAME)
     class_name_to_id: dict[str, int] = resolve_class_name_to_id(
         list(hyperparams.CLASS_NAMES))
     log.info(
         f"Found {len(source_samples)} labeled train samples using "
-        f"'{image_file_name}' + '{label_file_name}'; augmenting x{aug_factor} "
+        f"'{image_file_name}' (variant '{config.SOURCE_IMAGE_VARIANT}') + "
+        f"'{label_file_name}'; augmenting x{aug_factor} "
         f"= {len(source_samples) * aug_factor} outputs over "
         f"{len(class_name_to_id)} classes.")
 

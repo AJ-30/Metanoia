@@ -17,7 +17,7 @@ diffusion generations only.
 Dataset and device helpers are reused from ``VAE.runner`` (single source of
 truth for image preprocessing) instead of being duplicated here. The dataset
 is folder-per-sample and the render is selected by ``TRAIN_IMAGE_VARIANT`` in
-``hyperparameters.toml`` (diffusion is trained on the full render).
+``config.toml`` (diffusion is trained on the full render).
 """
 
 import argparse
@@ -47,7 +47,12 @@ from helpers.telemetry_writer import TelemetryWriter
 
 from Diffusion.model import LatentDiffusion
 from VAE.model import VAEModel
-from VAE.runner import FloorPlanDataset, resolve_device, resolve_image_file_name
+from VAE.runner import (
+    TRAIN_IMAGE_VARIANT_KEY,
+    FloorPlanDataset,
+    resolve_device,
+    resolve_image_file_name,
+)
 
 # Directory of this file, used to resolve relative TOML / output paths.
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
@@ -256,10 +261,10 @@ class DiffusionRunner:
             DataLoader: Configured image dataloader for that split.
         """
         preload: bool = bool(self.hyperparams.PRELOAD_IMAGES)
-        image_file_name: str = resolve_image_file_name(self.hyperparams)
+        image_file_name: str = resolve_image_file_name(self.config, TRAIN_IMAGE_VARIANT_KEY)
         self.log.info(
             f"Building image dataset from {split_dir} using render "
-            f"'{image_file_name}' (variant '{self.hyperparams.TRAIN_IMAGE_VARIANT}', "
+            f"'{image_file_name}' (variant '{self.config.TRAIN_IMAGE_VARIANT}', "
             f"preload into RAM: {preload})..."
         )
         dataset = FloorPlanDataset(

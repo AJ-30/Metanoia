@@ -41,17 +41,3 @@ USE_MU_ONLY = true
 NORMALIZE_LATENTS = true
 LATENT_STATS_SAMPLES = 2048
 LATENT_STD_MIN = 0.001
-
-# Which render of each sample folder the diffusion model learns from. The
-# dataset stores every render of a layout side by side, so this key is the only
-# switch needed. Diffusion is trained on the full render:
-#   "full_png"    -> full.png           (furniture + floorplan)
-#   "layout_only" -> floorplan_only.png (rooms only, no furniture)
-TRAIN_IMAGE_VARIANT = "full_png"
-
-# Variant name -> render filename inside each sample folder. Kept in TOML so the
-# filenames are never hardcoded in Python.
-# NOTE: VAE/hyperparameters.toml carries a copy of this table; keep in sync.
-[default.IMAGE_VARIANTS]
-full_png = "full.png"
-layout_only = "floorplan_only.png"
