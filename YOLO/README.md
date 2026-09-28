@@ -161,7 +161,7 @@ both hyperparameter files — keep in sync.
 
 ## Outputs
 
-- Augmented images/labels: `/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented/{images,labels}/{train,val,test}/`
+- Augmented images/labels: `/Users/aatmaj/Downloads/datasets/yolo_augmented/{images,labels}/{train,val,test}/`
 - Manifest + data config: `augment_manifest.csv`, `data.yaml` (train/val/test) in the same root
 - Telemetry: `YOLO/telemetry_logs/<run>.csv`
 - Overlays + curves: `YOLO/outputs/`

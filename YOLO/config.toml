@@ -6,9 +6,9 @@ OUTPUT_SAMPLES_DIRECTORY = "./YOLO/outputs/"
 # Generated YOLO dataset (2x augmented train + mirrored val/test) and its
 # Ultralytics index files. This root is separate from any earlier build so a
 # stale labels/*.cache or data.yaml from a different AUG_FACTOR is never reused.
-AUGMENTED_DATASET_ROOT = "/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented"
-DATA_YAML_PATH = "/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented/data.yaml"
-AUGMENT_MANIFEST_PATH = "/Users/aatmaj/FurnitureArranger/datasets/yolo_augmented/augment_manifest.csv"
+AUGMENTED_DATASET_ROOT = "/Users/aatmaj/Downloads/datasets/yolo_augmented"
+DATA_YAML_PATH = "/Users/aatmaj/Downloads/datasets/yolo_augmented/data.yaml"
+AUGMENT_MANIFEST_PATH = "/Users/aatmaj/Downloads/datasets/yolo_augmented/augment_manifest.csv"
 VAE_MODELS_DIR = "./VAE/models/"
 VAE_RUN_ID = "next-collie"
 DEVICE = "mps"
@@ -16,17 +16,18 @@ DEVICE = "mps"
 # sub-folder per sample containing full.png, floorplan_only.png and
 # labels.txt — there is no separate images/ or labels/ directory anymore.
 # Which render is read is set by SOURCE_IMAGE_VARIANT below.
-SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
-SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/validate"
-SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
+SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/train"
+SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/validate"
+SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/test"
 
 # Which render of each sample folder the YOLO pipeline reads. The dataset stores
 # every render of a layout side by side, so this key is the only switch needed.
-# YOLO is trained on the full render:
+# YOLO is trained on the full render, because the boxes in labels.txt describe
+# the full furniture set:
 #   "full_png"    -> full.png           (furniture + floorplan)
 #   "layout_only" -> floorplan_only.png (rooms only, no furniture)
-# floorplan_only.png / no_tv.png must not be used: no_tv.png drops the tv pixels
-# while labels.txt still lists the tv box, so its boxes would mismatch.
+# no_tv.png is deliberately absent from the table below: it drops the tv pixels
+# while labels.txt still lists the tv box, so its boxes would mismatch its pixels.
 SOURCE_IMAGE_VARIANT = "full_png"
 
 # Annotation file every source sample folder must carry alongside the render

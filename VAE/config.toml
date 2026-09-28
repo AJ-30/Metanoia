@@ -11,8 +11,8 @@ DEVICE = "mps"
 # Split folders of the folder-per-sample dataset: each holds one sub-folder per
 # sample (e.g. <hash>_original/) containing full.png, floorplan_only.png and
 # labels.txt. Which render is read is set by TRAIN_IMAGE_VARIANT below.
-TRAIN_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
-TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
+TRAIN_IMAGES_DIR = "/Users/aatmaj/Downloads/datasets/work/train"
+TEST_IMAGES_DIR = "/Users/aatmaj/Downloads/datasets/work/test"
 
 # Which render of each sample folder the VAE learns from. The dataset stores
 # every render of a layout side by side, so this key is the only switch needed.

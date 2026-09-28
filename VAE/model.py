@@ -47,17 +47,20 @@ class Encoder(nn.Module):
         # Dropout2d drops whole feature maps, which regularizes more strongly
         # than pixel-wise dropout for convolutional features.
         self.conv_layers = nn.Sequential(
-            
-            nn.Conv2d(in_channels, base_channels // 8, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(in_channels, base_channels // 8,
+                      kernel_size=4, stride=2, padding=1),
             nn.SiLU(),
-            
-            nn.Conv2d(base_channels // 8, base_channels // 4, kernel_size=3, stride=2, padding=1),
+
+            nn.Conv2d(base_channels // 8, base_channels //
+                      4, kernel_size=4, stride=2, padding=1),
             nn.SiLU(),
-            
-            nn.Conv2d(base_channels // 4, base_channels//2, kernel_size=3, stride=2, padding=1),
+
+            nn.Conv2d(base_channels // 4, base_channels//2,
+                      kernel_size=3, stride=2, padding=1),
             nn.SiLU(),
             nn.Dropout2d(dropout),
-            nn.Conv2d(base_channels // 2, base_channels, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(base_channels // 2, base_channels,
+                      kernel_size=3, stride=2, padding=1),
             nn.SiLU(),
             nn.Dropout2d(dropout),
         )
@@ -113,28 +116,34 @@ class Decoder(nn.Module):
 
         # Store the feature-map geometry so the flat fc output can be reshaped
         # back into a spatial tensor without any float arithmetic.
-        self.spatial_size: int = image_size //16
+        self.spatial_size: int = image_size // 16
         self.base_channels: int = base_channels
         self.fc_dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(latent_dim, base_channels * self.spatial_size * self.spatial_size)
+        self.fc = nn.Linear(latent_dim, base_channels *
+                            self.spatial_size * self.spatial_size)
 
         # Reverse of the encoder: 4 upsampling stages (stride 2) restore the
         # original spatial size. Sigmoid keeps outputs in the [0, 1] range.
         # Dropout2d again regularizes the feature maps while training.
         self.deconv_layers = nn.Sequential(
-            nn.ConvTranspose2d(base_channels, base_channels // 2, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.ConvTranspose2d(base_channels, base_channels // 2,
+                               kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.SiLU(),
             nn.Dropout2d(dropout),
-            nn.ConvTranspose2d(base_channels // 2, base_channels // 4, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.ConvTranspose2d(base_channels // 2, base_channels // 4,
+                               kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.SiLU(),
             nn.Dropout2d(dropout),
-            nn.ConvTranspose2d(base_channels // 4, base_channels // 8, kernel_size=3, stride=2, padding=1,output_padding=1),
+            nn.ConvTranspose2d(base_channels // 4, base_channels // 8,
+                               kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.SiLU(),
-            
-            nn.ConvTranspose2d(base_channels // 8, out_channels, kernel_size=3, stride=2, padding=1,output_padding=1),
+
+            nn.ConvTranspose2d(base_channels // 8, out_channels,
+                               kernel_size=5, stride=2, padding=2, output_padding=1),
             nn.SiLU(),
-            
-            nn.ConvTranspose2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1), #sharpness increasing layer
+
+            nn.Conv2d(out_channels, out_channels,
+                      kernel_size=5, stride=1, padding=2),
             nn.Sigmoid(),
         )
 
@@ -152,7 +161,8 @@ class Decoder(nn.Module):
         h = self.fc(h)
         # Reshape the flat feature vector back into (channels, spatial, spatial)
         # before feeding it to the transposed convolutions.
-        h = h.view(h.shape[0], self.base_channels, self.spatial_size, self.spatial_size)
+        h = h.view(h.shape[0], self.base_channels,
+                   self.spatial_size, self.spatial_size)
         return self.deconv_layers(h)
 
 
@@ -216,7 +226,8 @@ class VAEModel(nn.Module):
 
         # Add small Gaussian noise to the latent vector during training to regularize the decoder.
         if self.training:
-            noise: torch.Tensor = torch.randn_like(z) * self.latent_additional_noise  # Small noise for regularization
+            noise: torch.Tensor = torch.randn_like(
+                z) * self.latent_additional_noise  # Small noise for regularization
             z = z + noise
         reconstruction: torch.Tensor = self.decoder(z)
         return reconstruction, mu, logvar
@@ -264,16 +275,19 @@ def vae_loss(
             MSE + l1_weight * L1 reconstruction loss, reduced over the batch.
     """
     # Mean squared error between input and reconstruction.
-    mse_loss: torch.Tensor = nn.functional.mse_loss(reconstruction, x, reduction="sum") / x.shape[0]
+    mse_loss: torch.Tensor = nn.functional.mse_loss(
+        reconstruction, x, reduction="sum") / x.shape[0]
 
     # Mean absolute error between input and reconstruction (sharpens edges).
-    l1_term: torch.Tensor = nn.functional.l1_loss(reconstruction, x, reduction="sum") / x.shape[0]
+    l1_term: torch.Tensor = nn.functional.l1_loss(
+        reconstruction, x, reduction="sum") / x.shape[0]
 
     # Combined reconstruction objective: MSE regularized by a weighted L1 term.
     recon_loss: torch.Tensor = mse_loss + l1_weight * l1_term
 
     # Closed-form KL divergence between N(mu, sigma^2) and N(0, 1).
-    kl_loss: torch.Tensor = torch.mean(-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    kl_loss: torch.Tensor = torch.mean(-0.5 * torch.sum(
+        1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
     total_loss: torch.Tensor = recon_loss + kl_weight * kl_loss
     return total_loss, recon_loss, kl_loss
