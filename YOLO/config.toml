@@ -25,7 +25,7 @@ SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/test"
 # YOLO is trained on the full render, because the boxes in labels.txt describe
 # the full furniture set:
 #   "full_png"    -> full.png           (furniture + floorplan)
-#   "layout_only" -> floorplan_only.png (rooms only, no furniture)
+#   "floorplan_only" -> floorplan_only.png (rooms only, no furniture)
 # no_tv.png is deliberately absent from the table below: it drops the tv pixels
 # while labels.txt still lists the tv box, so its boxes would mismatch its pixels.
 SOURCE_IMAGE_VARIANT = "full_png"
@@ -40,7 +40,7 @@ SOURCE_LABEL_FILE_NAME = "labels.txt"
 # Diffusion/config.toml carry the same entries. Keep them in sync.
 [default.IMAGE_VARIANTS]
 full_png = "full.png"
-layout_only = "floorplan_only.png"
+floorplan_only = "floorplan_only.png"
 
 [debug]
 IS_DEBUG = true

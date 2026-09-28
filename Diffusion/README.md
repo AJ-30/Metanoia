@@ -37,11 +37,11 @@ The dataset stores every render side by side, so which one the diffusion model
 learns is a single TOML switch in `Diffusion/config.toml`, not a code change:
 
 ```toml
-TRAIN_IMAGE_VARIANT = "full_png"    # or "layout_only"
+TRAIN_IMAGE_VARIANT = "full_png"    # or "floorplan_only"
 
 [default.IMAGE_VARIANTS]
 full_png    = "full.png"
-layout_only = "floorplan_only.png"
+floorplan_only = "floorplan_only.png"
 ```
 
 Diffusion is trained on the **full render** (`full.png`). `FloorPlanDataset` is
@@ -115,7 +115,7 @@ epoch dropdown), auto-refreshing every 3 s while training runs.
 | `TRAIN_IMAGES_DIR`         | Split folder of samples to train on             |
 | `TEST_IMAGES_DIR`          | Split folder of samples used for evaluation     |
 | `VAE_CHECKPOINT_PATH`      | Frozen VAE checkpoint supplying latents + decoder|
-| `TRAIN_IMAGE_VARIANT`      | Which render to learn: `full_png` or `layout_only`|
+| `TRAIN_IMAGE_VARIANT`      | Which render to learn: `full_png` or `floorplan_only`|
 | `IMAGE_VARIANTS`           | Variant → filename table (`[default.IMAGE_VARIANTS]`)|
 | `DEBUG_LOG_FILE_PATH`      | Log file written by the shared logger            |
 | `MODEL_SAVE_PATH`          | Where `.pt` checkpoints are saved                |

@@ -8,7 +8,7 @@ the test split after every epoch and once on the full test set at the end.
 
 The dataset is folder-per-sample (one folder holding every render of a layout).
 Which render is learned — the full render (``full_png``) or the floorplan-only
-render (``layout_only``) — is selected by ``TRAIN_IMAGE_VARIANT`` in
+render (``floorplan_only``) — is selected by ``TRAIN_IMAGE_VARIANT`` in
 ``config.toml``; the render name itself lives in the
 ``[default.IMAGE_VARIANTS]`` table of the same file, never hardcoded here.
 
@@ -17,6 +17,11 @@ via helpers/telemetry_writer, and reconstruction grids of fixed test samples
 are saved every epoch so the dashboard server can display them.
 """
 
+from VAE.model import VAEModel, vae_loss
+from helpers.telemetry_writer import TelemetryWriter
+from helpers.logger import setup_logger
+from helpers.hyperparams import load_hyperparams
+from helpers.config import load_config
 import argparse
 import os
 import sys
@@ -37,12 +42,6 @@ from torchvision import transforms
 ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from helpers.config import load_config
-from helpers.hyperparams import load_hyperparams
-from helpers.logger import setup_logger
-from helpers.telemetry_writer import TelemetryWriter
-
-from VAE.model import VAEModel, vae_loss
 
 # Directory of this file, used to resolve relative TOML / output paths.
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
@@ -69,7 +68,7 @@ class FloorPlanDataset(Dataset):
             labels.txt
 
     Each sample folder holds every render of that layout, so ``image_file_name``
-    selects which one this dataset reads (``full_png`` or ``layout_only`` in
+    selects which one this dataset reads (``full_png`` or ``floorplan_only`` in
     the TOML; the mapping lives in ``config.toml`` under
     ``[default.IMAGE_VARIANTS]``). Each RGBA image is composited onto a solid
     background (to drop the alpha channel), resized to a square and converted
@@ -117,7 +116,8 @@ class FloorPlanDataset(Dataset):
         self.image_file_name: str = image_file_name
         split_path: Path = Path(split_dir)
         if not split_path.is_dir():
-            raise FileNotFoundError(f"Dataset split directory missing: {split_dir}")
+            raise FileNotFoundError(
+                f"Dataset split directory missing: {split_dir}")
 
         # One image per sample folder: enumerate sub-directories and keep those
         # that actually carry the selected render. Iterdir() is deliberately
@@ -327,7 +327,8 @@ def save_reconstruction_grid(
 
     # Stack originals above their reconstructions so they are easy to compare.
     comparison: torch.Tensor = torch.cat([sample_batch, reconstruction], dim=0)
-    grid: torch.Tensor = make_grid(comparison, nrow=sample_batch.shape[0], padding=2, normalize=True)
+    grid: torch.Tensor = make_grid(
+        comparison, nrow=sample_batch.shape[0], padding=2, normalize=True)
     grid_img = transforms.ToPILImage()(grid)
     grid_img.save(str(save_path))
     model.train()
@@ -367,7 +368,8 @@ def save_generation_grid(
 
     # Non-square / non-power-of-2 grid cell counts fall back to nrow=min(10, n).
     nrow: int = min(num_samples, 10)
-    grid: torch.Tensor = make_grid(generated, nrow=nrow, padding=2, normalize=True)
+    grid: torch.Tensor = make_grid(
+        generated, nrow=nrow, padding=2, normalize=True)
     grid_img = transforms.ToPILImage()(grid)
     grid_img.save(str(save_path))
     model.train()
@@ -382,14 +384,16 @@ class VAERunner:
         self.config_file: str = str(SCRIPT_DIR / "config.toml")
         self.hyperparams_file: str = str(SCRIPT_DIR / "hyperparameters.toml")
 
-        parser = argparse.ArgumentParser(description="Train the VAE on floor-plan images.")
+        parser = argparse.ArgumentParser(
+            description="Train the VAE on floor-plan images.")
         parser.add_argument(
             "--mode", help="Run mode (debug/prod)", choices=["debug", "prod"], default="debug"
         )
         args: argparse.Namespace = parser.parse_args()
 
         self.config: SimpleNamespace = load_config(args.mode, self.config_file)
-        self.hyperparams: SimpleNamespace = load_hyperparams(self.hyperparams_file)
+        self.hyperparams: SimpleNamespace = load_hyperparams(
+            self.hyperparams_file)
         self.log = setup_logger(self.config)
 
         # Telemetry fieldnames for the shared CSV telemetry writer. test_loss is
@@ -398,7 +402,8 @@ class VAERunner:
             "epoch", "train_loss", "recon_loss", "kl_loss", "test_loss",
         ]
 
-        self.device: torch.device = resolve_device(self.config.DEVICE, self.log)
+        self.device: torch.device = resolve_device(
+            self.config.DEVICE, self.log)
         self.log.info(
             f"Starting VAE training with run_id: <red>{self.config.runtime.RUN_ID}</red> "
             f"at time: {datetime.fromtimestamp(self.config.runtime.START_TIME)} on device: {self.device}"
@@ -406,7 +411,8 @@ class VAERunner:
 
         # Training state.
         self.model: VAEModel = VAEModel(self.hyperparams).to(self.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyperparams.LEARNING_RATE)
+        self.optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=self.hyperparams.LEARNING_RATE)
         self.telemetry_writer = TelemetryWriter(
             fieldnames=self.telemetry_fieldnames,
             directory=self.config.TELEMETRY_LOG_DIRECTORY,
@@ -430,7 +436,8 @@ class VAERunner:
             DataLoader: Configured dataloader for that split.
         """
         preload: bool = bool(self.hyperparams.PRELOAD_IMAGES)
-        image_file_name: str = resolve_image_file_name(self.config, TRAIN_IMAGE_VARIANT_KEY)
+        image_file_name: str = resolve_image_file_name(
+            self.config, TRAIN_IMAGE_VARIANT_KEY)
         self.log.info(
             f"Building dataset from {split_dir} using render '{image_file_name}' "
             f"(variant '{self.config.TRAIN_IMAGE_VARIANT}', "
@@ -623,7 +630,8 @@ class VAERunner:
 
         # Hold onto one fixed batch of TEST images for the per-epoch
         # reconstruction grids, so progress is always shown on the same samples.
-        fixed_batch: torch.Tensor = next(iter(test_dl))[: self.hyperparams.NUM_RECON_SAMPLES]
+        fixed_batch: torch.Tensor = next(iter(test_dl))[
+            : self.hyperparams.NUM_RECON_SAMPLES]
 
         self.log.info(f"Torch version: {torch.__version__}")
         execution_start: float = time.time()
@@ -660,7 +668,8 @@ class VAERunner:
                 Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
                 / f"reconstruction_epoch_{epoch}_{self.config.runtime.RUN_ID}.png"
             )
-            save_reconstruction_grid(self.model, fixed_batch, self.device, sample_path, self.log)
+            save_reconstruction_grid(
+                self.model, fixed_batch, self.device, sample_path, self.log)
 
             gen_path: Path = (
                 Path(self.config.OUTPUT_SAMPLES_DIRECTORY)

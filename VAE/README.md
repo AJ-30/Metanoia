@@ -32,11 +32,11 @@ The dataset stores every render side by side, so which one the VAE learns is a
 single TOML switch in `VAE/config.toml`, not a code change:
 
 ```toml
-TRAIN_IMAGE_VARIANT = "full_png"    # or "layout_only"
+TRAIN_IMAGE_VARIANT = "full_png"    # or "floorplan_only"
 
 [default.IMAGE_VARIANTS]
 full_png    = "full.png"
-layout_only = "floorplan_only.png"
+floorplan_only = "floorplan_only.png"
 ```
 
 `TRAIN_IMAGE_VARIANT` picks an entry of the `[default.IMAGE_VARIANTS]` table, so
@@ -112,7 +112,7 @@ epoch's grid, and the dashboard auto-refreshes so the newest images and the
 | `MODEL_SAVE_PATH`        | Where `.pt` checkpoints are saved                |
 | `TELEMETRY_LOG_DIRECTORY`| Where the run's `*.csv` telemetry goes           |
 | `OUTPUT_SAMPLES_DIRECTORY`| Where reconstruction grid images are saved      |
-| `TRAIN_IMAGE_VARIANT`    | Which render to learn: `full_png` or `layout_only`|
+| `TRAIN_IMAGE_VARIANT`    | Which render to learn: `full_png` or `floorplan_only`|
 | `IMAGE_VARIANTS`         | Variant → filename table (`[default.IMAGE_VARIANTS]`)|
 
 `[debug]` / `[prod]` sections follow the same convention as the root `config.toml`.

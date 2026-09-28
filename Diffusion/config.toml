@@ -21,7 +21,7 @@ VAE_CHECKPOINT_PATH = "./VAE/models/vae_next-collie_epoch_500.pt"
 # dataset stores every render of a layout side by side, so this key is the only
 # switch needed. Diffusion is trained on the full render:
 #   "full_png"    -> full.png           (furniture + floorplan)
-#   "layout_only" -> floorplan_only.png (rooms only, no furniture)
+#   "floorplan_only" -> floorplan_only.png (rooms only, no furniture)
 TRAIN_IMAGE_VARIANT = "full_png"
 
 # Variant name -> render filename inside each sample folder. Kept in TOML so the
@@ -30,7 +30,7 @@ TRAIN_IMAGE_VARIANT = "full_png"
 # carry the same entries. Keep them in sync.
 [default.IMAGE_VARIANTS]
 full_png = "full.png"
-layout_only = "floorplan_only.png"
+floorplan_only = "floorplan_only.png"
 
 [debug]
 IS_DEBUG = true

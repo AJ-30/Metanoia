@@ -39,12 +39,12 @@ carry), and `SOURCE_LABEL_FILE_NAME` names the annotation file that must sit
 next to it.
 
 ```toml
-SOURCE_IMAGE_VARIANT = "full_png"     # or "layout_only"
+SOURCE_IMAGE_VARIANT = "full_png"     # or "floorplan_only"
 SOURCE_LABEL_FILE_NAME = "labels.txt"
 
 [default.IMAGE_VARIANTS]
 full_png    = "full.png"
-layout_only = "floorplan_only.png"
+floorplan_only = "floorplan_only.png"
 ```
 
 Only the full render is used, because the boxes in `labels.txt` describe the
