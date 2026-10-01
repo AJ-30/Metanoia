@@ -25,7 +25,8 @@
     "titleBar.activeBackground": "#a71fb4",
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.inactiveBackground": "#a71fb499",
-    "titleBar.inactiveForeground": "#e7e7e799"
+    "titleBar.inactiveForeground": "#e7e7e799",
+    "statusBar.inactiveBackground": "#a71fb4"
   },
   "peacock.color": "#a71fb4",
   "C_Cpp_Runner.cCompilerPath": "clang",

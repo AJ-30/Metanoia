@@ -1,0 +1,44 @@
+[fresh-whale] 2026-09-30 15:23:31 | INFO | mask_VAE.runner:266 - Starting mask VAE training with run_id: fresh-whale at time: 2026-09-30 15:23:31.360289 on device: mps | seed: 42
+[fresh-whale] 2026-09-30 15:23:31 | INFO | mask_VAE.runner:272 - Mask layout: 2 group(s), 28 channels, 27 foreground
+  - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
+  - furniture: furniture_segmentation.png -> global channels [0, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] (11 classes: furniture/background, furniture/sofa, furniture/tv, furniture/dining_set, furniture/side_table, furniture/showcase, furniture/couch, furniture/chair, furniture/center_table, furniture/vase_table, furniture/sofa_cum_bed)
+[fresh-whale] 2026-09-30 15:23:31 | INFO | mask_VAE.runner:331 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[fresh-whale] 2026-09-30 15:23:32 | INFO | mask_VAE.runner:331 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/test (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[fresh-whale] 2026-09-30 15:23:33 | INFO | mask_VAE.runner:369 - Train masks: 32 | Test masks: 44
+[fresh-whale] 2026-09-30 15:23:33 | INFO | mask_VAE.runner:623 - Torch version: 2.13.0
+[fresh-whale] 2026-09-30 15:23:36 | INFO | mask_VAE.runner:216 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_1_fresh-whale.png
+[fresh-whale] 2026-09-30 15:23:36 | INFO | mask_VAE.runner:216 - Saved colorized grid to mask_VAE/outputs/generation_epoch_1_fresh-whale.png
+[fresh-whale] 2026-09-30 15:23:37 | INFO | mask_VAE.runner:560 - Saved checkpoint to ./mask_VAE/models/mask_vae_fresh-whale_epoch_1.pt
+[fresh-whale] 2026-09-30 15:23:37 | INFO | mask_VAE.runner:663 - Epoch 1/1 | train_loss: 1269275.7500 (bce: 1269275.4062, kl/dim: 0.001889) | test_loss: 1264917.6250 | test_fg_iou: 0.0298 | test_fg_dice: 0.0330 (N=8) | epoch_time: 4.3s | total: 4.3s
+[fresh-whale] 2026-09-30 15:23:39 | INFO | mask_VAE.runner:560 - Saved checkpoint to ./mask_VAE/models/mask_vae_fresh-whale_epoch_1.pt
+[fresh-whale] 2026-09-30 15:23:39 | SUCCESS | mask_VAE.runner:678 - FINAL TEST RESULT on full test set (N=44): test_loss=1265132.8068 | test_bce=1265132.4318 | test_kl=0.4567 | test_fg_iou=0.0288 | test_fg_dice=0.0324
+[fresh-whale] 2026-09-30 15:23:39 | INFO | mask_VAE.runner:709 - Worst 5 classes by test IoU (mean foreground IoU 0.0288): background=0.0000, floorplan/balcony=0.0000, floorplan/bathroom=0.0000, floorplan/bedroom=0.0000, floorplan/door=0.0000
+[polite-leech] 2026-10-01 05:34:08 | INFO | mask_VAE.runner:269 - Starting mask VAE training with run_id: polite-leech at time: 2026-10-01 05:34:08.086488 on device: mps | seed: 42
+[polite-leech] 2026-10-01 05:34:08 | INFO | mask_VAE.runner:275 - Mask layout: 2 group(s), 28 channels, 27 foreground
+  - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
+  - furniture: furniture_segmentation.png -> global channels [0, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] (11 classes: furniture/background, furniture/sofa, furniture/tv, furniture/dining_set, furniture/side_table, furniture/showcase, furniture/couch, furniture/chair, furniture/center_table, furniture/vase_table, furniture/sofa_cum_bed)
+[polite-leech] 2026-10-01 05:34:08 | INFO | mask_VAE.runner:334 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['floorplan', 'furniture'], preload into RAM: False)...
+[polite-leech] 2026-10-01 05:34:23 | INFO | mask_VAE.runner:334 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/test (groups: ['floorplan', 'furniture'], preload into RAM: False)...
+[polite-leech] 2026-10-01 05:34:24 | INFO | mask_VAE.runner:372 - Train masks: 32 | Test masks: 10043
+[polite-leech] 2026-10-01 05:34:25 | INFO | mask_VAE.runner:626 - Torch version: 2.13.0
+[polite-leech] 2026-10-01 05:34:27 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_1_polite-leech.png
+[polite-leech] 2026-10-01 05:34:27 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_1_polite-leech.png
+[polite-leech] 2026-10-01 05:34:27 | INFO | mask_VAE.runner:666 - Epoch 1/2 | train_loss: 1268908.5938 (bce: 1268908.2500, kl/dim: 0.001917) | test_loss: 1264665.7500 | test_fg_iou: 0.0332 | test_fg_dice: 0.0350 (N=8) | epoch_time: 2.2s | total: 2.2s
+[polite-leech] 2026-10-01 05:34:28 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_2_polite-leech.png
+[polite-leech] 2026-10-01 05:34:28 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_2_polite-leech.png
+[polite-leech] 2026-10-01 05:34:29 | INFO | mask_VAE.runner:563 - Saved checkpoint to ./mask_VAE/models/mask_vae_polite-leech_epoch_2.pt
+[polite-leech] 2026-10-01 05:34:29 | INFO | mask_VAE.runner:666 - Epoch 2/2 | train_loss: 1261857.2188 (bce: 1261856.8125, kl/dim: 0.002128) | test_loss: 1257268.3750 | test_fg_iou: 0.0328 | test_fg_dice: 0.0348 (N=8) | epoch_time: 2.1s | total: 4.4s
+[polite-leech] 2026-10-01 05:40:23 | INFO | mask_VAE.runner:563 - Saved checkpoint to ./mask_VAE/models/mask_vae_polite-leech_epoch_2.pt
+[polite-leech] 2026-10-01 05:40:23 | SUCCESS | mask_VAE.runner:681 - FINAL TEST RESULT on full test set (N=10043): test_loss=1257472.2489 | test_bce=1257471.4989 | test_kl=0.9548 | test_fg_iou=0.0307 | test_fg_dice=0.0336
+[polite-leech] 2026-10-01 05:40:23 | INFO | mask_VAE.runner:712 - Worst 5 classes by test IoU (mean foreground IoU 0.0307): background=0.0000, floorplan/balcony=0.0000, floorplan/bathroom=0.0000, floorplan/bedroom=0.0000, floorplan/door=0.0000
+[busy-ferret] 2026-10-01 09:29:23 | INFO | mask_VAE.runner:269 - Starting mask VAE training with run_id: busy-ferret at time: 2026-10-01 09:29:22.978330 on device: mps | seed: 42
+[busy-ferret] 2026-10-01 09:29:23 | INFO | mask_VAE.runner:275 - Mask layout: 2 group(s), 28 channels, 27 foreground
+  - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
+  - furniture: furniture_segmentation.png -> global channels [0, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] (11 classes: furniture/background, furniture/sofa, furniture/tv, furniture/dining_set, furniture/side_table, furniture/showcase, furniture/couch, furniture/chair, furniture/center_table, furniture/vase_table, furniture/sofa_cum_bed)
+[busy-ferret] 2026-10-01 09:29:23 | INFO | mask_VAE.runner:334 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['floorplan', 'furniture'], preload into RAM: False)...
+[busy-ferret] 2026-10-01 09:29:40 | INFO | mask_VAE.runner:334 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/test (groups: ['floorplan', 'furniture'], preload into RAM: False)...
+[busy-ferret] 2026-10-01 09:29:54 | INFO | mask_VAE.runner:372 - Train masks: 69776 | Test masks: 10043
+[busy-ferret] 2026-10-01 09:29:57 | INFO | mask_VAE.runner:626 - Torch version: 2.13.0
+[busy-ferret] 2026-10-01 10:07:12 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_1_busy-ferret.png
+[busy-ferret] 2026-10-01 10:07:12 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_1_busy-ferret.png
+[busy-ferret] 2026-10-01 10:07:12 | INFO | mask_VAE.runner:666 - Epoch 1/2500 | train_loss: 86044.3490 (bce: 85174.3092, kl/dim: 4.531457) | test_loss: 44633.0747 | test_fg_iou: 0.0638 | test_fg_dice: 0.0736 (N=100) | epoch_time: 2234.5s | total: 2234.5s

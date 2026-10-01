@@ -1,0 +1,67 @@
+# Non-model configuration for mask_VAE: device, paths, logging, telemetry and
+# which semantic masks are learned. Model architecture and training
+# hyperparameters live in mask_VAE/hyperparameters.toml.
+#
+# This model does NOT read the rendered floor-plan images (full.png /
+# floorplan_only.png). It reads the integer segmentation masks that sit next to
+# them, and reconstructs them with a per-class binary cross-entropy objective.
+
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/mask_vae.log"
+MODEL_SAVE_PATH = "./mask_VAE/models/"
+TELEMETRY_LOG_DIRECTORY = "./mask_VAE/telemetry_logs/"
+PER_CLASS_TELEMETRY_LOG_DIRECTORY = "./mask_VAE/telemetry_logs/"
+OUTPUT_SAMPLES_DIRECTORY = "./mask_VAE/outputs/"
+DEVICE = "mps"
+
+# Split folders of the folder-per-sample dataset: each holds one sub-folder per
+# sample (e.g. <hash>_original/) containing floorplan_segmentation.png,
+# furniture_segmentation.png, full.png and labels.txt.
+TRAIN_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
+TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
+
+# ---------------------------------------------------------------------------
+# Which semantic masks the model learns. THIS LIST IS THE ARCHITECTURE SWITCH:
+# its order and length define the channel count of the encoder input and the
+# decoder output, so changing it makes previously saved checkpoints unloadable.
+#
+#   ["floorplan"]              -> background + 17 floorplan classes  = 18 channels
+#   ["furniture"]              -> background + 10 furniture classes  = 11 channels
+#   ["floorplan", "furniture"] -> background + 17 + 10               = 28 channels
+#
+# Channel 0 is always the shared background channel: it is on wherever a pixel
+# is 0 in EVERY selected mask. Channels 1.. follow, group by group, in the
+# order of this list.
+# ---------------------------------------------------------------------------
+MASK_GROUPS = ["floorplan", "furniture"]
+
+# Directory holding the color index JSONs. They live at the dataset root, next
+# to the split folders. If a file is not found here, the runner falls back to
+# the parent of TRAIN_IMAGES_DIR and logs a warning.
+#
+# NOTE: this key must stay above the first [default.<TABLE>] header below. A
+# bare key written after such a header belongs to that sub-table, not to
+# [default], and the runner would then not find it in the active table.
+MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+
+# Group name -> mask filename inside each sample folder. Kept in TOML so the
+# filenames are never hardcoded in Python.
+[default.MASK_FILES]
+floorplan = "floorplan_segmentation.png"
+furniture = "furniture_segmentation.png"
+
+# Group name -> color index JSON, looked up in MASK_COLOR_INDEX_DIR. The JSON is
+# a mapping from the numeric class id (as a string, "0" is background) to
+# {"name": ..., "color": "#rrggbb"}. It is the authoritative visualization map
+# for the mask PNGs, which themselves store plain integer labels.
+[default.MASK_COLOR_INDEX_FILES]
+floorplan = "floorplan_color_index.json"
+furniture = "furniture_color_index.json"
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false

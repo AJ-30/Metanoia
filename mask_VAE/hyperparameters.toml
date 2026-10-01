@@ -1,0 +1,83 @@
+# Model architecture and training hyperparameters for mask_VAE.
+# Non-model settings (device, paths, which masks are learned) live in
+# mask_VAE/config.toml. Nothing in this file is read at a specific mode: all
+# values apply to both --mode debug and --mode prod.
+
+[default]
+# --- Architecture -----------------------------------------------------------
+# Square side length of the mask tensors. MUST be divisible by 16: the encoder
+# applies 4 stride-2 stages, so 16 is the smallest valid value.
+IMAGE_SIZE = 256
+# Channel count of the encoder input / decoder output. MUST equal the channel
+# count implied by MASK_GROUPS in config.toml: 1 shared background channel plus
+# one channel per foreground class of every selected mask. The runner asserts
+# this at startup instead of silently training a model that cannot be decoded.
+#
+# With the current dataset (18 floorplan classes, 11 furniture classes) and
+# MASK_GROUPS = ["floorplan", "furniture"] the count is 1 + 17 + 10 = 28. The
+# number of classes lives in the dataset's own *_color_index.json files, so if
+# the dataset is regenerated with a different class table, the assertion below
+# fires and its message states the value to copy in here.
+MASK_CHANNELS = 28
+# Dimensionality of the flat latent vector, same convention as VAE/hyperparameters.toml.
+LATENT_DIM = 256
+# Channel count of the deepest convolution of the encoder / first layer of the decoder.
+BASE_CHANNELS = 128
+# Dropout probability, applied in the encoder and in the decoder. Training only.
+DROPOUT = 0.15
+# Std-dev of extra Gaussian noise added to the sampled latent during training,
+# which pushes the aggregate posterior towards the prior. Training only.
+LATENT_ADDITIONAL_NOISE = 0.05
+
+# --- Loss weights -----------------------------------------------------------
+# Beta-VAE weight on the KL divergence. 0.0 trains an autoencoder with no
+# latent regularization at all; values above 1.0 trade reconstruction detail for
+# a tighter latent space.
+KL_WEIGHT = 0.75
+# Positive-class weight of the binary cross-entropy. 1.0 is plain BCE. Masks are
+# mostly background, so the all-zero answer already scores well; raising this
+# makes a missed foreground class cost more than a false positive.
+BCE_POS_WEIGHT = 1.0
+
+# --- Optimization and data --------------------------------------------------
+LEARNING_RATE = 0.0003
+# Memory scales with BATCH_SIZE x MASK_CHANNELS x IMAGE_SIZE**2, because the BCE
+# is a per-pixel sum over channels. At the values above, BATCH_SIZE = 16 uses
+# roughly 3.5 GB of activations on MPS; halve it on a smaller machine.
+BATCH_SIZE = 16
+NUM_EPOCHS = 2500
+# RNG seed for Python and torch, applied before any model or data is built, so
+# two runs with the same seed and the same config produce the same result.
+SEED = 42
+# DataLoader worker processes. Keep this at 0 on macOS: the dataset holds a
+# per-sample closure that does not survive the spawn start method, and workers
+# are slower than in-process loading here anyway (measured 114 masks/s at
+# num_workers=0 vs 38 at 4), because decoding these small PNGs is faster than
+# the queue round-trip.
+NUM_WORKERS = 0
+# Cap on samples per split. Negative means use every sample.
+MAX_SAMPLES = -1
+# Decode every mask into RAM once at construction, which removes the PNG decode
+# from the training loop. A cached sample costs MASK_CHANNELS x IMAGE_SIZE x
+# IMAGE_SIZE bytes as uint8, i.e. ~1.8 MB at the values above, so the current
+# 69776-sample train split would need ~126 GB and MUST stay false at this scale.
+# Set it to true only together with a MAX_SAMPLES cap that keeps the total
+# within RAM, e.g. MAX_SAMPLES = 4096 uses ~7.4 GB.
+PRELOAD_MASKS = false
+
+# --- Logging and evaluation -------------------------------------------------
+# Epochs between telemetry rows in the main CSV. 1 = every epoch.
+TELEMETRY_INTERVAL = 1
+# Epochs between checkpoint saves.
+CHECKPOINT_INTERVAL = 50
+# Fixed test masks drawn in the reconstruction grid, per mask group. These come
+# from the first test batch, so keep this at or below BATCH_SIZE to avoid a
+# second decode pass purely for the picture.
+NUM_RECON_SAMPLES = 8
+# Novel layouts sampled from the latent prior, per mask group.
+NUM_GEN_SAMPLES = 8
+# Test masks used for the per-epoch test_loss / test_fg_iou / test_fg_dice. The
+# test split is unshuffled, so this always covers the same first N masks and the
+# per-epoch numbers stay comparable. Note the final full-test evaluation ignores
+# this cap, which on the current 10043-sample test split takes a few minutes.
+TEST_LOSS_SAMPLES = 100
