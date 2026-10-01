@@ -233,8 +233,9 @@ class MaskVAEModel(nn.Module):
         if x.shape[1] != self.num_channels:
             raise ValueError(
                 f"This model decodes {self.num_channels} mask channels but got "
-                f"{x.shape[1]}. MASK_GROUPS in mask_VAE/config.toml and "
-                "MASK_CHANNELS in mask_VAE/hyperparameters.toml disagree."
+                f"{x.shape[1]}. MASK_MODE in mask_VAE/config.toml and "
+                "the checkpoint's channel count disagree (checkpoints from a "
+                "different mode are unloadable)."
             )
 
         mu, logvar = self.encoder(x)

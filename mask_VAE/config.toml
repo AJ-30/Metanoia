@@ -21,28 +21,42 @@ TRAIN_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
 TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 
 # ---------------------------------------------------------------------------
-# Which semantic masks the model learns. THIS LIST IS THE ARCHITECTURE SWITCH:
-# its order and length define the channel count of the encoder input and the
-# decoder output, so changing it makes previously saved checkpoints unloadable.
+# Which semantic masks the model learns. THIS SWITCH DEFINES THE ARCHITECTURE:
+# its resolved group list defines the channel count of the encoder input and
+# the decoder output, so changing it makes previously saved checkpoints
+# unloadable. The runner auto-syncs the model input channels to the resolved
+# layout, so only this key (plus the tables below) needs editing.
 #
-#   ["floorplan"]              -> background + 17 floorplan classes  = 18 channels
-#   ["furniture"]              -> background + 10 furniture classes  = 11 channels
-#   ["floorplan", "furniture"] -> background + 17 + 10               = 28 channels
+#   "floorplan"   -> background + 17 floorplan classes  = 18 channels
+#   "arrangement" -> background + 10 furniture classes  = 11 channels
+#   "both"        -> background + 17 + 10                = 28 channels
 #
 # Channel 0 is always the shared background channel: it is on wherever a pixel
 # is 0 in EVERY selected mask. Channels 1.. follow, group by group, in the
-# order of this list.
+# order of the resolved list.
 # ---------------------------------------------------------------------------
+MASK_MODE = "floorplan"
+
+# Legacy explicit list, used only when MASK_MODE is absent. Prefer MASK_MODE
+# above; this stays as a fallback so old configs keep working.
 MASK_GROUPS = ["floorplan", "furniture"]
 
 # Directory holding the color index JSONs. They live at the dataset root, next
 # to the split folders. If a file is not found here, the runner falls back to
 # the parent of TRAIN_IMAGES_DIR and logs a warning.
 #
-# NOTE: this key must stay above the first [default.<TABLE>] header below. A
-# bare key written after such a header belongs to that sub-table, not to
-# [default], and the runner would then not find it in the active table.
+# NOTE: every bare key above must stay above the first [default.<TABLE>] header
+# below. A bare key written after such a header belongs to that sub-table, not
+# to [default], and the runner would then not find it in the active table.
 MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+
+# Named mode -> ordered list of mask groups. Kept in TOML (not hardcoded in
+# Python) so adding a mode is a config edit. Each group name must exist in
+# [default.MASK_FILES] and [default.MASK_COLOR_INDEX_FILES] below.
+[default.MASK_MODES]
+floorplan = ["floorplan"]
+arrangement = ["furniture"]
+both = ["floorplan", "furniture"]
 
 # Group name -> mask filename inside each sample folder. Kept in TOML so the
 # filenames are never hardcoded in Python.

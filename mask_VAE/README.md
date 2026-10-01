@@ -94,18 +94,21 @@ to copy in, instead of training a model that cannot be decoded.
 
 ## Choosing which masks to learn
 
-`MASK_GROUPS` in `config.toml` is the switch. It is also an architectural
-switch: its order and length define the channel count, so changing it makes
-previously saved checkpoints unloadable.
+`MASK_MODE` in `config.toml` is the switch. It is also an architectural
+switch: the resolved group list defines the channel count, so changing it makes
+previously saved checkpoints unloadable. The runner auto-syncs the model
+input/output channels (`MASK_CHANNELS`) to the layout, so no second edit is
+needed.
 
 ```toml
-MASK_GROUPS = ["floorplan"]               # background + 17 = 18 channels
-MASK_GROUPS = ["furniture"]               # background + 10 = 11 channels
-MASK_GROUPS = ["floorplan", "furniture"]  # background + 17 + 10 = 28 channels
+MASK_MODE = "floorplan"    # background + 17 = 18 channels
+MASK_MODE = "arrangement"  # background + 10 = 11 channels (furniture)
+MASK_MODE = "both"         # background + 17 + 10 = 28 channels
 ```
 
-After changing it, update `MASK_CHANNELS` in `hyperparameters.toml` to the
-count the startup assertion prints.
+Mode names live in the `[default.MASK_MODES]` table (`mode -> group list`), so
+adding a mode is a TOML edit. `MASK_GROUPS` is kept only as a legacy fallback
+when `MASK_MODE` is absent.
 
 ## Files
 
@@ -175,14 +178,15 @@ column -s, -t < mask_VAE/telemetry_logs/<run_id>_per_class.csv | less -S
 | `DEVICE` | `mps`, `cuda` or `cpu` (falls back to CPU) |
 | `TRAIN_IMAGES_DIR` | Split folder of samples to train on |
 | `TEST_IMAGES_DIR` | Split folder of samples used for evaluation |
-| `MASK_GROUPS` | Ordered list of mask groups to learn; defines the channel count |
+| `MASK_MODE` | `floorplan` (rooms) / `arrangement` (furniture) / `both`; defines the channel count, input auto-syncs |
+| `MASK_GROUPS` | Legacy fallback list, used only when `MASK_MODE` is absent |
 | `MASK_COLOR_INDEX_DIR` | Directory holding the `*_color_index.json` files |
 | `DEBUG_LOG_FILE_PATH` | Log file written by the shared logger |
 | `MODEL_SAVE_PATH` | Where `.pt` checkpoints are saved |
 | `TELEMETRY_LOG_DIRECTORY` | Where the main `*.csv` telemetry goes |
 | `PER_CLASS_TELEMETRY_LOG_DIRECTORY` | Where the per-class `*.csv` goes |
 | `OUTPUT_SAMPLES_DIRECTORY` | Where the colorized grids are saved |
-| `IMAGE_VARIANTS`-style tables | `MASK_FILES` and `MASK_COLOR_INDEX_FILES`: group → filename, so no filename is hardcoded in Python |
+| `IMAGE_VARIANTS`-style tables | `MASK_MODES` (mode → groups), `MASK_FILES` and `MASK_COLOR_INDEX_FILES`: group → filename, so no filename is hardcoded in Python |
 
 `MASK_COLOR_INDEX_DIR` falls back to the parent of `TRAIN_IMAGES_DIR` when a
 JSON is not found there, which is what happens if only the split paths were

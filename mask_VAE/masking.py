@@ -310,6 +310,84 @@ def resolve_color_index_path(
     )
 
 
+def resolve_mask_group_names(config: SimpleNamespace) -> list[str]:
+    """
+    Resolve the ordered mask group names from the configured mode.
+
+    Primary source is ``MASK_MODE`` looked up in the ``MASK_MODES`` table
+    (e.g. ``"floorplan" -> ["floorplan"]``, ``"arrangement" -> ["furniture"]``,
+    ``"both" -> ["floorplan", "furniture"]``). When ``MASK_MODE`` is absent,
+    falls back to the legacy explicit ``MASK_GROUPS`` list so old configs keep
+    working.
+
+    Args:
+        config (SimpleNamespace): Parsed ``config.toml``. Must expose either
+            ``MASK_MODE`` plus ``MASK_MODES``, or ``MASK_GROUPS``.
+
+    Returns:
+        list[str]: Ordered group names, e.g. ``["floorplan", "furniture"]``.
+
+    Raises:
+        AttributeError: If neither ``MASK_MODE`` nor ``MASK_GROUPS`` is present.
+        KeyError: If the mode is not a key of the ``MASK_MODES`` table.
+        TypeError: If the mode entry is not a list of non-empty strings.
+        ValueError: If the resolved list is empty or contains duplicates.
+    """
+    if hasattr(config, "MASK_MODE"):
+        mode_name: str = str(config.MASK_MODE)
+        modes_table: object = _require_config_key(config, "MASK_MODES")
+        if not isinstance(modes_table, dict):
+            raise TypeError(
+                "mask_VAE/config.toml must define a [default.MASK_MODES] table "
+                f"mapping mode name -> group list, got {type(modes_table).__name__}."
+            )
+        if mode_name not in modes_table:
+            raise KeyError(
+                f"MASK_MODE={mode_name!r} is not in the [default.MASK_MODES] "
+                f"table. Known modes: {sorted(modes_table.keys())}."
+            )
+        raw_groups: object = modes_table[mode_name]
+        if not isinstance(raw_groups, list):
+            raise TypeError(
+                f"[default.MASK_MODES].{mode_name} must be a list of group "
+                f"names, got {type(raw_groups).__name__}."
+            )
+        group_names: list[str] = []
+        for entry in raw_groups:
+            if not isinstance(entry, str) or not entry:
+                raise TypeError(
+                    f"[default.MASK_MODES].{mode_name} must hold non-empty "
+                    f"strings, got {entry!r}."
+                )
+            group_names.append(entry)
+        source_label: str = f"MASK_MODE={mode_name!r}"
+    elif hasattr(config, "MASK_GROUPS"):
+        # Legacy path: explicit list, kept for backward compatibility.
+        raw_legacy: object = getattr(config, "MASK_GROUPS")
+        if not isinstance(raw_legacy, list):
+            raise TypeError(
+                f"MASK_GROUPS must be a list of group names, got {type(raw_legacy).__name__}."
+            )
+        group_names = [str(name) for name in raw_legacy]
+        source_label = "MASK_GROUPS"
+    else:
+        raise AttributeError(
+            "mask_VAE/config.toml must define MASK_MODE (preferred) or "
+            "MASK_GROUPS (legacy) in the active table."
+        )
+
+    if not group_names:
+        raise ValueError(
+            f"{source_label} in mask_VAE/config.toml must list at least one "
+            "mask group."
+        )
+    if len(set(group_names)) != len(group_names):
+        raise ValueError(
+            f"{source_label} in mask_VAE/config.toml contains duplicates: {group_names}."
+        )
+    return group_names
+
+
 def build_mask_layout(
     config: SimpleNamespace,
     fallback_color_index_dir: Path,
@@ -319,12 +397,14 @@ def build_mask_layout(
 
     The class ids of every selected mask group are laid out as follows: global
     channel ``0`` is the shared background, and each group then claims as many
-    channels as it has foreground classes, in ``MASK_GROUPS`` order.
+    channels as it has foreground classes, in resolved mode order
+    (:func:`resolve_mask_group_names`).
 
     Args:
         config (SimpleNamespace): Parsed ``config.toml``. Must expose
-            ``MASK_GROUPS``, ``MASK_FILES`` and ``MASK_COLOR_INDEX_FILES`` in the
-            active table, plus ``MASK_COLOR_INDEX_DIR``.
+            ``MASK_MODE`` plus ``MASK_MODES`` (or legacy ``MASK_GROUPS``),
+            ``MASK_FILES`` and ``MASK_COLOR_INDEX_FILES`` in the active table,
+            plus ``MASK_COLOR_INDEX_DIR``.
         fallback_color_index_dir (Path): Directory searched for the color index
             JSONs when ``MASK_COLOR_INDEX_DIR`` does not hold them. In practice
             the parent of the split folder.
@@ -334,20 +414,9 @@ def build_mask_layout(
 
     Raises:
         AttributeError: If a required config key is missing.
-        ValueError: If ``MASK_GROUPS`` is empty or names a group twice.
+        ValueError: If the resolved group list is empty or names a group twice.
     """
-    group_names: list[str] = [
-        str(name) for name in _require_config_key(config, "MASK_GROUPS")
-    ]
-    if not group_names:
-        raise ValueError(
-            "MASK_GROUPS in mask_VAE/config.toml must list at least one mask "
-            "group, e.g. [\"floorplan\", \"furniture\"]."
-        )
-    if len(set(group_names)) != len(group_names):
-        raise ValueError(
-            f"MASK_GROUPS in mask_VAE/config.toml contains duplicates: {group_names}."
-        )
+    group_names: list[str] = resolve_mask_group_names(config)
 
     mask_files: object = _require_config_key(config, "MASK_FILES")
     color_index_files: object = _require_config_key(config, "MASK_COLOR_INDEX_FILES")

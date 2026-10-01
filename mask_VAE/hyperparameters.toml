@@ -8,16 +8,16 @@
 # Square side length of the mask tensors. MUST be divisible by 16: the encoder
 # applies 4 stride-2 stages, so 16 is the smallest valid value.
 IMAGE_SIZE = 256
-# Channel count of the encoder input / decoder output. MUST equal the channel
-# count implied by MASK_GROUPS in config.toml: 1 shared background channel plus
-# one channel per foreground class of every selected mask. The runner asserts
-# this at startup instead of silently training a model that cannot be decoded.
+# Channel count of the encoder input / decoder output. Auto-synced at startup
+# to the layout implied by MASK_MODE in config.toml: 1 shared background
+# channel plus one per foreground class of every selected mask group.
 #
-# With the current dataset (18 floorplan classes, 11 furniture classes) and
-# MASK_GROUPS = ["floorplan", "furniture"] the count is 1 + 17 + 10 = 28. The
-# number of classes lives in the dataset's own *_color_index.json files, so if
-# the dataset is regenerated with a different class table, the assertion below
-# fires and its message states the value to copy in here.
+# With the current dataset (18 floorplan classes, 11 furniture classes):
+#   MASK_MODE = "floorplan"   -> 1 + 17      = 18 channels
+#   MASK_MODE = "arrangement" -> 1 + 10      = 11 channels
+#   MASK_MODE = "both"        -> 1 + 17 + 10 = 28 channels
+# Keep the value below matching your mode for readability; a mismatch only
+# triggers a warning and the runner overwrites it with the layout count.
 MASK_CHANNELS = 28
 # Dimensionality of the flat latent vector, same convention as VAE/hyperparameters.toml.
 LATENT_DIM = 256
@@ -63,7 +63,7 @@ MAX_SAMPLES = -1
 # 69776-sample train split would need ~126 GB and MUST stay false at this scale.
 # Set it to true only together with a MAX_SAMPLES cap that keeps the total
 # within RAM, e.g. MAX_SAMPLES = 4096 uses ~7.4 GB.
-PRELOAD_MASKS = false
+PRELOAD_MASKS = true
 
 # --- Logging and evaluation -------------------------------------------------
 # Epochs between telemetry rows in the main CSV. 1 = every epoch.

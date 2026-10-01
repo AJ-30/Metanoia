@@ -223,14 +223,16 @@ class MaskVAERunner:
     """
     Trains a :class:`~mask_VAE.model.MaskVAEModel` on semantic segmentation masks.
 
+    The mask mode (``MASK_MODE`` in ``config.toml``: ``"floorplan"``,
+    ``"arrangement"`` or ``"both"``) selects which mask groups are learned.
+    The dataset encoding, the model input/output channels and the colorized
+    grids all follow the resolved layout, so switching mode needs no other
+    edit: ``MASK_CHANNELS`` is auto-synced to the layout before the model is
+    built.
+
     Args:
         mode (str): Run mode selecting the ``[debug]`` or ``[prod]`` table of
             ``config.toml``. Parsed from ``--mode`` when not passed explicitly.
-
-    Raises:
-        ValueError: If ``MASK_CHANNELS`` in the hyperparameters disagrees with
-            the channel count implied by ``MASK_GROUPS`` in the config, which
-            would silently train a model that cannot be decoded.
     """
 
     def __init__(self, mode: str | None = None) -> None:
@@ -259,11 +261,15 @@ class MaskVAERunner:
         # the colorized grids, so it is resolved once here and handed to all
         # three. The color index JSONs live at the dataset root, next to the
         # split folders.
+        # The channel layout is the contract between the dataset, the model and
+        # the colorized grids, so it is resolved once here and handed to all
+        # three. The color index JSONs live at the dataset root, next to the
+        # split folders.
         self.layout: MaskLayout = build_mask_layout(
             self.config,
             fallback_color_index_dir=Path(self.config.TRAIN_IMAGES_DIR).parent,
         )
-        self._assert_channel_count_matches_layout()
+        self._sync_channel_count_to_layout()
 
         self.device: torch.device = resolve_device(self.config.DEVICE, self.log)
         self.log.info(
@@ -289,26 +295,31 @@ class MaskVAERunner:
             config=self.config,
         )
 
-    def _assert_channel_count_matches_layout(self) -> None:
+    def _sync_channel_count_to_layout(self) -> None:
         """
-        Fail before training if the model's channel count is not the layout's.
+        Sync the model input/output channels to the resolved mask layout.
 
-        The channel count appears in two files that are edited independently, so
-        a mismatch is easy to introduce and expensive to notice: the model would
-        train happily against a target it cannot even be built for.
+        The layout's channel count (1 shared background plus one per foreground
+        class of every selected group) is authoritative: the dataset encodes
+        to it and the grids render from it. ``MASK_CHANNELS`` in
+        ``hyperparameters.toml`` is overwritten when it disagrees, so switching
+        ``MASK_MODE`` (``"floorplan"`` / ``"arrangement"`` / ``"both"``)
+        changes the encoder input and decoder output automatically instead of
+        requiring a second manual edit.
 
-        Raises:
-            ValueError: If ``MASK_CHANNELS`` and the layout disagree.
+        Returns:
+            None: Updates ``self.hyperparams.MASK_CHANNELS`` in place.
         """
         configured: int = int(self.hyperparams.MASK_CHANNELS)
-        if configured != self.layout.num_channels:
-            raise ValueError(
-                f"MASK_CHANNELS={configured} in mask_VAE/hyperparameters.toml does "
-                f"not match the {self.layout.num_channels} channels implied by "
-                f"MASK_GROUPS={self.config.MASK_GROUPS} in mask_VAE/config.toml. "
-                "The channel count is 1 shared background channel plus one per "
-                "foreground class of every selected mask group."
+        required: int = int(self.layout.num_channels)
+        mode_label: str = str(getattr(self.config, "MASK_MODE", "MASK_GROUPS"))
+        if configured != required:
+            self.log.warning(
+                f"MASK_CHANNELS={configured} in mask_VAE/hyperparameters.toml "
+                f"does not match the {required} channels of mode {mode_label!r}; "
+                "auto-syncing the model input/output to the layout."
             )
+            self.hyperparams.MASK_CHANNELS = required
 
     def _make_dataloader(
         self,
@@ -552,7 +563,8 @@ class MaskVAERunner:
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "epoch": epoch,
                 "hyperparameters": vars(self.hyperparams),
-                "mask_groups": list(self.config.MASK_GROUPS),
+                "mask_mode": str(getattr(self.config, "MASK_MODE", "custom")),
+                "mask_groups": [group.name for group in self.layout.groups],
                 "mask_channel_indices": {
                     group.name: list(group.channel_indices) for group in self.layout.groups
                 },
