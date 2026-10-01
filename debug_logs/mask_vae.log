@@ -47,3 +47,132 @@
   - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
   - furniture: furniture_segmentation.png -> global channels [0, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27] (11 classes: furniture/background, furniture/sofa, furniture/tv, furniture/dining_set, furniture/side_table, furniture/showcase, furniture/couch, furniture/chair, furniture/center_table, furniture/vase_table, furniture/sofa_cum_bed)
 [upward-stork] 2026-10-01 10:41:16 | WARNING | mask_VAE.runner:317 - MASK_CHANNELS=999 in mask_VAE/hyperparameters.toml does not match the 28 channels of mode 'both'; auto-syncing the model input/output to the layout.
+[saved-insect] 2026-10-01 10:47:51 | WARNING | mask_VAE.runner:317 - MASK_CHANNELS=28 in mask_VAE/hyperparameters.toml does not match the 18 channels of mode 'floorplan'; auto-syncing the model input/output to the layout.
+[saved-insect] 2026-10-01 10:47:51 | INFO | mask_VAE.runner:275 - Starting mask VAE training with run_id: saved-insect at time: 2026-10-01 10:47:51.192268 on device: mps | seed: 42
+[saved-insect] 2026-10-01 10:47:51 | INFO | mask_VAE.runner:281 - Mask layout: 1 group(s), 18 channels, 17 foreground
+  - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
+[saved-insect] 2026-10-01 10:47:51 | INFO | mask_VAE.runner:345 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[saved-insect] 2026-10-01 10:52:23 | INFO | mask_VAE.runner:345 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/test (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[saved-insect] 2026-10-01 10:53:05 | INFO | mask_VAE.runner:383 - Train masks: 69776 | Test masks: 10043
+[saved-insect] 2026-10-01 10:53:05 | INFO | mask_VAE.runner:638 - Torch version: 2.13.0
+[saved-insect] 2026-10-01 11:09:41 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_1_saved-insect.png
+[saved-insect] 2026-10-01 11:09:41 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_1_saved-insect.png
+[saved-insect] 2026-10-01 11:09:41 | INFO | mask_VAE.runner:678 - Epoch 1/2500 | train_loss: 28126.2923 (bce: 27512.6873, kl/dim: 3.195859) | test_loss: 15614.2222 | test_fg_iou: 0.1370 | test_fg_dice: 0.1532 (N=100) | epoch_time: 995.8s | total: 995.8s
+[saved-insect] 2026-10-01 11:25:59 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_2_saved-insect.png
+[saved-insect] 2026-10-01 11:25:59 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_2_saved-insect.png
+[saved-insect] 2026-10-01 11:25:59 | INFO | mask_VAE.runner:678 - Epoch 2/2500 | train_loss: 9033.9857 (bce: 8612.3190, kl/dim: 2.196181) | test_loss: 6535.3118 | test_fg_iou: 0.2242 | test_fg_dice: 0.2508 (N=100) | epoch_time: 978.3s | total: 1974.1s
+[saved-insect] 2026-10-01 11:42:34 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_3_saved-insect.png
+[saved-insect] 2026-10-01 11:42:34 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_3_saved-insect.png
+[saved-insect] 2026-10-01 11:42:34 | INFO | mask_VAE.runner:678 - Epoch 3/2500 | train_loss: 5180.4725 (bce: 4773.4055, kl/dim: 2.120141) | test_loss: 3732.7947 | test_fg_iou: 0.2690 | test_fg_dice: 0.2808 (N=100) | epoch_time: 995.1s | total: 2969.2s
+[saved-insect] 2026-10-01 11:59:04 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_4_saved-insect.png
+[saved-insect] 2026-10-01 11:59:05 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_4_saved-insect.png
+[saved-insect] 2026-10-01 11:59:05 | INFO | mask_VAE.runner:678 - Epoch 4/2500 | train_loss: 3832.1753 (bce: 3440.0695, kl/dim: 2.042218) | test_loss: 3147.9499 | test_fg_iou: 0.2731 | test_fg_dice: 0.2831 (N=100) | epoch_time: 990.5s | total: 3959.7s
+[keen-hermit] 2026-10-01 12:01:05 | WARNING | mask_VAE.runner:317 - MASK_CHANNELS=28 in mask_VAE/hyperparameters.toml does not match the 18 channels of mode 'floorplan'; auto-syncing the model input/output to the layout.
+[keen-hermit] 2026-10-01 12:01:05 | INFO | mask_VAE.runner:275 - Starting mask VAE training with run_id: keen-hermit at time: 2026-10-01 12:01:05.380733 on device: mps | seed: 42
+[keen-hermit] 2026-10-01 12:01:05 | INFO | mask_VAE.runner:281 - Mask layout: 1 group(s), 18 channels, 17 foreground
+  - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
+[keen-hermit] 2026-10-01 12:01:05 | INFO | mask_VAE.runner:345 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[ideal-wombat] 2026-10-01 12:02:36 | WARNING | mask_VAE.runner:317 - MASK_CHANNELS=28 in mask_VAE/hyperparameters.toml does not match the 18 channels of mode 'floorplan'; auto-syncing the model input/output to the layout.
+[ideal-wombat] 2026-10-01 12:02:36 | INFO | mask_VAE.runner:275 - Starting mask VAE training with run_id: ideal-wombat at time: 2026-10-01 12:02:36.516811 on device: mps | seed: 42
+[ideal-wombat] 2026-10-01 12:02:36 | INFO | mask_VAE.runner:281 - Mask layout: 1 group(s), 18 channels, 17 foreground
+  - floorplan: floorplan_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] (18 classes: floorplan/background, floorplan/living, floorplan/bedroom, floorplan/bathroom, floorplan/kitchen, floorplan/door, floorplan/window, floorplan/wall, floorplan/front_door, floorplan/balcony, floorplan/storage, floorplan/stair, floorplan/garden, floorplan/inner, floorplan/parking, floorplan/pool, floorplan/land, floorplan/neighbor)
+[ideal-wombat] 2026-10-01 12:02:36 | INFO | mask_VAE.runner:345 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[ideal-wombat] 2026-10-01 12:07:53 | INFO | mask_VAE.runner:345 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/test (groups: ['floorplan', 'furniture'], preload into RAM: True)...
+[ideal-wombat] 2026-10-01 12:08:45 | INFO | mask_VAE.runner:383 - Train masks: 69776 | Test masks: 10043
+[ideal-wombat] 2026-10-01 12:08:45 | INFO | mask_VAE.runner:638 - Torch version: 2.13.0
+[ideal-wombat] 2026-10-01 12:25:53 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_1_ideal-wombat.png
+[ideal-wombat] 2026-10-01 12:25:53 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_1_ideal-wombat.png
+[ideal-wombat] 2026-10-01 12:25:53 | INFO | mask_VAE.runner:678 - Epoch 1/2500 | train_loss: 28126.2923 (bce: 27512.6873, kl/dim: 3.195859) | test_loss: 15614.2222 | test_fg_iou: 0.1370 | test_fg_dice: 0.1532 (N=100) | epoch_time: 1028.0s | total: 1028.0s
+[ideal-wombat] 2026-10-01 12:42:55 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_2_ideal-wombat.png
+[ideal-wombat] 2026-10-01 12:42:56 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_2_ideal-wombat.png
+[ideal-wombat] 2026-10-01 12:42:56 | INFO | mask_VAE.runner:678 - Epoch 2/2500 | train_loss: 9044.1528 (bce: 8622.4283, kl/dim: 2.196482) | test_loss: 6397.0153 | test_fg_iou: 0.2284 | test_fg_dice: 0.2545 (N=100) | epoch_time: 1022.4s | total: 2050.4s
+[ideal-wombat] 2026-10-01 13:00:38 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_3_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:00:39 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_3_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:00:39 | INFO | mask_VAE.runner:678 - Epoch 3/2500 | train_loss: 14239.9831 (bce: 8015.4419, kl/dim: 32.419486) | test_loss: 58664.1841 | test_fg_iou: 0.0937 | test_fg_dice: 0.1052 (N=100) | epoch_time: 1063.1s | total: 3113.5s
+[ideal-wombat] 2026-10-01 13:17:46 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_4_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:17:47 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_4_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:17:47 | INFO | mask_VAE.runner:678 - Epoch 4/2500 | train_loss: 50691.1384 (bce: 18753.5733, kl/dim: 166.341485) | test_loss: 36665.9137 | test_fg_iou: 0.1021 | test_fg_dice: 0.1142 (N=100) | epoch_time: 1027.8s | total: 4141.3s
+[ideal-wombat] 2026-10-01 13:35:36 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_5_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:35:36 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_5_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:35:37 | INFO | mask_VAE.runner:575 - Saved checkpoint to ./mask_VAE/models/mask_vae_ideal-wombat_epoch_5.pt
+[ideal-wombat] 2026-10-01 13:35:37 | INFO | mask_VAE.runner:678 - Epoch 5/2500 | train_loss: 25785.3000 (bce: 15030.8552, kl/dim: 56.012733) | test_loss: 14891.9979 | test_fg_iou: 0.1687 | test_fg_dice: 0.2039 (N=100) | epoch_time: 1070.1s | total: 5211.4s
+[ideal-wombat] 2026-10-01 13:53:17 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_6_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:53:17 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_6_ideal-wombat.png
+[ideal-wombat] 2026-10-01 13:53:17 | INFO | mask_VAE.runner:678 - Epoch 6/2500 | train_loss: 10212.3938 (bce: 8428.7156, kl/dim: 9.289991) | test_loss: 5377.5751 | test_fg_iou: 0.2604 | test_fg_dice: 0.2759 (N=100) | epoch_time: 1060.3s | total: 6271.7s
+[ideal-wombat] 2026-10-01 14:11:05 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_7_ideal-wombat.png
+[ideal-wombat] 2026-10-01 14:11:06 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_7_ideal-wombat.png
+[ideal-wombat] 2026-10-01 14:11:06 | INFO | mask_VAE.runner:678 - Epoch 7/2500 | train_loss: 5086.9419 (bce: 4463.3029, kl/dim: 3.248120) | test_loss: 3730.1775 | test_fg_iou: 0.2712 | test_fg_dice: 0.2821 (N=100) | epoch_time: 1068.6s | total: 7340.3s
+[ideal-wombat] 2026-10-01 14:28:58 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_8_ideal-wombat.png
+[ideal-wombat] 2026-10-01 14:28:58 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_8_ideal-wombat.png
+[ideal-wombat] 2026-10-01 14:28:58 | INFO | mask_VAE.runner:678 - Epoch 8/2500 | train_loss: 3906.0505 (bce: 3462.4246, kl/dim: 2.310552) | test_loss: 3088.4474 | test_fg_iou: 0.2746 | test_fg_dice: 0.2839 (N=100) | epoch_time: 1072.5s | total: 8412.9s
+[ideal-wombat] 2026-10-01 14:46:46 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_9_ideal-wombat.png
+[ideal-wombat] 2026-10-01 14:46:47 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_9_ideal-wombat.png
+[ideal-wombat] 2026-10-01 14:46:47 | INFO | mask_VAE.runner:678 - Epoch 9/2500 | train_loss: 3398.2175 (bce: 3002.9788, kl/dim: 2.058535) | test_loss: 2856.9534 | test_fg_iou: 0.2754 | test_fg_dice: 0.2844 (N=100) | epoch_time: 1068.8s | total: 9481.6s
+[ideal-wombat] 2026-10-01 15:04:30 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_10_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:04:31 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_10_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:04:31 | INFO | mask_VAE.runner:575 - Saved checkpoint to ./mask_VAE/models/mask_vae_ideal-wombat_epoch_10.pt
+[ideal-wombat] 2026-10-01 15:04:31 | INFO | mask_VAE.runner:678 - Epoch 10/2500 | train_loss: 3066.9833 (bce: 2688.0850, kl/dim: 1.973428) | test_loss: 2541.8074 | test_fg_iou: 0.2769 | test_fg_dice: 0.2852 (N=100) | epoch_time: 1064.6s | total: 10546.2s
+[ideal-wombat] 2026-10-01 15:22:16 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_11_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:22:16 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_11_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:22:16 | INFO | mask_VAE.runner:678 - Epoch 11/2500 | train_loss: 2770.1515 (bce: 2400.5934, kl/dim: 1.924781) | test_loss: 2343.5236 | test_fg_iou: 0.2781 | test_fg_dice: 0.2858 (N=100) | epoch_time: 1065.0s | total: 11611.2s
+[ideal-wombat] 2026-10-01 15:40:02 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_12_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:40:03 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_12_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:40:03 | INFO | mask_VAE.runner:678 - Epoch 12/2500 | train_loss: 2544.8745 (bce: 2176.6234, kl/dim: 1.917974) | test_loss: 2300.7939 | test_fg_iou: 0.2779 | test_fg_dice: 0.2857 (N=100) | epoch_time: 1066.5s | total: 12677.6s
+[ideal-wombat] 2026-10-01 15:57:57 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_13_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:57:58 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_13_ideal-wombat.png
+[ideal-wombat] 2026-10-01 15:57:58 | INFO | mask_VAE.runner:678 - Epoch 13/2500 | train_loss: 2332.3616 (bce: 1969.4542, kl/dim: 1.890143) | test_loss: 2051.4021 | test_fg_iou: 0.2809 | test_fg_dice: 0.2873 (N=100) | epoch_time: 1074.7s | total: 13752.3s
+[ideal-wombat] 2026-10-01 16:15:47 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_14_ideal-wombat.png
+[ideal-wombat] 2026-10-01 16:15:47 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_14_ideal-wombat.png
+[ideal-wombat] 2026-10-01 16:15:47 | INFO | mask_VAE.runner:678 - Epoch 14/2500 | train_loss: 2169.2709 (bce: 1810.3042, kl/dim: 1.869618) | test_loss: 1895.3279 | test_fg_iou: 0.2812 | test_fg_dice: 0.2875 (N=100) | epoch_time: 1069.7s | total: 14822.0s
+[ideal-wombat] 2026-10-01 16:33:34 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_15_ideal-wombat.png
+[ideal-wombat] 2026-10-01 16:33:35 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_15_ideal-wombat.png
+[ideal-wombat] 2026-10-01 16:33:35 | INFO | mask_VAE.runner:575 - Saved checkpoint to ./mask_VAE/models/mask_vae_ideal-wombat_epoch_15.pt
+[ideal-wombat] 2026-10-01 16:33:35 | INFO | mask_VAE.runner:678 - Epoch 15/2500 | train_loss: 2050.5783 (bce: 1695.6997, kl/dim: 1.848326) | test_loss: 1974.1400 | test_fg_iou: 0.2813 | test_fg_dice: 0.2875 (N=100) | epoch_time: 1068.2s | total: 15890.2s
+[ideal-wombat] 2026-10-01 16:51:21 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_16_ideal-wombat.png
+[ideal-wombat] 2026-10-01 16:51:22 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_16_ideal-wombat.png
+[ideal-wombat] 2026-10-01 16:51:22 | INFO | mask_VAE.runner:678 - Epoch 16/2500 | train_loss: 1953.2416 (bce: 1600.8362, kl/dim: 1.835445) | test_loss: 1798.0314 | test_fg_iou: 0.2816 | test_fg_dice: 0.2877 (N=100) | epoch_time: 1066.1s | total: 16956.3s
+[ideal-wombat] 2026-10-01 17:09:05 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_17_ideal-wombat.png
+[ideal-wombat] 2026-10-01 17:09:05 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_17_ideal-wombat.png
+[ideal-wombat] 2026-10-01 17:09:05 | INFO | mask_VAE.runner:678 - Epoch 17/2500 | train_loss: 1856.1265 (bce: 1506.6571, kl/dim: 1.820153) | test_loss: 1777.7587 | test_fg_iou: 0.2820 | test_fg_dice: 0.2879 (N=100) | epoch_time: 1063.9s | total: 18020.1s
+[ideal-wombat] 2026-10-01 17:26:55 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_18_ideal-wombat.png
+[ideal-wombat] 2026-10-01 17:26:55 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_18_ideal-wombat.png
+[ideal-wombat] 2026-10-01 17:26:55 | INFO | mask_VAE.runner:678 - Epoch 18/2500 | train_loss: 1793.4768 (bce: 1445.1899, kl/dim: 1.813994) | test_loss: 1648.5216 | test_fg_iou: 0.2833 | test_fg_dice: 0.2886 (N=100) | epoch_time: 1070.1s | total: 19090.2s
+[ideal-wombat] 2026-10-01 17:44:47 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_19_ideal-wombat.png
+[ideal-wombat] 2026-10-01 17:44:47 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_19_ideal-wombat.png
+[ideal-wombat] 2026-10-01 17:44:47 | INFO | mask_VAE.runner:678 - Epoch 19/2500 | train_loss: 1723.2987 (bce: 1378.5931, kl/dim: 1.795342) | test_loss: 1629.7426 | test_fg_iou: 0.2837 | test_fg_dice: 0.2888 (N=100) | epoch_time: 1071.8s | total: 20162.0s
+[ideal-wombat] 2026-10-01 18:02:40 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_20_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:02:41 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_20_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:02:41 | INFO | mask_VAE.runner:575 - Saved checkpoint to ./mask_VAE/models/mask_vae_ideal-wombat_epoch_20.pt
+[ideal-wombat] 2026-10-01 18:02:41 | INFO | mask_VAE.runner:678 - Epoch 20/2500 | train_loss: 1665.9239 (bce: 1322.5610, kl/dim: 1.788349) | test_loss: 1595.6856 | test_fg_iou: 0.2830 | test_fg_dice: 0.2884 (N=100) | epoch_time: 1074.0s | total: 21236.0s
+[ideal-wombat] 2026-10-01 18:20:32 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_21_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:20:33 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_21_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:20:33 | INFO | mask_VAE.runner:678 - Epoch 21/2500 | train_loss: 1619.1184 (bce: 1277.0505, kl/dim: 1.781604) | test_loss: 1589.7316 | test_fg_iou: 0.2832 | test_fg_dice: 0.2885 (N=100) | epoch_time: 1071.7s | total: 22307.7s
+[ideal-wombat] 2026-10-01 18:38:24 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_22_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:38:24 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_22_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:38:24 | INFO | mask_VAE.runner:678 - Epoch 22/2500 | train_loss: 1583.3959 (bce: 1241.9317, kl/dim: 1.778459) | test_loss: 1565.4129 | test_fg_iou: 0.2841 | test_fg_dice: 0.2890 (N=100) | epoch_time: 1071.1s | total: 23378.8s
+[ideal-wombat] 2026-10-01 18:56:11 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_23_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:56:12 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_23_ideal-wombat.png
+[ideal-wombat] 2026-10-01 18:56:12 | INFO | mask_VAE.runner:678 - Epoch 23/2500 | train_loss: 1533.8944 (bce: 1195.1836, kl/dim: 1.764119) | test_loss: 1497.3874 | test_fg_iou: 0.2843 | test_fg_dice: 0.2891 (N=100) | epoch_time: 1067.4s | total: 24446.2s
+[ideal-wombat] 2026-10-01 19:13:59 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_24_ideal-wombat.png
+[ideal-wombat] 2026-10-01 19:13:59 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_24_ideal-wombat.png
+[ideal-wombat] 2026-10-01 19:13:59 | INFO | mask_VAE.runner:678 - Epoch 24/2500 | train_loss: 1492.7547 (bce: 1155.6628, kl/dim: 1.755687) | test_loss: 1526.2879 | test_fg_iou: 0.2840 | test_fg_dice: 0.2889 (N=100) | epoch_time: 1067.6s | total: 25513.9s
+[ideal-wombat] 2026-10-01 19:31:49 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_25_ideal-wombat.png
+[ideal-wombat] 2026-10-01 19:31:50 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_25_ideal-wombat.png
+[ideal-wombat] 2026-10-01 19:31:51 | INFO | mask_VAE.runner:575 - Saved checkpoint to ./mask_VAE/models/mask_vae_ideal-wombat_epoch_25.pt
+[ideal-wombat] 2026-10-01 19:31:51 | INFO | mask_VAE.runner:678 - Epoch 25/2500 | train_loss: 1464.4003 (bce: 1127.1429, kl/dim: 1.756549) | test_loss: 1440.7308 | test_fg_iou: 0.2842 | test_fg_dice: 0.2890 (N=100) | epoch_time: 1071.4s | total: 26585.3s
+[ideal-wombat] 2026-10-01 19:49:41 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_26_ideal-wombat.png
+[ideal-wombat] 2026-10-01 19:49:41 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_26_ideal-wombat.png
+[ideal-wombat] 2026-10-01 19:49:41 | INFO | mask_VAE.runner:678 - Epoch 26/2500 | train_loss: 1429.7437 (bce: 1095.5363, kl/dim: 1.740663) | test_loss: 1411.8795 | test_fg_iou: 0.2849 | test_fg_dice: 0.2894 (N=100) | epoch_time: 1070.6s | total: 27655.8s
+[ideal-wombat] 2026-10-01 20:07:30 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_27_ideal-wombat.png
+[ideal-wombat] 2026-10-01 20:07:30 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_27_ideal-wombat.png
+[ideal-wombat] 2026-10-01 20:07:30 | INFO | mask_VAE.runner:678 - Epoch 27/2500 | train_loss: 1406.3117 (bce: 1069.9196, kl/dim: 1.752042) | test_loss: 1490.8599 | test_fg_iou: 0.2840 | test_fg_dice: 0.2889 (N=100) | epoch_time: 1069.2s | total: 28725.0s
+[ideal-wombat] 2026-10-01 20:25:14 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_28_ideal-wombat.png
+[ideal-wombat] 2026-10-01 20:25:14 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_28_ideal-wombat.png
+[ideal-wombat] 2026-10-01 20:25:14 | INFO | mask_VAE.runner:678 - Epoch 28/2500 | train_loss: 1371.1477 (bce: 1037.7520, kl/dim: 1.736436) | test_loss: 1431.8339 | test_fg_iou: 0.2849 | test_fg_dice: 0.2894 (N=100) | epoch_time: 1063.8s | total: 29788.8s
+[ideal-wombat] 2026-10-01 20:43:00 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_29_ideal-wombat.png
+[ideal-wombat] 2026-10-01 20:43:00 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_29_ideal-wombat.png
+[ideal-wombat] 2026-10-01 20:43:00 | INFO | mask_VAE.runner:678 - Epoch 29/2500 | train_loss: 1342.5442 (bce: 1010.6637, kl/dim: 1.728544) | test_loss: 1464.3468 | test_fg_iou: 0.2844 | test_fg_dice: 0.2891 (N=100) | epoch_time: 1066.3s | total: 30855.1s
+[ideal-wombat] 2026-10-01 21:00:21 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_30_ideal-wombat.png
+[ideal-wombat] 2026-10-01 21:00:22 | INFO | mask_VAE.runner:219 - Saved colorized grid to mask_VAE/outputs/generation_epoch_30_ideal-wombat.png
+[ideal-wombat] 2026-10-01 21:00:22 | INFO | mask_VAE.runner:575 - Saved checkpoint to ./mask_VAE/models/mask_vae_ideal-wombat_epoch_30.pt
+[ideal-wombat] 2026-10-01 21:00:22 | INFO | mask_VAE.runner:678 - Epoch 30/2500 | train_loss: 1325.2003 (bce: 993.5227, kl/dim: 1.727487) | test_loss: 1456.8715 | test_fg_iou: 0.2847 | test_fg_dice: 0.2893 (N=100) | epoch_time: 1042.0s | total: 31897.1s

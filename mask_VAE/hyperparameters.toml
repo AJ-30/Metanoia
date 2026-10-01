@@ -69,13 +69,13 @@ PRELOAD_MASKS = true
 # Epochs between telemetry rows in the main CSV. 1 = every epoch.
 TELEMETRY_INTERVAL = 1
 # Epochs between checkpoint saves.
-CHECKPOINT_INTERVAL = 50
+CHECKPOINT_INTERVAL = 5
 # Fixed test masks drawn in the reconstruction grid, per mask group. These come
 # from the first test batch, so keep this at or below BATCH_SIZE to avoid a
 # second decode pass purely for the picture.
-NUM_RECON_SAMPLES = 8
+NUM_RECON_SAMPLES = 32
 # Novel layouts sampled from the latent prior, per mask group.
-NUM_GEN_SAMPLES = 8
+NUM_GEN_SAMPLES = 32
 # Test masks used for the per-epoch test_loss / test_fg_iou / test_fg_dice. The
 # test split is unshuffled, so this always covers the same first N masks and the
 # per-epoch numbers stay comparable. Note the final full-test evaluation ignores
