@@ -35,7 +35,7 @@ TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 # is 0 in EVERY selected mask. Channels 1.. follow, group by group, in the
 # order of the resolved list.
 # ---------------------------------------------------------------------------
-MASK_MODE = "floorplan"
+MASK_MODE = "arrangement"  # "floorplan", "arrangement", "both"
 
 # Legacy explicit list, used only when MASK_MODE is absent. Prefer MASK_MODE
 # above; this stays as a fallback so old configs keep working.
