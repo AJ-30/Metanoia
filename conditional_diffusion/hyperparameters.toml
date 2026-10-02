@@ -1,0 +1,72 @@
+# Architecture and training hyperparameters for conditional diffusion.
+# Frozen-checkpoint paths and split dirs live in conditional_diffusion/config.toml.
+
+[default]
+# Must match the LATENT_DIM stored inside TARGET_VAE_CHECKPOINT_PATH (the
+# diffusion space). The runner fails fast on mismatch.
+LATENT_DIM = 256
+# Must match the LATENT_DIM stored inside COND_VAE_CHECKPOINT_PATH (the
+# floorplan condition encoder). Fails fast on mismatch.
+COND_DIM = 256
+# Conditional denoiser MLP capacity. Input is concat(noisy_target, condition).
+HIDDEN_DIM = 1024
+NUM_LAYERS = 5
+# Dropout inside the denoiser MLP (after the input projection and inside each
+# residual block). Training only; sampling runs in eval mode unaffected.
+DROPOUT = 0.05
+# Sinusoidal timestep embedding size and period.
+TIME_EMB_DIM = 256
+TIME_MAX_PERIOD = 10000
+# DDPM forward schedule (linear betas, Ho et al. 2020).
+NUM_TIMESTEPS = 1000
+BETA_START = 0.0001
+BETA_END = 0.02
+# Optimization.
+LEARNING_RATE = 0.0003
+BATCH_SIZE = 128
+NUM_EPOCHS = 2000
+SEED = 42
+# Logging / checkpointing.
+TELEMETRY_INTERVAL = 5
+CHECKPOINT_INTERVAL = 10
+# Data loading.
+NUM_WORKERS = 0
+MAX_SAMPLES = -1
+# Batch size for the one-time frozen-encoder passes over mask pairs. Kept
+# small (mask tensors are 18/11 x 256 x 256) so encoding never OOMs even
+# though the diffusion MLP itself trains with the larger BATCH_SIZE above.
+IMAGE_ENCODE_BATCH_SIZE = 16
+# Batches between progress log lines while encoding a split to latents.
+# Encoding the full 70k train split takes ~15-30 min with no other output,
+# so this heartbeat is what tells you it is moving rather than stuck.
+ENCODE_LOG_INTERVAL = 500
+# Square side length the masks are resized to. Must equal BOTH frozen
+# checkpoints' IMAGE_SIZE (both are 256). Fails fast otherwise.
+IMAGE_SIZE = 256
+# RGBA backdrop used to flatten the full-render alpha channel for the top
+# reconstruction row.
+BACKGROUND_COLOR = [255, 255, 255, 255]
+# Composite noise-prediction loss: MSE + L1_WEIGHT * L1 on predicted noise.
+L1_WEIGHT = 0.5
+# Unified grid saved every GRID_INTERVAL epochs for the dashboard.
+GRID_INTERVAL = 10
+# Fixed test pairs (columns) per unified grid: full render, floorplan mask,
+# arrangement GT, then one overlay row per generated draw.
+NUM_GRID_SAMPLES = 32
+# Fresh noise draws per floorplan in the unified grid, showing the
+# distribution p(arrangement|floorplan) rather than a single sample.
+NUM_GEN_DRAWS = 4
+TEST_LOSS_SAMPLES = 100
+# Latent handling: true = condition/target from encoder mu (deterministic);
+# false = reparameterized samples (stochastic augmentation).
+USE_MU_ONLY = true
+# Standardize target latents (diffusion space) and condition latents with
+# dataset mean/std before training (recommended: keeps the unit-variance noise
+# schedule well conditioned).
+NORMALIZE_LATENTS = true
+NORMALIZE_COND = true
+LATENT_STATS_SAMPLES = 2048
+LATENT_STD_MIN = 0.001
+# Alpha blend of predicted furniture pixels over the floorplan base in the
+# overlay row of the conditional grid. 1.0 = hard paste, 0.0 = base only.
+OVERLAY_ALPHA = 0.6
