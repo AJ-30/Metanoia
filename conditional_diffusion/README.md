@@ -79,7 +79,10 @@ artifacts, then trains):
 
 The "Reconstructions" panel shows the unified grid (full render / floorplan /
 arrangement GT / one overlay row per draw) with an epoch dropdown and
-auto-refresh. Telemetry curves: `train_loss` / `l1_loss` / `test_loss`.
+auto-refresh. Telemetry curves: `train_loss` / `l1_loss` / `test_loss` /
+`test_mask_bce` (mask-level weighted BCE of sampled arrangements vs GT masks,
+both VAEs frozen, refreshed every `MASK_BCE_INTERVAL` epochs and attached to
+the next telemetry row).
 
 ## Configuration
 
@@ -123,6 +126,8 @@ auto-refresh. Telemetry curves: `train_loss` / `l1_loss` / `test_loss`.
 | `IMAGE_SIZE` | Mask side length (must equal both frozen VAEs') |
 | `BACKGROUND_COLOR` | RGBA backdrop for flattening the top-row render |
 | `L1_WEIGHT` | Weight on L1 next to MSE in the noise-prediction loss |
+| `MASK_BCE_POS_WEIGHT` | Positive weight for the periodic mask-level BCE eval |
+| `MASK_BCE_INTERVAL` | Epochs between mask-level BCE evals |
 | `GRID_INTERVAL` | Epochs between unified grid saves |
 | `NUM_GRID_SAMPLES` | Fixed test pairs (columns) per unified grid |
 | `NUM_GEN_DRAWS` | Noise draws (overlay rows) per floorplan in the unified grid |

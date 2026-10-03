@@ -426,7 +426,13 @@ class ConditionalDiffusionRunner:
         self.log = setup_logger(self.config)
         set_reproducibility_seed(int(self.hyperparams.SEED))
 
-        self.telemetry_fieldnames: list[str] = ["epoch", "train_loss", "l1_loss", "test_loss"]
+        self.telemetry_fieldnames: list[str] = [
+            "epoch",
+            "train_loss",
+            "l1_loss",
+            "test_loss",
+            "test_mask_bce",
+        ]
 
         self.device: torch.device = resolve_device(self.config.DEVICE, self.log)
         self.log.info(
@@ -506,6 +512,9 @@ class ConditionalDiffusionRunner:
         self.latent_std: torch.Tensor = torch.ones(int(self.hyperparams.LATENT_DIM))
         self.cond_mean: torch.Tensor = torch.zeros(int(self.hyperparams.COND_DIM))
         self.cond_std: torch.Tensor = torch.ones(int(self.hyperparams.COND_DIM))
+        # Freshest mask-level BCE; refreshed every MASK_BCE_INTERVAL epochs
+        # and attached to the next telemetry row.
+        self.last_mask_bce: float | None = None
 
     def _make_paired_dataloader(
         self,
@@ -1031,6 +1040,51 @@ class ConditionalDiffusionRunner:
 
     @torch.no_grad()
     @torch.no_grad()
+    def evaluate_mask_bce(
+        self,
+        fixed_cond_masks: torch.Tensor,
+        fixed_target_masks: torch.Tensor,
+    ) -> float:
+        """Score sampled arrangements against GT masks with weighted BCE.
+
+        Encodes the fixed floorplans with the frozen condition encoder,
+        samples one arrangement latent per floorplan through the full
+        reverse chain, decodes with the frozen arrangement decoder, and
+        scores the logits against the GT arrangement masks with
+        ``binary_cross_entropy_with_logits`` weighted by
+        ``MASK_BCE_POS_WEIGHT``. Both VAEs stay frozen; this is an eval-only
+        metric, so no gradients are tracked. Lower is better; unlike the
+        latent noise loss it reads directly as mask quality.
+
+        Args:
+            fixed_cond_masks (torch.Tensor): Fixed floorplan masks on CPU,
+                shape (n, Cc, H, W).
+            fixed_target_masks (torch.Tensor): Paired GT arrangement masks on
+                CPU, shape (n, Ct, H, W) with values ``0.0``/``1.0``.
+
+        Returns:
+            float: Mean weighted BCE over all elements.
+        """
+        self.model.eval()
+        cond, _ = self._encode_pair(fixed_cond_masks, fixed_target_masks)
+        cond_norm: torch.Tensor = self.normalize_cond(cond).to(self.device)
+        sampled: torch.Tensor = self.model.sample_conditional(cond_norm)
+        pred_logits: torch.Tensor = self.target_vae.decode(
+            self.denormalize_latents(sampled)
+        ).cpu()
+        pos_weight: torch.Tensor = torch.full_like(
+            fixed_target_masks, float(self.hyperparams.MASK_BCE_POS_WEIGHT)
+        )
+        bce: torch.Tensor = torch.nn.functional.binary_cross_entropy_with_logits(
+            pred_logits,
+            fixed_target_masks,
+            pos_weight=pos_weight,
+            reduction="mean",
+        )
+        self.model.train()
+        return float(bce.item())
+
+    @torch.no_grad()
     def save_unified_grid(
         self,
         fixed_cond_masks: torch.Tensor,
@@ -1144,9 +1198,12 @@ class ConditionalDiffusionRunner:
 
         Encodes both splits to cached pairs once, then every epoch trains on
         all train pairs, evaluates the conditional loss on a fixed test
-        subset, writes a telemetry row, and every ``GRID_INTERVAL`` epochs
-        saves the single unified grid (full render, floorplan, arrangement
-        GT, generated draws). Checkpoints periodically.
+        subset, and every ``TELEMETRY_INTERVAL`` epochs writes a telemetry
+        row. Every ``MASK_BCE_INTERVAL`` epochs the mask-level BCE (sampled
+        arrangements decoded with the frozen target decoder vs GT masks) is
+        refreshed and attached to the next telemetry row. Every
+        ``GRID_INTERVAL`` epochs saves the single unified grid (full render,
+        floorplan, arrangement GT, generated draws). Checkpoints periodically.
         """
         torch.autograd.set_detect_anomaly(bool(self.config.IS_DEBUG_TORCH))
         os.makedirs(str(self.config.OUTPUT_SAMPLES_DIRECTORY), exist_ok=True)
@@ -1169,19 +1226,32 @@ class ConditionalDiffusionRunner:
                 test_dl, max_samples=int(self.hyperparams.TEST_LOSS_SAMPLES)
             )
 
-            # 3) Telemetry row so the dashboard updates live.
+            # 3) Mask-level BCE on its own cadence (decoded samples vs GT
+            # masks, both VAEs frozen). The fresh value attaches to the next
+            # telemetry row below.
+            mask_bce_due: bool = (
+                epoch % int(self.hyperparams.MASK_BCE_INTERVAL) == 0
+                or epoch == int(self.hyperparams.NUM_EPOCHS)
+            )
+            if mask_bce_due:
+                self.last_mask_bce = self.evaluate_mask_bce(fixed_cond, fixed_target)
+
+            # 4) Telemetry row so the dashboard updates live.
             if (
                 epoch % int(self.hyperparams.TELEMETRY_INTERVAL) == 0
                 or epoch == int(self.hyperparams.NUM_EPOCHS)
             ):
-                self.telemetry_writer.log(
-                    epoch=epoch,
-                    train_loss=train_loss,
-                    l1_loss=l1_loss,
-                    test_loss=test_metrics["test_loss"],
-                )
+                telemetry_row: dict[str, object] = {
+                    "epoch": epoch,
+                    "train_loss": train_loss,
+                    "l1_loss": l1_loss,
+                    "test_loss": test_metrics["test_loss"],
+                }
+                if self.last_mask_bce is not None:
+                    telemetry_row["test_mask_bce"] = self.last_mask_bce
+                self.telemetry_writer.log(**telemetry_row)
 
-            # 4) Unified grid every GRID_INTERVAL epochs (plus the final
+            # 5) Unified grid every GRID_INTERVAL epochs (plus the final
             # epoch): full render, floorplan, arrangement GT, generated draws.
             if epoch % int(self.hyperparams.GRID_INTERVAL) == 0 or epoch == int(
                 self.hyperparams.NUM_EPOCHS
@@ -1196,11 +1266,14 @@ class ConditionalDiffusionRunner:
 
             epoch_time: float = time.time() - epoch_start
             total_elapsed: float = time.time() - execution_start
+            mask_bce_str: str = (
+                f" | mask_bce: {self.last_mask_bce:.4f}" if mask_bce_due else ""
+            )
             self.log.info(
                 f"Epoch {epoch}/{self.hyperparams.NUM_EPOCHS} | "
                 f"train_loss: {train_loss:.4f} (l1: {l1_loss:.4f}) | "
                 f"test_loss: {test_metrics['test_loss']:.4f} "
-                f"(N={int(test_metrics['samples'])}) | "
+                f"(N={int(test_metrics['samples'])}){mask_bce_str} | "
                 f"epoch_time: {epoch_time:.1f}s | total: {total_elapsed:.1f}s"
             )
 
