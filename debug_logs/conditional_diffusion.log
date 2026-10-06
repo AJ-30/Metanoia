@@ -7047,3 +7047,31 @@
 [mature-civet] 2026-10-03 12:08:36 | INFO | conditional_diffusion.runner:1272 - Epoch 827/2000 | train_loss: 0.3321 (l1: 0.2510) | test_loss: 0.5957 (N=1000) | epoch_time: 10.5s | total: 9973.5s
 [mature-civet] 2026-10-03 12:08:48 | INFO | conditional_diffusion.runner:1272 - Epoch 828/2000 | train_loss: 0.3332 (l1: 0.2517) | test_loss: 0.5719 (N=1000) | mask_bce: 0.4613 | epoch_time: 12.7s | total: 9986.2s
 [mature-civet] 2026-10-03 12:08:59 | INFO | conditional_diffusion.runner:1272 - Epoch 829/2000 | train_loss: 0.3336 (l1: 0.2520) | test_loss: 0.5412 (N=1000) | epoch_time: 10.7s | total: 9996.9s
+[ideal-rat] 2026-10-03 12:41:49 | INFO | conditional_diffusion.runner:445 - Starting conditional diffusion with run_id: ideal-rat at time: 2026-10-03 12:41:49.819053 on device: mps
+[large-teal] 2026-10-06 09:11:36 | INFO | conditional_diffusion.runner:448 - Starting conditional diffusion with run_id: large-teal at time: 2026-10-06 09:11:35.990311 on device: mps
+[large-teal] 2026-10-06 09:11:36 | INFO | conditional_diffusion.runner:476 - Frozen condition VAE: ./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt (channels=18, latent=128)
+[large-teal] 2026-10-06 09:11:36 | INFO | conditional_diffusion.runner:480 - Frozen target VAE: ./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt (channels=11, latent=128)
+[large-teal] 2026-10-06 09:11:38 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/test: 4 samples.
+[deep-gibbon] 2026-10-06 09:11:48 | INFO | conditional_diffusion.runner:448 - Starting conditional diffusion with run_id: deep-gibbon at time: 2026-10-06 09:11:48.579792 on device: mps
+[deep-gibbon] 2026-10-06 09:11:48 | INFO | conditional_diffusion.runner:476 - Frozen condition VAE: ./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt (channels=18, latent=128)
+[deep-gibbon] 2026-10-06 09:11:48 | INFO | conditional_diffusion.runner:480 - Frozen target VAE: ./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt (channels=11, latent=128)
+[deep-gibbon] 2026-10-06 09:11:49 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/test: 4 samples.
+[upward-filly] 2026-10-06 09:11:58 | INFO | conditional_diffusion.runner:448 - Starting conditional diffusion with run_id: upward-filly at time: 2026-10-06 09:11:58.422810 on device: mps
+[upward-filly] 2026-10-06 09:11:58 | INFO | conditional_diffusion.runner:476 - Frozen condition VAE: ./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt (channels=18, latent=128)
+[upward-filly] 2026-10-06 09:11:58 | INFO | conditional_diffusion.runner:480 - Frozen target VAE: ./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt (channels=11, latent=128)
+[upward-filly] 2026-10-06 09:11:58 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/test: 4 samples.
+[epic-oriole] 2026-10-06 09:12:07 | INFO | conditional_diffusion.runner:448 - Starting conditional diffusion with run_id: epic-oriole at time: 2026-10-06 09:12:07.547861 on device: mps
+[epic-oriole] 2026-10-06 09:12:07 | INFO | conditional_diffusion.runner:476 - Frozen condition VAE: ./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt (channels=18, latent=128)
+[epic-oriole] 2026-10-06 09:12:07 | INFO | conditional_diffusion.runner:480 - Frozen target VAE: ./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt (channels=11, latent=128)
+[epic-oriole] 2026-10-06 09:12:08 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/test: 4 samples.
+[epic-oriole] 2026-10-06 09:12:09 | INFO | conditional_diffusion.runner:1197 - Saved unified grid to conditional_diffusion/outputs/reconstruction_epoch_0_epic-oriole.png
+[mature-shiner] 2026-10-06 09:12:22 | INFO | conditional_diffusion.runner:448 - Starting conditional diffusion with run_id: mature-shiner at time: 2026-10-06 09:12:22.358032 on device: mps
+[mature-shiner] 2026-10-06 09:12:22 | INFO | conditional_diffusion.runner:476 - Frozen condition VAE: ./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt (channels=18, latent=128)
+[mature-shiner] 2026-10-06 09:12:22 | INFO | conditional_diffusion.runner:480 - Frozen target VAE: ./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt (channels=11, latent=128)
+[mature-shiner] 2026-10-06 09:12:22 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/test: 4 samples.
+[wired-jaguar] 2026-10-06 18:48:09 | INFO | conditional_diffusion.runner:448 - Starting conditional diffusion with run_id: wired-jaguar at time: 2026-10-06 18:48:09.541947 on device: mps
+[wired-jaguar] 2026-10-06 18:48:09 | INFO | conditional_diffusion.runner:476 - Frozen condition VAE: ./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt (channels=18, latent=128)
+[wired-jaguar] 2026-10-06 18:48:09 | INFO | conditional_diffusion.runner:480 - Frozen target VAE: ./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt (channels=11, latent=128)
+[wired-jaguar] 2026-10-06 18:48:30 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/train: 69776 samples.
+[wired-jaguar] 2026-10-06 18:48:32 | INFO | conditional_diffusion.runner:558 - Paired masks from /Users/aatmaj/FurnitureArranger/datasets/work/test: 10043 samples.
+[wired-jaguar] 2026-10-06 18:48:32 | INFO | conditional_diffusion.runner:815 - Latent cache fingerprint mismatch; re-encoding from scratch.

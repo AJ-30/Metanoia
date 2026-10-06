@@ -648,6 +648,45 @@ def encode_masks_to_single_channel(
     return torch.cat(channels, dim=1)
 
 
+def onehot_to_single_channel(
+    onehot: torch.Tensor,
+    layout: MaskLayout,
+) -> torch.Tensor:
+    """
+    Recover the single-channel encoder input from a one-vs-rest tensor.
+
+    Each group's class ids are the ``argmax`` over that group's own channels,
+    normalized by the group's id range exactly like
+    :func:`encode_masks_to_single_channel`. For ground-truth one-hot tensors
+    the recovery is exact; for model logits it is the model's own decision,
+    matching what the colorized grids display.
+
+    Args:
+        onehot (torch.Tensor): ``(B, num_channels, H, W)`` one-vs-rest binary
+            targets or decoder logits for the whole layout.
+        layout (MaskLayout): Channel layout defining the groups.
+
+    Returns:
+        torch.Tensor: Float32 ``(B, num_groups, H, W)`` tensor in ``0..1``.
+
+    Raises:
+        ValueError: If the channel count is not the layout's.
+    """
+    if onehot.shape[1] != layout.num_channels:
+        raise ValueError(
+            f"Expected {layout.num_channels} channels, got {onehot.shape[1]}."
+        )
+    channels: list[torch.Tensor] = []
+    for group in layout.groups:
+        channel_index: torch.Tensor = torch.tensor(
+            group.channel_indices, dtype=torch.long, device=onehot.device
+        )
+        class_ids: torch.Tensor = onehot.index_select(1, channel_index).argmax(dim=1)
+        scale: float = float(max(group.num_classes - 1, 1))
+        channels.append(class_ids.to(torch.float32).unsqueeze(1) / scale)
+    return torch.cat(channels, dim=1)
+
+
 def _as_batched_int_mask(mask_array: torch.Tensor) -> torch.Tensor:
     """
     Normalize a mask to a contiguous int64 tensor of shape ``(B, H, W)``.

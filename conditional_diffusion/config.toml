@@ -24,10 +24,11 @@ TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 
 # Frozen mask_VAE checkpoints. Rebuilt from each checkpoint's own
 # hyperparameters, so these stay usable even after mask_VAE config moved on.
-# ideal-wombat epoch 30 = floorplan VAE (18 channels, 256-dim latents).
-COND_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_ideal-wombat_epoch_30.pt"
-# ace-squid epoch 30 = arrangement/furniture VAE (11 channels, 256-dim latents).
-TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_ace-squid_epoch_75.pt"
+# Both are latest-generation single-channel-encoder runs (128-dim latents).
+# mint-akita epoch 200 = floorplan VAE (18 channels).
+COND_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_mint-akita_epoch_200.pt"
+# chief-yeti epoch 555 = arrangement/furniture VAE (11 channels).
+TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_chief-yeti_epoch_555.pt"
 
 # Mask filenames inside each sample folder. Kept in TOML so no filename is
 # hardcoded in Python.

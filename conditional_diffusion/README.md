@@ -6,14 +6,18 @@ of two **frozen, fully trained mask_VAEs**:
 
 | Role | Checkpoint | Channels | Latent |
 |---|---|---|---|
-| Condition (floorplan) | `mask_vae_ideal-wombat_epoch_30.pt` | 18 | 256 |
-| Target (arrangement) | `mask_vae_ace-squid_epoch_30.pt` | 11 | 256 |
+| Condition (floorplan) | `mask_vae_mint-akita_epoch_200.pt` | 18 | 128 |
+| Target (arrangement) | `mask_vae_chief-yeti_epoch_555.pt` | 11 | 128 |
 
 Each sample folder provides BOTH `floorplan_segmentation.png` and
 `furniture_segmentation.png` of the same layout, so every training pair
 `(floorplan, arrangement)` is naturally aligned. Both masks are encoded once
 with their frozen encoders and cached in RAM as `(c, x_0)` latent pairs; the
 conditional denoiser (time + floorplan-aware MLP) learns `p(x_0 | c)`.
+Checkpoints from both mask-VAE encoder generations load: the current
+single-channel `MaskEncoder` reads class-id channels recovered from the
+one-vs-rest batch (exact for GT masks), while legacy checkpoints keep reading
+one-vs-rest directly.
 Sampling encodes a floorplan mask to `c`, runs the reverse chain from noise
 conditioned on `c`, and decodes with the frozen arrangement decoder.
 

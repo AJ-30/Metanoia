@@ -3,11 +3,13 @@
 
 [default]
 # Must match the LATENT_DIM stored inside TARGET_VAE_CHECKPOINT_PATH (the
-# diffusion space). The runner fails fast on mismatch.
-LATENT_DIM = 256
+# diffusion space: chief-yeti arrangement VAE). The runner fails fast on
+# mismatch.
+LATENT_DIM = 128
 # Must match the LATENT_DIM stored inside COND_VAE_CHECKPOINT_PATH (the
-# floorplan condition encoder). Fails fast on mismatch.
-COND_DIM = 256
+# floorplan condition encoder: mint-akita floorplan VAE). Fails fast on
+# mismatch.
+COND_DIM = 128
 # Conditional denoiser MLP capacity. Input is concat(noisy_target, condition).
 HIDDEN_DIM = 1024
 NUM_LAYERS = 5

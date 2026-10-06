@@ -53,6 +53,7 @@ from mask_VAE.masking import (
     MaskLayout,
     encode_masks_to_channels,
     load_color_index,
+    onehot_to_single_channel,
     render_group_rgb,
 )
 from mask_VAE.model import MaskVAEModel
@@ -122,9 +123,12 @@ def build_frozen_mask_vae(
 
     The architecture is reconstructed from the hyperparameters embedded in
     the checkpoint itself (not from the current TOML), so older runs stay
-    usable even after the mask_VAE config moved on. The render layout is
-    rebuilt from the checkpoint's own channel indices plus the dataset's
-    color index JSON, so grids use the dataset's authoritative colors.
+    usable even after the mask_VAE config moved on. Both encoder generations
+    load: the small single-channel ``MaskEncoder`` when the checkpoint
+    carries ``ENCODER_IN_CHANNELS``, otherwise the legacy one-vs-rest
+    ``VAE`` encoder. The render layout is rebuilt from the checkpoint's own
+    channel indices plus the dataset's color index JSON, so grids use the
+    dataset's authoritative colors.
 
     Args:
         checkpoint_path (str): Path to the ``mask_vae_<run>_epoch_<N>.pt`` file.
@@ -142,13 +146,6 @@ def build_frozen_mask_vae(
     if not os.path.isfile(checkpoint_path):
         raise FileNotFoundError(f"Mask VAE checkpoint not found: {checkpoint_path}")
     checkpoint: dict[str, object] = torch.load(checkpoint_path, map_location=device)
-    if checkpoint.get("encoder_kind", "onehot") != "onehot":
-        raise ValueError(
-            f"{checkpoint_path} holds a single-channel-encoder mask VAE, but "
-            "conditional diffusion still encodes one-vs-rest masks: point "
-            "COND/TARGET_VAE_CHECKPOINT_PATH at a one-hot-encoder checkpoint "
-            "(e.g. the ideal-wombat / ace-squid runs)."
-        )
     saved_hyperparams: dict[str, object] = checkpoint["hyperparameters"]
     state_dict: dict[str, torch.Tensor] = checkpoint["model_state_dict"]
     archparams = SimpleNamespace(
@@ -159,6 +156,12 @@ def build_frozen_mask_vae(
         DROPOUT=saved_hyperparams["DROPOUT"],
         LATENT_ADDITIONAL_NOISE=saved_hyperparams.get("LATENT_ADDITIONAL_NOISE", 0.0),
     )
+    # New-arch checkpoints carry the single-channel encoder width; passing it
+    # through selects MaskEncoder, while its absence selects the legacy
+    # one-vs-rest encoder. Either way the decoder layout below is unchanged.
+    if "ENCODER_IN_CHANNELS" in saved_hyperparams:
+        archparams.ENCODER_IN_CHANNELS = saved_hyperparams["ENCODER_IN_CHANNELS"]
+        archparams.ENCODER_BASE_CHANNELS = saved_hyperparams["ENCODER_BASE_CHANNELS"]
     vae = MaskVAEModel(archparams)
     vae.load_state_dict(state_dict)
     # Freeze every parameter: neither encoder trains here.
@@ -562,6 +565,36 @@ class ConditionalDiffusionRunner:
         )
 
     @torch.no_grad()
+    def _encode_one_vae(
+        self, vae: MaskVAEModel, masks: torch.Tensor, layout: MaskLayout
+    ) -> torch.Tensor:
+        """Encode one mask batch with one frozen VAE, matching its encoder generation.
+
+        Single-channel encoders read class-id channels recovered from the
+        one-vs-rest batch (exact for ground-truth masks); legacy encoders read
+        the one-vs-rest batch directly.
+
+        Args:
+            vae (MaskVAEModel): Frozen mask VAE in eval mode.
+            masks (torch.Tensor): One-vs-rest masks, shape (n, C, H, W).
+            layout (MaskLayout): Single-group layout of ``masks``.
+
+        Returns:
+            torch.Tensor: Latent vectors on CPU, shape (n, latent_dim).
+        """
+        if vae.encoder_kind == "single":
+            encoder_input: torch.Tensor = onehot_to_single_channel(masks, layout)
+        else:
+            encoder_input = masks
+        mu: torch.Tensor
+        logvar: torch.Tensor
+        mu, logvar = vae.encoder(encoder_input.to(self.device))
+        if bool(self.hyperparams.USE_MU_ONLY):
+            latents: torch.Tensor = mu
+        else:
+            latents = vae.reparameterize(mu, logvar)
+        return latents.cpu()
+
     def _encode_pair(
         self, cond_masks: torch.Tensor, target_masks: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -575,19 +608,11 @@ class ConditionalDiffusionRunner:
             tuple[torch.Tensor, torch.Tensor]: (condition, target) latent
                 vectors on CPU, each shape (n, dim).
         """
-        cond_mu: torch.Tensor
-        cond_logvar: torch.Tensor
-        cond_mu, cond_logvar = self.cond_vae.encoder(cond_masks.to(self.device))
-        target_mu: torch.Tensor
-        target_logvar: torch.Tensor
-        target_mu, target_logvar = self.target_vae.encoder(target_masks.to(self.device))
-        if bool(self.hyperparams.USE_MU_ONLY):
-            cond: torch.Tensor = cond_mu
-            target: torch.Tensor = target_mu
-        else:
-            cond = self.cond_vae.reparameterize(cond_mu, cond_logvar)
-            target = self.target_vae.reparameterize(target_mu, target_logvar)
-        return cond.cpu(), target.cpu()
+        cond: torch.Tensor = self._encode_one_vae(self.cond_vae, cond_masks, self.cond_layout)
+        target: torch.Tensor = self._encode_one_vae(
+            self.target_vae, target_masks, self.target_layout
+        )
+        return cond, target
 
     def compute_latent_stats(self, image_loader: DataLoader[PairedMaskDataset]) -> None:
         """Estimate mean/std of both latent spaces over train pairs.
