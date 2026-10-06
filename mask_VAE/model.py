@@ -1,15 +1,18 @@
 """
 Convolutional VAE over semantic segmentation masks, trained with BCE.
 
-Structurally this is the same autoencoder as :mod:`VAE.model`: a convolutional
-encoder produces the mean and log-variance of a flat latent Gaussian, and a
-convolutional decoder maps a sampled latent back to a full-resolution tensor.
-The encoder is imported from :mod:`VAE.model` and reused unchanged, because it
-is activation-agnostic: it ends in two linear heads and never sees what the
-decoded tensor is supposed to represent.
+The encoder (:class:`MaskEncoder`) reads the raw single-channel segmentation
+masks directly — one float channel per mask group holding integer class ids
+normalized to ``0..1`` — instead of the wide one-vs-rest tensor. It mirrors
+the four-stage convolutional layout of :mod:`VAE.model` ``Encoder`` but with
+far fewer channels (``ENCODER_BASE_CHANNELS``), since class-id maps carry
+less texture than RGB. A convolutional decoder maps a sampled flat latent
+back to the full one-vs-rest tensor, scored against the one-vs-rest target
+with ``binary_cross_entropy_with_logits``.
 
-What differs from the image VAE is entirely on the output side:
+What differs from the image VAE:
 
+* The encoder input is ``(B, num_groups, H, W)`` class-id channels, not RGB.
 * The decoder emits ``num_channels`` **logits**, one per class, with no output
   activation. The image VAE ends in a ``Sigmoid`` because its target is a
   ``0..1`` pixel; a mask target is a one-vs-rest binary map scored with
@@ -22,6 +25,11 @@ What differs from the image VAE is entirely on the output side:
 The latent stays a flat ``LATENT_DIM`` vector with no spatial axes, matching
 :mod:`VAE.model` and keeping these latents interchangeable with the ones the
 Diffusion and YOLO stages consume.
+
+Checkpoints written before :class:`MaskEncoder` existed hold a reused
+:mod:`VAE.model` ``Encoder`` over the one-vs-rest tensor. :class:`MaskVAEModel`
+rebuilds that legacy encoder when the hyperparameters carry no
+``ENCODER_IN_CHANNELS`` key, so old checkpoints keep loading unchanged.
 """
 
 from __future__ import annotations
@@ -36,6 +44,89 @@ from VAE.model import Encoder
 # Downsampling stages in the encoder, i.e. the power of two an input side length
 # must be divisible by. The decoder mirrors it with transposed convolutions.
 DOWNSAMPLE_STAGES: int = 4
+
+
+class MaskEncoder(nn.Module):
+    """
+    Convolutional encoder that maps class-id mask channels to latent parameters.
+
+    Same four stride-2 downsampling stages as :class:`VAE.model.Encoder`
+    (``kernel=4`` then ``kernel=3`` blocks with ``SiLU`` and ``Dropout2d`` on
+    the deeper stages), but built for ``num_groups`` single-channel
+    segmentation inputs instead of RGB, and with a smaller ``base_channels``
+    width since class-id maps need less capacity than images.
+
+    Args:
+        in_channels (int): Number of mask-group channels (1 per group).
+        latent_dim (int): Dimensionality of the latent space.
+        base_channels (int): Number of channels in the deepest convolutional
+            layer. Smaller than the decoder's width by design.
+        image_size (int): Height/width of the (square) input masks.
+        dropout (float): Dropout probability applied after deep activations.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        latent_dim: int,
+        base_channels: int,
+        image_size: int,
+        dropout: float,
+    ) -> None:
+        super().__init__()
+        if in_channels < 1:
+            raise ValueError(f"in_channels must be >= 1, got {in_channels}.")
+
+        # Each block (stride 2) halves the spatial size. Dropout2d drops whole
+        # feature maps, which regularizes more strongly than pixel-wise
+        # dropout for convolutional features.
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(in_channels, base_channels // 8,
+                      kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
+
+            nn.Conv2d(base_channels // 8, base_channels //
+                      4, kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
+
+            nn.Conv2d(base_channels // 4, base_channels//2,
+                      kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
+            nn.Dropout2d(dropout),
+            nn.Conv2d(base_channels // 2, base_channels,
+                      kernel_size=3, stride=2, padding=1),
+            nn.SiLU(),
+            nn.Dropout2d(dropout),
+        )
+
+        # After 4 downsampling stages the spatial size is image_size / 16.
+        spatial_size: int = image_size // 16
+        self.flattened_size: int = base_channels * spatial_size * spatial_size
+
+        # Linear heads producing the parameters of the latent Gaussian. The
+        # plain Dropout operates on the flattened vector before the heads.
+        self.fc_dropout = nn.Dropout(dropout)
+        self.fc_mu = nn.Linear(self.flattened_size, latent_dim)
+        self.fc_logvar = nn.Linear(self.flattened_size, latent_dim)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Encode a mask batch into the latent Gaussian parameters.
+
+        Args:
+            x (torch.Tensor): Mask batch of shape
+                ``(batch_size, num_groups, image_size, image_size)`` holding
+                per-group class ids normalized to ``0..1``.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: (mu, logvar) each of shape
+                ``(batch_size, latent_dim)``.
+        """
+        h: torch.Tensor = self.conv_layers(x)
+        h = h.flatten(start_dim=1)
+        h = self.fc_dropout(h)
+        mu: torch.Tensor = self.fc_mu(h)
+        logvar: torch.Tensor = self.fc_logvar(h)
+        return mu, logvar
 
 
 class MaskDecoder(nn.Module):
@@ -117,13 +208,13 @@ class MaskDecoder(nn.Module):
             ),
             nn.SiLU(),
             nn.ConvTranspose2d(
-                base_channels // 8, base_channels // 8, kernel_size=5, stride=2,
-                padding=2, output_padding=1,
+                base_channels // 8, base_channels // 8, kernel_size=3, stride=2,
+                padding=1, output_padding=1,
             ),
             nn.SiLU(),
-            # Final 5x5 convolution mixes the upsampled features into per-class
+            # Final 3x3 convolution mixes the upsampled features into per-class
             # scores. No activation: these are logits.
-            nn.Conv2d(base_channels // 8, num_channels, kernel_size=5, padding=2),
+            nn.Conv2d(base_channels // 8, num_channels, kernel_size=3, padding=1),
         )
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
@@ -151,7 +242,11 @@ class MaskDecoder(nn.Module):
 
 class MaskVAEModel(nn.Module):
     """
-    VAE that encodes and decodes one-vs-rest semantic mask tensors.
+    VAE that encodes single-channel segmentation masks into one-vs-rest logits.
+
+    The encoder reads ``(B, num_groups, H, W)`` class-id channels while the
+    decoder still predicts the full ``(B, num_channels, H, W)`` one-vs-rest
+    tensor the BCE loss is computed against.
 
     The whole hyperparameters namespace is taken rather than individual scalars,
     matching :class:`VAE.model.VAEModel` and the rest of the project: adding a
@@ -160,14 +255,21 @@ class MaskVAEModel(nn.Module):
     Args:
         archparams (SimpleNamespace): Architecture hyperparameters. Must expose
             ``MASK_CHANNELS``, ``LATENT_DIM``, ``BASE_CHANNELS``, ``IMAGE_SIZE``,
-            ``DROPOUT`` and ``LATENT_ADDITIONAL_NOISE``.
+            ``DROPOUT`` and ``LATENT_ADDITIONAL_NOISE``. When it additionally
+            exposes ``ENCODER_IN_CHANNELS`` and ``ENCODER_BASE_CHANNELS`` the
+            small :class:`MaskEncoder` is built; otherwise the legacy reused
+            :class:`VAE.model.Encoder` over the one-vs-rest tensor is built so
+            pre-encoder checkpoints keep loading.
 
     Attributes:
         num_channels (int): Class channels the decoder predicts.
+        enc_channels (int): Mask-group channels the encoder reads.
+        encoder_kind (str): ``"single"`` for :class:`MaskEncoder`,
+            ``"onehot"`` for the legacy encoder.
         latent_dim (int): Dimensionality of the flat latent vector.
         latent_additional_noise (float): Std-dev of the extra latent noise
             added during training.
-        encoder (Encoder): Reused VAE encoder producing ``(mu, logvar)``.
+        encoder (nn.Module): Encoder producing ``(mu, logvar)``.
         decoder (MaskDecoder): Mask decoder producing logits.
     """
 
@@ -177,13 +279,28 @@ class MaskVAEModel(nn.Module):
         self.latent_dim: int = int(archparams.LATENT_DIM)
         self.latent_additional_noise: float = float(archparams.LATENT_ADDITIONAL_NOISE)
 
-        self.encoder: Encoder = Encoder(
-            in_channels=self.num_channels,
-            latent_dim=self.latent_dim,
-            base_channels=int(archparams.BASE_CHANNELS),
-            image_size=int(archparams.IMAGE_SIZE),
-            dropout=float(archparams.DROPOUT),
-        )
+        if hasattr(archparams, "ENCODER_IN_CHANNELS"):
+            self.encoder_kind: str = "single"
+            self.enc_channels: int = int(archparams.ENCODER_IN_CHANNELS)
+            self.encoder: nn.Module = MaskEncoder(
+                in_channels=self.enc_channels,
+                latent_dim=self.latent_dim,
+                base_channels=int(archparams.ENCODER_BASE_CHANNELS),
+                image_size=int(archparams.IMAGE_SIZE),
+                dropout=float(archparams.DROPOUT),
+            )
+        else:
+            # Legacy path: checkpoints predating MaskEncoder reused the VAE
+            # encoder over the one-vs-rest tensor.
+            self.encoder_kind = "onehot"
+            self.enc_channels = self.num_channels
+            self.encoder = Encoder(
+                in_channels=self.num_channels,
+                latent_dim=self.latent_dim,
+                base_channels=int(archparams.BASE_CHANNELS),
+                image_size=int(archparams.IMAGE_SIZE),
+                dropout=float(archparams.DROPOUT),
+            )
         self.decoder: MaskDecoder = MaskDecoder(
             latent_dim=self.latent_dim,
             base_channels=int(archparams.BASE_CHANNELS),
@@ -215,27 +332,30 @@ class MaskVAEModel(nn.Module):
         x: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Reconstruct a batch of mask tensors through the latent bottleneck.
+        Reconstruct a batch of masks through the latent bottleneck.
 
         Args:
-            x (torch.Tensor): ``(batch, num_channels, image_size, image_size)``
-                binary one-vs-rest masks.
+            x (torch.Tensor): ``(batch, enc_channels, image_size, image_size)``
+                encoder input — class-id channels for the ``"single"``
+                encoder, binary one-vs-rest masks for the legacy ``"onehot"``
+                encoder.
 
         Returns:
             tuple[torch.Tensor, torch.Tensor, torch.Tensor]: The reconstructed
-                logits shaped like ``x``, plus the posterior ``mu`` and
-                ``logvar``.
+                one-vs-rest logits of shape
+                ``(batch, num_channels, image_size, image_size)``, plus the
+                posterior ``mu`` and ``logvar``.
 
         Raises:
-            ValueError: If the input's channel count is not what the decoder was
-                built for.
+            ValueError: If the input's channel count is not what the encoder
+                was built for.
         """
-        if x.shape[1] != self.num_channels:
+        if x.shape[1] != self.enc_channels:
             raise ValueError(
-                f"This model decodes {self.num_channels} mask channels but got "
-                f"{x.shape[1]}. MASK_MODE in mask_VAE/config.toml and "
-                "the checkpoint's channel count disagree (checkpoints from a "
-                "different mode are unloadable)."
+                f"This {self.encoder_kind} encoder reads {self.enc_channels} "
+                f"channels but got {x.shape[1]}. MASK_MODE in "
+                "mask_VAE/config.toml and the checkpoint's mode disagree "
+                "(checkpoints from a different mode are unloadable)."
             )
 
         mu, logvar = self.encoder(x)

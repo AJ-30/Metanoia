@@ -66,8 +66,12 @@ that belong to no class, which silently invalidates the one-vs-rest target.
 
 ### Channel layout
 
-The model input and output are one-vs-rest binary tensors with **an explicit
-background channel**. With `MASK_GROUPS = ["floorplan", "furniture"]`:
+The custom encoder reads the raw segmentation directly: **one float channel
+per mask group** holding integer class ids normalized to `0..1` (divided by
+that group's id range). With `MASK_MODE = "both"` that is 2 input channels;
+single-group modes read exactly 1. The decoder output and BCE target remain
+one-vs-rest binary tensors with **an explicit background channel**. With
+`MASK_GROUPS = ["floorplan", "furniture"]`:
 
 | Global channel | Meaning |
 | -------------- | ------- |
@@ -88,9 +92,9 @@ below). Use `MAX_SAMPLES` to cap an epoch when iterating on the setup.
 
 The number of classes lives in the dataset's JSON files, not in this repo.
 `MASK_CHANNELS` in `hyperparameters.toml` states the expected total and the
-runner **asserts it against the layout at startup**, so a dataset regenerated
-with a different class table fails immediately with a message naming the value
-to copy in, instead of training a model that cannot be decoded.
+runner **auto-syncs it to the layout at startup** (with a warning when they
+disagree), so a dataset regenerated with a different class table just works
+instead of training a model that cannot be decoded.
 
 ## Choosing which masks to learn
 
@@ -113,13 +117,17 @@ when `MASK_MODE` is absent.
 ## Files
 
 - `masking.py` — Reads the color index JSONs, owns the channel layout
-  (`MaskLayout`), encodes integer masks into one-vs-rest channels, and renders
-  any per-class tensor back to colored RGB.
+  (`MaskLayout`), encodes integer masks into one-vs-rest channels and into
+  the single-channel encoder input, and renders any per-class tensor back to
+  colored RGB.
 - `dataset.py` — `MaskDataset`: enumerates sample folders that provide all
-  selected masks, resizes nearest-neighbour, caches as `uint8`.
-- `model.py` — `MaskDecoder`, `MaskVAEModel` and `mask_vae_loss` (BCE + KL).
-  The encoder is **imported and reused from `VAE/model.py`**, which is
-  activation-agnostic, so there is exactly one encoder definition in the repo.
+  selected masks, resizes nearest-neighbour, caches as `uint8`. Each item is
+  a `(single, onehot)` pair: class-id channels for the encoder, one-vs-rest
+  for the loss.
+- `model.py` — `MaskEncoder` (small custom encoder over class-id channels),
+  `MaskDecoder`, `MaskVAEModel` and `mask_vae_loss` (BCE + KL). Pre-encoder
+  checkpoints holding the reused `VAE/model.py` `Encoder` still load through
+  the legacy branch.
 - `metrics.py` — Per-class IoU and Dice, accumulated through a confusion matrix.
 - `per_class_telemetry.py` — The per-class CSV writer.
 - `runner.py` — `MaskVAERunner`: dataloaders, training loop, evaluation,
@@ -202,9 +210,10 @@ updated for a new machine.
 | Key | Meaning |
 | --- | ------- |
 | `IMAGE_SIZE` | Square side length of the masks (must be divisible by 16) |
-| `MASK_CHANNELS` | Class channels; asserted against the layout at startup |
+| `MASK_CHANNELS` | Class channels; auto-synced to the layout at startup |
 | `LATENT_DIM` | Dimensionality of the flat latent vector |
-| `BASE_CHANNELS` | Channel count of the deepest conv layer |
+| `BASE_CHANNELS` | Channel count of the deepest decoder conv layer |
+| `ENCODER_BASE_CHANNELS` | Channel count of the deepest encoder conv layer (small by design) |
 | `DROPOUT` | Dropout probability (encoder + decoder, training only) |
 | `LATENT_ADDITIONAL_NOISE` | Std-dev of extra latent noise added during training |
 | `KL_WEIGHT` | Beta-VAE weight on the KL term. `0.0` = no latent regularization |
@@ -260,11 +269,12 @@ size (~60 MB) and makes the smoke test independent of disk speed.
 ### Caching, memory and throughput
 
 `PRELOAD_MASKS = false` is the correct default **at the current dataset size**.
-A cached sample costs `MASK_CHANNELS x IMAGE_SIZE x IMAGE_SIZE` bytes as
-`uint8`, i.e. **~1.8 MB** at `28 x 256 x 256`, so caching all 69 776 train masks
-would need **~126 GB**. Turn it on only together with a `MAX_SAMPLES` cap that
-keeps the total within RAM — for example `MAX_SAMPLES = 4096` uses ~7.4 GB and
-removes the PNG decode from the training loop.
+A cached sample costs `(num_groups + MASK_CHANNELS) x IMAGE_SIZE x IMAGE_SIZE`
+bytes as `uint8`, i.e. **~2.0 MB** at `(2 + 28) x 256 x 256`, so caching all
+69 776 train masks would need **~137 GB**. Turn it on only together with a
+`MAX_SAMPLES` cap that keeps the total within RAM — for example
+`MAX_SAMPLES = 4096` uses ~8 GB and removes the PNG decode from the training
+loop.
 
 `NUM_WORKERS = 0` is deliberate. Measured on this machine with the real masks:
 **114 masks/s in-process vs 38 masks/s with 4 workers**, because decoding these

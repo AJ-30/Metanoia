@@ -20,14 +20,18 @@ IMAGE_SIZE = 256
 # triggers a warning and the runner overwrites it with the layout count.
 MASK_CHANNELS = 28
 # Dimensionality of the flat latent vector, same convention as VAE/hyperparameters.toml.
-LATENT_DIM = 256
+LATENT_DIM = 128
 # Channel count of the deepest convolution of the encoder / first layer of the decoder.
-BASE_CHANNELS = 128
+BASE_CHANNELS = 64
+# Channel count of the deepest convolution of the custom single-channel mask
+# encoder. Kept much smaller than BASE_CHANNELS: class-id maps need less
+# capacity than RGB, which is what makes the encoder lightweight.
+ENCODER_BASE_CHANNELS = 32
 # Dropout probability, applied in the encoder and in the decoder. Training only.
 DROPOUT = 0.15
 # Std-dev of extra Gaussian noise added to the sampled latent during training,
 # which pushes the aggregate posterior towards the prior. Training only.
-LATENT_ADDITIONAL_NOISE = 0.05
+LATENT_ADDITIONAL_NOISE = 0.15
 
 # --- Loss weights -----------------------------------------------------------
 # Beta-VAE weight on the KL divergence. 0.0 trains an autoencoder with no
@@ -44,7 +48,7 @@ LEARNING_RATE = 0.0003
 # Memory scales with BATCH_SIZE x MASK_CHANNELS x IMAGE_SIZE**2, because the BCE
 # is a per-pixel sum over channels. At the values above, BATCH_SIZE = 16 uses
 # roughly 3.5 GB of activations on MPS; halve it on a smaller machine.
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 NUM_EPOCHS = 2500
 # RNG seed for Python and torch, applied before any model or data is built, so
 # two runs with the same seed and the same config produce the same result.

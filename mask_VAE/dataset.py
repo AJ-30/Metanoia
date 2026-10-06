@@ -3,9 +3,13 @@ Dataset for mask_VAE: reads the integer semantic segmentation masks of a split.
 
 The dataset is folder-per-sample: a split folder holds one sub-folder per
 layout, and each sub-folder carries every render of that layout. This module
-reads **only** the segmentation masks selected by ``MASK_GROUPS`` in
+reads **only** the segmentation masks selected by ``MASK_MODE`` in
 ``mask_VAE/config.toml`` — the rendered floor-plan images are never opened,
 because this model is unconditional and its target is the mask itself.
+
+Each item serves two tensors of the same masks: the single-channel float
+tensor the custom encoder reads (one ``0..1`` class-id channel per group)
+and the one-vs-rest binary tensor the BCE loss is computed against.
 
 Two details of the source data drive the implementation:
 
@@ -27,7 +31,11 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-from mask_VAE.masking import MaskLayout, encode_masks_to_channels
+from mask_VAE.masking import (
+    MaskLayout,
+    encode_masks_to_channels,
+    encode_masks_to_single_channel,
+)
 
 # Image mode the source masks are stored in, and the mode they are read back as.
 MASK_IMAGE_MODE: str = "L"
@@ -44,12 +52,13 @@ MASK_RESAMPLE: Image.Resampling = Image.Resampling.NEAREST
 
 class MaskDataset(Dataset):
     """
-    Torch dataset yielding the one-vs-rest binary mask tensor of each sample.
+    Torch dataset yielding the mask tensors of each sample.
 
-    One item is the encoded mask of a single layout, shaped
-    ``(num_channels, image_size, image_size)`` and valued ``0.0`` or ``1.0``.
-    The same encoding is used for the loss target and for the encoder input, so
-    an item doubles as both.
+    One item is a ``(single, onehot)`` pair for a single layout: ``single`` is
+    the Float32 ``(num_groups, image_size, image_size)`` class-id tensor in
+    ``0..1`` the custom encoder reads, and ``onehot`` is the Float32
+    ``(num_channels, image_size, image_size)`` binary tensor the BCE loss is
+    computed against.
 
     Args:
         split_dir (str): Split folder holding one sub-folder per sample.
@@ -60,7 +69,7 @@ class MaskDataset(Dataset):
             every sample found.
         preload (bool): Decode and encode every sample once at construction and
             keep it in RAM as ``uint8``. Costs
-            ``num_channels * image_size**2`` bytes per sample.
+            ``(num_groups + num_channels) * image_size**2`` bytes per sample.
 
     Raises:
         ValueError: If ``image_size`` is not positive.
@@ -87,8 +96,8 @@ class MaskDataset(Dataset):
         if max_samples >= 0:
             self.sample_dirs = self.sample_dirs[:max_samples]
 
-        # Forward reference so the cache can be typed as a list of tensors.
-        self.cache: list[torch.Tensor] | None = None
+        # Forward reference so the cache can be typed as a list of pairs.
+        self.cache: list[tuple[torch.Tensor, torch.Tensor]] | None = None
         if preload:
             self.cache = [self._load_uint8(sample_dir) for sample_dir in self.sample_dirs]
 
@@ -101,22 +110,27 @@ class MaskDataset(Dataset):
         """
         return len(self.sample_dirs)
 
-    def __getitem__(self, index: int) -> torch.Tensor:
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Return the encoded mask of one sample.
+        Return the encoded masks of one sample.
 
         Args:
             index (int): Position in the sorted sample list.
 
         Returns:
-            torch.Tensor: Float32 ``(num_channels, image_size, image_size)``
-                binary tensor, ``0.0`` and ``1.0`` only.
+            tuple[torch.Tensor, torch.Tensor]: ``(single, onehot)`` Float32
+                tensors — ``single`` of shape
+                ``(num_groups, image_size, image_size)`` in ``0..1`` for the
+                encoder, ``onehot`` of shape
+                ``(num_channels, image_size, image_size)`` of ``0.0``/``1.0``
+                for the loss.
 
         Raises:
             IndexError: If ``index`` is out of range.
         """
         if self.cache is not None:
-            return self.cache[index].float() / 255.0
+            cached_single, cached_onehot = self.cache[index]
+            return self._decode_single(cached_single), cached_onehot.float() / 255.0
         return self._load_float(self.sample_dirs[index])
 
     def _list_complete_sample_dirs(
@@ -208,7 +222,25 @@ class MaskDataset(Dataset):
             )
         return torch.from_numpy(array.astype(np.int64))
 
-    def _encode(self, sample_dir: Path) -> torch.Tensor:
+    def _load_ids(self, sample_dir: Path) -> list[torch.Tensor]:
+        """
+        Read every selected mask of one sample as class-id tensors.
+
+        Args:
+            sample_dir (Path): Sample folder holding the mask files.
+
+        Returns:
+            list[torch.Tensor]: One int64 ``(image_size, image_size)`` tensor
+                per group, ordered like ``layout.groups``.
+        """
+        return [
+            self._load_mask(sample_dir / group.mask_file_name)
+            for group in self.layout.groups
+        ]
+
+    def _encode(
+        self, sample_dir: Path
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Read and encode every selected mask of one sample.
 
@@ -216,34 +248,69 @@ class MaskDataset(Dataset):
             sample_dir (Path): Sample folder holding the mask files.
 
         Returns:
-            torch.Tensor: Float32 ``(num_channels, image_size, image_size)``
-                binary tensor. The batch dimension the encoder introduces for a
-                single sample is squeezed off here, so a dataset item is exactly
-                the tensor shape the model takes before batching.
+            tuple[torch.Tensor, torch.Tensor]: ``(single, onehot)`` Float32
+                tensors. The batch dimension the encoders introduce for a
+                single sample is squeezed off here, so a dataset item is
+                exactly the tensor shapes the model takes before batching.
         """
-        mask_arrays: list[torch.Tensor] = [
-            self._load_mask(sample_dir / group.mask_file_name)
-            for group in self.layout.groups
-        ]
-        return encode_masks_to_channels(mask_arrays, self.layout).squeeze(0)
+        mask_arrays: list[torch.Tensor] = self._load_ids(sample_dir)
+        single: torch.Tensor = encode_masks_to_single_channel(
+            mask_arrays, self.layout
+        ).squeeze(0)
+        onehot: torch.Tensor = encode_masks_to_channels(
+            mask_arrays, self.layout
+        ).squeeze(0)
+        return single, onehot
 
-    def _load_uint8(self, sample_dir: Path) -> torch.Tensor:
+    def _decode_single(self, cached_ids: torch.Tensor) -> torch.Tensor:
+        """
+        Restore the encoder input from cached class ids.
+
+        The cached ids are exact, so dividing by each group's id range
+        reproduces the non-cached encoding bit-identically.
+
+        Args:
+            cached_ids (torch.Tensor): ``uint8`` ``(num_groups, H, W)`` ids.
+
+        Returns:
+            torch.Tensor: Float32 ``(num_groups, H, W)`` tensor in ``0..1``.
+        """
+        channels: list[torch.Tensor] = []
+        for index, group in enumerate(self.layout.groups):
+            scale: float = float(max(group.num_classes - 1, 1))
+            channels.append(cached_ids[index].float().unsqueeze(0) / scale)
+        return torch.cat(channels, dim=0)
+
+    def _load_uint8(
+        self, sample_dir: Path
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Read one sample's masks as ``uint8`` for the RAM cache.
 
-        The encoded tensor is strictly ``0.0`` or ``1.0``, so it round-trips
-        through ``uint8`` exactly. That makes the cache four times smaller than
-        keeping floats, and ``__getitem__`` scales it back on the way out.
+        The class ids fit in ``uint8`` natively and the one-vs-rest tensor is
+        strictly ``0.0`` or ``1.0``, so both round-trip through ``uint8``
+        exactly. That makes the cache four times smaller than keeping floats,
+        and ``__getitem__`` scales both back on the way out.
 
         Args:
             sample_dir (Path): Sample folder holding the mask files.
 
         Returns:
-            torch.Tensor: ``uint8`` tensor of the same shape as ``_encode``.
+            tuple[torch.Tensor, torch.Tensor]: ``uint8`` ``(single_ids,
+                onehot)`` pair matching ``_encode`` shapes.
         """
-        return (self._encode(sample_dir) * 255.0).round().to(torch.uint8)
+        mask_arrays: list[torch.Tensor] = self._load_ids(sample_dir)
+        single_ids: torch.Tensor = torch.stack(
+            [array.to(torch.uint8) for array in mask_arrays], dim=0
+        )
+        onehot: torch.Tensor = (
+            encode_masks_to_channels(mask_arrays, self.layout).squeeze(0) * 255.0
+        ).round().to(torch.uint8)
+        return single_ids, onehot
 
-    def _load_float(self, sample_dir: Path) -> torch.Tensor:
+    def _load_float(
+        self, sample_dir: Path
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Read one sample's masks on demand, without caching.
 
@@ -251,6 +318,7 @@ class MaskDataset(Dataset):
             sample_dir (Path): Sample folder holding the mask files.
 
         Returns:
-            torch.Tensor: Float32 binary channel tensor, straight from disk.
+            tuple[torch.Tensor, torch.Tensor]: ``(single, onehot)`` Float32
+                tensors, straight from disk.
         """
         return self._encode(sample_dir)

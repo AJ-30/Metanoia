@@ -142,6 +142,13 @@ def build_frozen_mask_vae(
     if not os.path.isfile(checkpoint_path):
         raise FileNotFoundError(f"Mask VAE checkpoint not found: {checkpoint_path}")
     checkpoint: dict[str, object] = torch.load(checkpoint_path, map_location=device)
+    if checkpoint.get("encoder_kind", "onehot") != "onehot":
+        raise ValueError(
+            f"{checkpoint_path} holds a single-channel-encoder mask VAE, but "
+            "conditional diffusion still encodes one-vs-rest masks: point "
+            "COND/TARGET_VAE_CHECKPOINT_PATH at a one-hot-encoder checkpoint "
+            "(e.g. the ideal-wombat / ace-squid runs)."
+        )
     saved_hyperparams: dict[str, object] = checkpoint["hyperparameters"]
     state_dict: dict[str, torch.Tensor] = checkpoint["model_state_dict"]
     archparams = SimpleNamespace(

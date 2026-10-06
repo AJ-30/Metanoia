@@ -96,7 +96,8 @@ def set_reproducibility_seed(seed: int) -> None:
 
 def save_reconstruction_grid(
     model: MaskVAEModel,
-    mask_batch: torch.Tensor,
+    enc_batch: torch.Tensor,
+    target_batch: torch.Tensor,
     layout: MaskLayout,
     device: torch.device,
     save_path: Path,
@@ -116,7 +117,9 @@ def save_reconstruction_grid(
 
     Args:
         model (MaskVAEModel): Trained model, switched to eval mode internally.
-        mask_batch (torch.Tensor): ``(B, num_channels, H, W)`` binary target
+        enc_batch (torch.Tensor): ``(B, num_groups, H, W)`` encoder inputs
+            held on CPU.
+        target_batch (torch.Tensor): ``(B, num_channels, H, W)`` binary target
             masks held on CPU, used as the ground-truth rows.
         layout (MaskLayout): Channel layout defining the groups and colors.
         device (torch.device): Device the forward pass runs on.
@@ -126,14 +129,14 @@ def save_reconstruction_grid(
     was_training: bool = model.training
     model.eval()
     with torch.no_grad():
-        reconstruction: torch.Tensor = model(mask_batch.to(device))[0].cpu()
+        reconstruction: torch.Tensor = model(enc_batch.to(device))[0].cpu()
 
     rows: list[torch.Tensor] = []
     for group in layout.groups:
-        rows.append(render_group_rgb(mask_batch, group, torch.device("cpu")))
+        rows.append(render_group_rgb(target_batch, group, torch.device("cpu")))
         rows.append(render_group_rgb(reconstruction, group, torch.device("cpu")))
 
-    save_rgb_rows(rows, nrow=mask_batch.shape[0], save_path=save_path, log=log)
+    save_rgb_rows(rows, nrow=target_batch.shape[0], save_path=save_path, log=log)
     model.train(was_training)
 
 
@@ -225,9 +228,10 @@ class MaskVAERunner:
 
     The mask mode (``MASK_MODE`` in ``config.toml``: ``"floorplan"``,
     ``"arrangement"`` or ``"both"``) selects which mask groups are learned.
-    The dataset encoding, the model input/output channels and the colorized
+    The dataset encodings, the model input/output channels and the colorized
     grids all follow the resolved layout, so switching mode needs no other
-    edit: ``MASK_CHANNELS`` is auto-synced to the layout before the model is
+    edit: ``MASK_CHANNELS`` is auto-synced to the layout and the small
+    single-channel encoder width to the group count before the model is
     built.
 
     Args:
@@ -305,10 +309,11 @@ class MaskVAERunner:
         ``hyperparameters.toml`` is overwritten when it disagrees, so switching
         ``MASK_MODE`` (``"floorplan"`` / ``"arrangement"`` / ``"both"``)
         changes the encoder input and decoder output automatically instead of
-        requiring a second manual edit.
+        requiring a second manual edit. The encoder input width always follows
+        the group count (one class-id channel per group).
 
         Returns:
-            None: Updates ``self.hyperparams.MASK_CHANNELS`` in place.
+            None: Updates ``self.hyperparams`` in place.
         """
         configured: int = int(self.hyperparams.MASK_CHANNELS)
         required: int = int(self.layout.num_channels)
@@ -320,6 +325,7 @@ class MaskVAERunner:
                 "auto-syncing the model input/output to the layout."
             )
             self.hyperparams.MASK_CHANNELS = required
+        self.hyperparams.ENCODER_IN_CHANNELS = len(self.layout.groups)
 
     def _make_dataloader(
         self,
@@ -388,23 +394,25 @@ class MaskVAERunner:
 
     def training_step(
         self,
-        batch: torch.Tensor,
+        batch: tuple[torch.Tensor, torch.Tensor],
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Run one optimizer step on a batch of binary masks.
+        Run one optimizer step on a batch of mask pairs.
 
         Args:
-            batch (torch.Tensor): ``(B, num_channels, H, W)`` binary mask batch on
-                CPU.
+            batch (tuple[torch.Tensor, torch.Tensor]): ``(enc, target)`` mask
+                batches on CPU — ``enc`` of shape ``(B, num_groups, H, W)``
+                for the encoder, ``target`` of shape
+                ``(B, num_channels, H, W)`` for the BCE loss.
 
         Returns:
             tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
                 Detached total loss, BCE term, KL term and per-dimension KL.
         """
-        batch = batch.to(self.device)
-        reconstruction, mu, logvar = self.model(batch)
+        enc_batch, target_batch = batch[0].to(self.device), batch[1].to(self.device)
+        reconstruction, mu, logvar = self.model(enc_batch)
         total_loss, bce_loss, kl_loss, kl_per_dim = mask_vae_loss(
-            batch,
+            target_batch,
             reconstruction,
             mu,
             logvar,
@@ -500,26 +508,29 @@ class MaskVAERunner:
                         break
                     # Slice to exactly the remaining request so the per-epoch
                     # metrics cover exactly max_samples masks.
-                    batch = batch[:remaining]
+                    batch = (batch[0][:remaining], batch[1][:remaining])
 
-                batch = batch.to(self.device)
-                reconstruction, mu, logvar = self.model(batch)
+                enc_batch = batch[0].to(self.device)
+                target_batch = batch[1].to(self.device)
+                reconstruction, mu, logvar = self.model(enc_batch)
                 total_loss, bce_loss, kl_loss, _ = mask_vae_loss(
-                    batch,
+                    target_batch,
                     reconstruction,
                     mu,
                     logvar,
                     kl_weight=float(self.hyperparams.KL_WEIGHT),
                     bce_pos_weight=float(self.hyperparams.BCE_POS_WEIGHT),
                 )
-                batch_size: int = batch.shape[0]
+                batch_size: int = target_batch.shape[0]
                 # The loss terms are per-image sums, so weight by image count to
                 # keep a short final batch from skewing the average.
                 loss_sums["test_loss"] += float(total_loss.item()) * batch_size
                 loss_sums["test_bce"] += float(bce_loss.item()) * batch_size
                 loss_sums["test_kl"] += float(kl_loss.item()) * batch_size
                 total_samples += batch_size
-                confusion_total += confusion_matrix(reconstruction.cpu(), batch.cpu(), num_channels)
+                confusion_total += confusion_matrix(
+                    reconstruction.cpu(), target_batch.cpu(), num_channels
+                )
 
         if total_samples == 0:
             raise ValueError(
@@ -563,6 +574,7 @@ class MaskVAERunner:
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "epoch": epoch,
                 "hyperparameters": vars(self.hyperparams),
+                "encoder_kind": self.model.encoder_kind,
                 "mask_mode": str(getattr(self.config, "MASK_MODE", "custom")),
                 "mask_groups": [group.name for group in self.layout.groups],
                 "mask_channel_indices": {
@@ -574,13 +586,16 @@ class MaskVAERunner:
         )
         self.log.info(f"Saved checkpoint to {checkpoint_path}")
 
-    def save_grids(self, fixed_batch: torch.Tensor, epoch: int) -> None:
+    def save_grids(
+        self, fixed_batch: tuple[torch.Tensor, torch.Tensor], epoch: int
+    ) -> None:
         """
         Write the colorized reconstruction and generation grids for an epoch.
 
         Args:
-            fixed_batch (torch.Tensor): Fixed test batch used as the
-                ground-truth half of the reconstruction grid, held on CPU.
+            fixed_batch (tuple[torch.Tensor, torch.Tensor]): Fixed test
+                ``(enc, target)`` batch used as the ground-truth half of the
+                reconstruction grid, held on CPU.
             epoch (int): Epoch number embedded in the file names.
         """
         reconstruction_path: Path = (
@@ -589,7 +604,8 @@ class MaskVAERunner:
         )
         save_reconstruction_grid(
             model=self.model,
-            mask_batch=fixed_batch,
+            enc_batch=fixed_batch[0],
+            target_batch=fixed_batch[1],
             layout=self.layout,
             device=self.device,
             save_path=reconstruction_path,
@@ -629,8 +645,12 @@ class MaskVAERunner:
         # One fixed batch of test masks backs the reconstruction grid, so every
         # epoch's picture shows the same layouts and progress is comparable.
         num_recon: int = int(self.hyperparams.NUM_RECON_SAMPLES)
-        fixed_batch: torch.Tensor = next(iter(test_loader))[:num_recon]
-        if fixed_batch.shape[0] == 0:
+        first_batch: tuple[torch.Tensor, torch.Tensor] = next(iter(test_loader))
+        fixed_batch: tuple[torch.Tensor, torch.Tensor] = (
+            first_batch[0][:num_recon],
+            first_batch[1][:num_recon],
+        )
+        if fixed_batch[0].shape[0] == 0:
             raise ValueError(
                 f"NUM_RECON_SAMPLES={num_recon} but the first test batch is empty."
             )

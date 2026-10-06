@@ -598,6 +598,56 @@ def encode_masks_to_channels(
     return channels
 
 
+def encode_masks_to_single_channel(
+    mask_arrays: list[torch.Tensor],
+    layout: MaskLayout,
+) -> torch.Tensor:
+    """
+    Stack per-group integer masks into the float tensor the mask encoder reads.
+
+    One channel per group holding that group's class ids normalized to
+    ``0..1`` by ``num_classes - 1``, so groups with different class counts
+    share the same input scale. Values stay exact fractions of the integer
+    ids; no rounding is applied.
+
+    Args:
+        mask_arrays (list[torch.Tensor]): One ``(H, W)`` or ``(B, H, W)`` int
+            tensor of class ids per group, ordered like ``layout.groups``.
+        layout (MaskLayout): Channel layout defining the group order.
+
+    Returns:
+        torch.Tensor: Float32 ``(B, num_groups, H, W)`` tensor in ``0..1``.
+
+    Raises:
+        ValueError: If the number of masks does not match the number of groups,
+            or the masks disagree on batch size or spatial size.
+    """
+    if len(mask_arrays) != len(layout.groups):
+        raise ValueError(
+            f"Expected one mask per configured group ({len(layout.groups)}), got "
+            f"{len(mask_arrays)}."
+        )
+
+    batched: list[torch.Tensor] = [_as_batched_int_mask(array) for array in mask_arrays]
+    reference: torch.Tensor = batched[0]
+    for group, array in zip(layout.groups[1:], batched[1:], strict=True):
+        if array.shape != reference.shape:
+            raise ValueError(
+                f"Mask '{group.mask_file_name}' has shape {tuple(array.shape)} but "
+                f"'{layout.groups[0].mask_file_name}' has "
+                f"{tuple(reference.shape)}. All masks of a sample must share the "
+                "same size."
+            )
+
+    channels: list[torch.Tensor] = []
+    for group, array in zip(layout.groups, batched, strict=True):
+        # Normalize by the group's own id range so a floorplan id and a
+        # furniture id of the same number mean the same input magnitude.
+        scale: float = float(max(group.num_classes - 1, 1))
+        channels.append(array.to(torch.float32).unsqueeze(1) / scale)
+    return torch.cat(channels, dim=1)
+
+
 def _as_batched_int_mask(mask_array: torch.Tensor) -> torch.Tensor:
     """
     Normalize a mask to a contiguous int64 tensor of shape ``(B, H, W)``.
