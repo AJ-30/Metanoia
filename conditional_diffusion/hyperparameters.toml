@@ -11,22 +11,22 @@ LATENT_DIM = 128
 # mismatch.
 COND_DIM = 128
 # Conditional denoiser MLP capacity. Input is concat(noisy_target, condition).
-HIDDEN_DIM = 1024
-NUM_LAYERS = 5
+HIDDEN_DIM = 512
+NUM_LAYERS = 6
 # Dropout inside the denoiser MLP (after the input projection and inside each
 # residual block). Training only; sampling runs in eval mode unaffected.
 DROPOUT = 0.125
 # Sinusoidal timestep embedding size and period.
-TIME_EMB_DIM = 32
+TIME_EMB_DIM = 128
 TIME_MAX_PERIOD = 10000
 # DDPM forward schedule (linear betas, Ho et al. 2020).
-NUM_TIMESTEPS = 1500
+NUM_TIMESTEPS = 1000
 BETA_START = 0.0001
 BETA_END = 0.02
 # Optimization.
 LEARNING_RATE = 0.0003
 BATCH_SIZE = 128
-NUM_EPOCHS = 2000
+NUM_EPOCHS = 10000
 SEED = 42
 # Logging / checkpointing.
 TELEMETRY_INTERVAL = 5
@@ -54,7 +54,7 @@ L1_WEIGHT = 0.75
 # arrangement decoded with the frozen target decoder vs the GT mask).
 # 1.0 = plain BCE; raise it so missed furniture costs more than false
 # positives on the background-dominated masks.
-MASK_BCE_POS_WEIGHT = 2.0
+MASK_BCE_POS_WEIGHT = 5.0
 # Epochs between mask-level BCE evals. Independent of TELEMETRY_INTERVAL:
 # the fresh value is logged on the next telemetry row, so differing
 # intervals leave honest gaps (empty cells) in the dashboard curve.
