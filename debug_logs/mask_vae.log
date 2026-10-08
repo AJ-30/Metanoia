@@ -3893,3 +3893,35 @@
 [fair-burro] 2026-10-08 07:31:35 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_312_fair-burro.png
 [fair-burro] 2026-10-08 07:31:36 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_312_fair-burro.png
 [fair-burro] 2026-10-08 07:31:36 | INFO | mask_VAE.runner:774 - Epoch 312/2500 | train_loss: 12655.7405 (bce: 12186.2713, kl/dim: 4.890304) | test_loss: 12462.6509 | test_fg_iou: 0.7293 | test_fg_dice: 0.7995 (N=100) | epoch_time: 279.5s | total: 88111.7s
+[fair-burro] 2026-10-08 07:36:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_313_fair-burro.png
+[fair-burro] 2026-10-08 07:36:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_313_fair-burro.png
+[fair-burro] 2026-10-08 07:36:27 | INFO | mask_VAE.runner:774 - Epoch 313/2500 | train_loss: 12684.2289 (bce: 12214.1461, kl/dim: 4.896696) | test_loss: 12556.5875 | test_fg_iou: 0.7289 | test_fg_dice: 0.7993 (N=100) | epoch_time: 290.9s | total: 88402.6s
+[fair-burro] 2026-10-08 07:41:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_314_fair-burro.png
+[fair-burro] 2026-10-08 07:41:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_314_fair-burro.png
+[fair-burro] 2026-10-08 07:41:11 | INFO | mask_VAE.runner:774 - Epoch 314/2500 | train_loss: 12692.0696 (bce: 12221.4230, kl/dim: 4.902569) | test_loss: 12300.1255 | test_fg_iou: 0.7288 | test_fg_dice: 0.7992 (N=100) | epoch_time: 284.2s | total: 88686.8s
+[fair-burro] 2026-10-08 07:46:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_315_fair-burro.png
+[fair-burro] 2026-10-08 07:46:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_315_fair-burro.png
+[fair-burro] 2026-10-08 07:46:07 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_fair-burro_epoch_315.pt
+[fair-burro] 2026-10-08 07:46:07 | INFO | mask_VAE.runner:774 - Epoch 315/2500 | train_loss: 12707.8317 (bce: 12237.9425, kl/dim: 4.894680) | test_loss: 12274.3796 | test_fg_iou: 0.7306 | test_fg_dice: 0.8002 (N=100) | epoch_time: 296.6s | total: 88983.4s
+[fair-burro] 2026-10-08 07:51:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_316_fair-burro.png
+[fair-burro] 2026-10-08 07:51:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_316_fair-burro.png
+[fair-burro] 2026-10-08 07:51:07 | INFO | mask_VAE.runner:774 - Epoch 316/2500 | train_loss: 12691.8104 (bce: 12221.8376, kl/dim: 4.895549) | test_loss: 12414.1441 | test_fg_iou: 0.7270 | test_fg_dice: 0.7980 (N=100) | epoch_time: 300.1s | total: 89283.4s
+[fair-burro] 2026-10-08 07:56:14 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_317_fair-burro.png
+[fair-burro] 2026-10-08 07:56:14 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_317_fair-burro.png
+[fair-burro] 2026-10-08 07:56:14 | INFO | mask_VAE.runner:774 - Epoch 317/2500 | train_loss: 12662.1024 (bce: 12192.3830, kl/dim: 4.892910) | test_loss: 12703.5224 | test_fg_iou: 0.7257 | test_fg_dice: 0.7973 (N=100) | epoch_time: 307.0s | total: 89590.5s
+[fair-burro] 2026-10-08 08:01:17 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_318_fair-burro.png
+[fair-burro] 2026-10-08 08:01:17 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_318_fair-burro.png
+[fair-burro] 2026-10-08 08:01:17 | INFO | mask_VAE.runner:774 - Epoch 318/2500 | train_loss: 12665.3576 (bce: 12195.9555, kl/dim: 4.889605) | test_loss: 12856.1812 | test_fg_iou: 0.7238 | test_fg_dice: 0.7961 (N=100) | epoch_time: 302.8s | total: 89893.3s
+[fair-burro] 2026-10-08 08:06:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_319_fair-burro.png
+[fair-burro] 2026-10-08 08:06:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_319_fair-burro.png
+[fair-burro] 2026-10-08 08:06:22 | INFO | mask_VAE.runner:774 - Epoch 319/2500 | train_loss: 12661.3994 (bce: 12192.3378, kl/dim: 4.886058) | test_loss: 12724.8357 | test_fg_iou: 0.7252 | test_fg_dice: 0.7969 (N=100) | epoch_time: 304.4s | total: 90197.7s
+[fair-burro] 2026-10-08 08:11:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_320_fair-burro.png
+[fair-burro] 2026-10-08 08:11:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_320_fair-burro.png
+[fair-burro] 2026-10-08 08:11:27 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_fair-burro_epoch_320.pt
+[fair-burro] 2026-10-08 08:11:27 | INFO | mask_VAE.runner:774 - Epoch 320/2500 | train_loss: 12693.3094 (bce: 12224.4121, kl/dim: 4.884347) | test_loss: 12224.3361 | test_fg_iou: 0.7292 | test_fg_dice: 0.7993 (N=100) | epoch_time: 305.7s | total: 90503.4s
+[fair-burro] 2026-10-08 08:16:24 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_321_fair-burro.png
+[fair-burro] 2026-10-08 08:16:24 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_321_fair-burro.png
+[fair-burro] 2026-10-08 08:16:24 | INFO | mask_VAE.runner:774 - Epoch 321/2500 | train_loss: 12639.8027 (bce: 12170.8003, kl/dim: 4.885441) | test_loss: 12677.4123 | test_fg_iou: 0.7233 | test_fg_dice: 0.7958 (N=100) | epoch_time: 297.1s | total: 90800.5s
+[fair-burro] 2026-10-08 09:52:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_322_fair-burro.png
+[fair-burro] 2026-10-08 09:52:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_322_fair-burro.png
+[fair-burro] 2026-10-08 09:52:23 | INFO | mask_VAE.runner:774 - Epoch 322/2500 | train_loss: 12668.1396 (bce: 12198.0633, kl/dim: 4.896628) | test_loss: 12631.1340 | test_fg_iou: 0.7244 | test_fg_dice: 0.7965 (N=100) | epoch_time: 5758.2s | total: 96558.7s
