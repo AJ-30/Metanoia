@@ -30,12 +30,19 @@ TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 #   "floorplan"   -> background + 17 floorplan classes  = 18 channels
 #   "arrangement" -> background + 10 furniture classes  = 11 channels
 #   "both"        -> background + 17 + 10                = 28 channels
+#   "arrangement_filtered" -> same 11 channels as "arrangement", but the
+#      classes listed for this mode in [default.MASK_EXCLUDED_CLASSES] (e.g.
+#      "tv") are remapped to background: their pixels count as background in
+#      the targets, their channel target is always 0, and the grids render them
+#      with the background color. The channel count is unchanged on purpose so
+#      "arrangement" and "arrangement_filtered" checkpoints stay
+#      shape-compatible.
 #
 # Channel 0 is always the shared background channel: it is on wherever a pixel
 # is 0 in EVERY selected mask. Channels 1.. follow, group by group, in the
 # order of the resolved list.
 # ---------------------------------------------------------------------------
-MASK_MODE = "floorplan"  # "floorplan", "arrangement", "both"
+MASK_MODE = "arrangement_filtered"  # "floorplan", "arrangement", "both", "arrangement_filtered"
 
 # Legacy explicit list, used only when MASK_MODE is absent. Prefer MASK_MODE
 # above; this stays as a fallback so old configs keep working.
@@ -57,6 +64,23 @@ MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
 floorplan = ["floorplan"]
 arrangement = ["furniture"]
 both = ["floorplan", "furniture"]
+arrangement_filtered = ["furniture"]
+
+# Mode name -> list of class names treated as background in that mode. Each
+# entry is either a plain class name (e.g. "tv", matched against every group
+# the mode selects) or a "group/name" pair (e.g. "furniture/tv", matched only
+# against that group) for the case where two groups share a class name.
+# Excluded classes keep their channel (so the architecture is identical to the
+# unfiltered mode) but their pixels are remapped to background before encoding,
+# their channel target is always 0, they never win the render argmax, and they
+# are skipped by the foreground IoU / Dice means. Put "tv" in the
+# arrangement_filtered list and every tv pixel trains and renders as
+# background. Modes absent from this table exclude nothing.
+[default.MASK_EXCLUDED_CLASSES]
+floorplan = []
+arrangement = []
+both = []
+arrangement_filtered = ["tv"]
 
 # Group name -> mask filename inside each sample folder. Kept in TOML so the
 # filenames are never hardcoded in Python.

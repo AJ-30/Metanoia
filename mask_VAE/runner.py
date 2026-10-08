@@ -227,12 +227,15 @@ class MaskVAERunner:
     Trains a :class:`~mask_VAE.model.MaskVAEModel` on semantic segmentation masks.
 
     The mask mode (``MASK_MODE`` in ``config.toml``: ``"floorplan"``,
-    ``"arrangement"`` or ``"both"``) selects which mask groups are learned.
-    The dataset encodings, the model input/output channels and the colorized
-    grids all follow the resolved layout, so switching mode needs no other
-    edit: ``MASK_CHANNELS`` is auto-synced to the layout and the small
-    single-channel encoder width to the group count before the model is
-    built.
+    ``"arrangement"``, ``"both"`` or ``"arrangement_filtered"``) selects which
+    mask groups are learned. The dataset encodings, the model input/output
+    channels and the colorized grids all follow the resolved layout, so
+    switching mode needs no other edit: ``MASK_CHANNELS`` is auto-synced to
+    the layout and the small single-channel encoder width to the group count
+    before the model is built. ``"arrangement_filtered"`` additionally treats
+    the classes listed in ``MASK_EXCLUDED_CLASSES`` (e.g. ``tv``) as
+    background while keeping every channel, so its architecture is identical
+    to ``"arrangement"``.
 
     Args:
         mode (str): Run mode selecting the ``[debug]`` or ``[prod]`` table of
@@ -350,7 +353,8 @@ class MaskVAERunner:
         preload: bool = bool(self.hyperparams.PRELOAD_MASKS)
         self.log.info(
             f"Building mask dataset from {split_dir} "
-            f"(groups: {self.config.MASK_GROUPS}, preload into RAM: {preload})..."
+            f"(groups: {[group.name for group in self.layout.groups]}, "
+            f"preload into RAM: {preload})..."
         )
         dataset: MaskDataset = MaskDataset(
             split_dir=split_dir,
@@ -529,7 +533,10 @@ class MaskVAERunner:
                 loss_sums["test_kl"] += float(kl_loss.item()) * batch_size
                 total_samples += batch_size
                 confusion_total += confusion_matrix(
-                    reconstruction.cpu(), target_batch.cpu(), num_channels
+                    reconstruction.cpu(),
+                    target_batch.cpu(),
+                    num_channels,
+                    layout=self.layout,
                 )
 
         if total_samples == 0:
@@ -552,13 +559,76 @@ class MaskVAERunner:
             "fg_dice": foreground_mean(overlap.dice, self.layout),
         }
 
+    def layout_sidecar_payload(self) -> dict[str, object]:
+        """
+        Describe the resolved mask layout for the dashboard sidecar file.
+
+        The dashboard serves only PNG grids, so without this file it cannot
+        name the mode, the class colors or the excluded classes. The payload
+        mirrors the layout: one entry per global channel with its label, its
+        ``#rrggbb`` color and whether the channel is excluded (rendered as
+        background) in this run.
+
+        Returns:
+            dict[str, object]: JSON-serializable layout description.
+        """
+        channels: list[dict[str, object]] = []
+        for global_channel, label in enumerate(self.layout.class_names):
+            color_hex: str = "#000000"
+            for group in self.layout.groups:
+                if global_channel in group.channel_indices:
+                    local_id: int = group.channel_indices.index(global_channel)
+                    red, green, blue = group.colors[local_id]
+                    color_hex = f"#{red:02x}{green:02x}{blue:02x}"
+                    break
+            channels.append(
+                {
+                    "channel": global_channel,
+                    "label": label,
+                    "color": color_hex,
+                    "excluded": global_channel in self.layout.excluded_channels,
+                }
+            )
+        return {
+            "run_id": self.config.runtime.RUN_ID,
+            "mask_mode": str(getattr(self.config, "MASK_MODE", "custom")),
+            "groups": [group.name for group in self.layout.groups],
+            "excluded_classes": list(self.layout.excluded_class_labels),
+            "channels": channels,
+        }
+
+    def save_layout_sidecar(self) -> Path:
+        """
+        Write the layout description JSON next to the colorized grids.
+
+        Called once at the start of training so the dashboard can show the
+        class legend (with excluded classes marked as background) from the
+        first epoch on, without needing the dataset paths.
+
+        Returns:
+            Path: Path of the written JSON file.
+        """
+        import json
+
+        os.makedirs(self.config.OUTPUT_SAMPLES_DIRECTORY, exist_ok=True)
+        sidecar_path: Path = (
+            Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
+            / f"layout_{self.config.runtime.RUN_ID}.json"
+        )
+        with open(sidecar_path, "w", encoding="utf-8") as handle:
+            json.dump(self.layout_sidecar_payload(), handle, indent=2)
+        self.log.info(f"Saved mask layout sidecar to {sidecar_path}")
+        return sidecar_path
+
     def save_checkpoint(self, epoch: int) -> None:
         """
         Write a checkpoint holding the weights, the optimizer and the layout.
 
         The hyperparameters and the mask layout are stored alongside the weights
         so a later stage can rebuild this exact model without having to guess
-        which mask groups and channel count were in effect.
+        which mask groups and channel count were in effect. Excluded classes
+        keep their channels, so the exclusion record is what lets a later
+        stage reproduce the background remapping.
 
         Args:
             epoch (int): Epoch number to record in the file name and payload.
@@ -581,6 +651,11 @@ class MaskVAERunner:
                     group.name: list(group.channel_indices) for group in self.layout.groups
                 },
                 "mask_class_names": list(self.layout.class_names),
+                "mask_excluded_classes": {
+                    group.name: list(group.excluded_local_labels)
+                    for group in self.layout.groups
+                },
+                "mask_excluded_channels": list(self.layout.excluded_channels),
             },
             checkpoint_path,
         )
@@ -639,6 +714,7 @@ class MaskVAERunner:
         """
         torch.autograd.set_detect_anomaly(bool(self.config.IS_DEBUG_TORCH))
         os.makedirs(self.config.OUTPUT_SAMPLES_DIRECTORY, exist_ok=True)
+        self.save_layout_sidecar()
 
         train_loader, test_loader = self.build_dataloaders()
 
@@ -724,23 +800,27 @@ class MaskVAERunner:
 
     def _log_worst_classes(self, metrics: dict[str, object]) -> None:
         """
-        Report the foreground classes the model reconstructs worst.
+        Report the classes the model reconstructs worst, skipping excluded ones.
 
         Averages that hide a single never-predicted class are the main way a
         multi-class mask model looks healthy while it is not, so the bottom of
-        the ranking is named explicitly at the end of every run.
+        the ranking is named explicitly at the end of every run. Excluded
+        classes (e.g. ``tv`` in ``arrangement_filtered``) are left out of the
+        ranking: their IoU is trivially 0 by construction, so listing them
+        would only bury the classes the run actually tried to learn.
 
         Args:
             metrics (dict[str, object]): Evaluation result carrying
                 ``per_class_iou`` and ``fg_iou``.
         """
         per_class_iou: list[float] = metrics["per_class_iou"]  # type: ignore[assignment]
+        excluded: set[int] = set(self.layout.excluded_channels)
         ranked: list[tuple[float, str]] = sorted(
-            zip(
-                per_class_iou,
-                self.layout.class_names,
-                strict=True,
+            (iou, name)
+            for channel, (iou, name) in enumerate(
+                zip(per_class_iou, self.layout.class_names, strict=True)
             )
+            if channel not in excluded
         )
         self.log.info(
             f"Worst 5 classes by test IoU (mean foreground IoU "

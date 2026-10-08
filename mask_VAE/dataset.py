@@ -226,6 +226,11 @@ class MaskDataset(Dataset):
         """
         Read every selected mask of one sample as class-id tensors.
 
+        Classes the layout excludes (e.g. ``tv`` in ``arrangement_filtered``)
+        are remapped to background id ``0`` here, so the RAM cache, the
+        encoder input and the one-vs-rest target all agree that an excluded
+        pixel is background.
+
         Args:
             sample_dir (Path): Sample folder holding the mask files.
 
@@ -234,7 +239,9 @@ class MaskDataset(Dataset):
                 per group, ordered like ``layout.groups``.
         """
         return [
-            self._load_mask(sample_dir / group.mask_file_name)
+            group.remap_ids_to_background(
+                self._load_mask(sample_dir / group.mask_file_name)
+            )
             for group in self.layout.groups
         ]
 

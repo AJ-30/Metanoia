@@ -108,11 +108,34 @@ needed.
 MASK_MODE = "floorplan"    # background + 17 = 18 channels
 MASK_MODE = "arrangement"  # background + 10 = 11 channels (furniture)
 MASK_MODE = "both"         # background + 17 + 10 = 28 channels
+MASK_MODE = "arrangement_filtered"  # same 11 channels; tv -> background
 ```
 
 Mode names live in the `[default.MASK_MODES]` table (`mode -> group list`), so
 adding a mode is a TOML edit. `MASK_GROUPS` is kept only as a legacy fallback
 when `MASK_MODE` is absent.
+
+### Excluding classes (e.g. tv) in `arrangement_filtered`
+
+The `[default.MASK_EXCLUDED_CLASSES]` table maps a mode name to the classes
+that mode treats as background:
+
+```toml
+[default.MASK_EXCLUDED_CLASSES]
+arrangement_filtered = ["tv"]
+```
+
+Each entry is either a plain class name (`"tv"`, matched against every group
+the mode selects) or a `"group/name"` pair (`"furniture/tv"`, matched only
+against that group). Excluded pixels are remapped to background before
+encoding, so their channel target is always 0 and the shared background
+channel is 1 there; the renderer and the metrics mask those channels out, so
+an excluded class never appears in the grids and never drags the foreground
+IoU / Dice means down. The channels themselves are kept, so the architecture
+is identical to the unfiltered mode (`arrangement` and
+`arrangement_filtered` both have 11 channels) and their checkpoints stay
+shape-compatible. Misspelled names fail fast at startup instead of silently
+excluding nothing.
 
 ## Files
 
@@ -166,8 +189,10 @@ the colorized grids:
 
 The dashboard (Flask + Chart.js in `helpers/server.py`) plots every numeric
 column of `<run_id>.csv`, including `test_fg_iou` and `test_fg_dice`, and shows
-a "Reconstructions" panel (grid of fixed test samples, ground truth above
-reconstruction) and a "Generations" panel. Both have an epoch dropdown, and the
+a "Mask layout" legend panel (class colors for the selected run, with excluded
+classes struck through as background), a "Reconstructions" panel (grid of
+fixed test samples, ground truth above reconstruction) and a "Generations"
+panel. Both grid panels have an epoch dropdown, and the
 dashboard auto-refreshes so the newest grids appear at the end of each epoch.
 
 The per-class CSV is **not** charted by the dashboard — it is a wide CSV meant to
@@ -186,7 +211,8 @@ column -s, -t < mask_VAE/telemetry_logs/<run_id>_per_class.csv | less -S
 | `DEVICE` | `mps`, `cuda` or `cpu` (falls back to CPU) |
 | `TRAIN_IMAGES_DIR` | Split folder of samples to train on |
 | `TEST_IMAGES_DIR` | Split folder of samples used for evaluation |
-| `MASK_MODE` | `floorplan` (rooms) / `arrangement` (furniture) / `both`; defines the channel count, input auto-syncs |
+| `MASK_MODE` | `floorplan` (rooms) / `arrangement` (furniture) / `both` / `arrangement_filtered` (furniture without the excluded classes); defines the channel count, input auto-syncs |
+| `MASK_EXCLUDED_CLASSES` | Per-mode table of classes treated as background (e.g. `arrangement_filtered = ["tv"]`); channels are kept, targets are always 0 |
 | `MASK_GROUPS` | Legacy fallback list, used only when `MASK_MODE` is absent |
 | `MASK_COLOR_INDEX_DIR` | Directory holding the `*_color_index.json` files |
 | `DEBUG_LOG_FILE_PATH` | Log file written by the shared logger |
@@ -254,11 +280,14 @@ with the image VAE so the two are directly comparable, and it makes the
 - Per-class telemetry CSV: `mask_VAE/telemetry_logs/<run_id>_per_class.csv`
 - Reconstruction grids: `mask_VAE/outputs/reconstruction_epoch_<N>_<run_id>.png`
 - Generation grids: `mask_VAE/outputs/generation_epoch_<N>_<run_id>.png`
+- Layout sidecar: `mask_VAE/outputs/layout_<run_id>.json` (mode, class colors,
+  excluded classes — rendered by the dashboard as the mask layout legend)
 - Debug logs: `debug_logs/mask_vae.log`
 
 Checkpoints store the hyperparameters, `MASK_GROUPS`, the per-group channel
-indices and the class names alongside the weights, so a later stage can rebuild
-this exact model without guessing which mask layout was in effect.
+indices, the class names and the exclusion record alongside the weights, so a
+later stage can rebuild this exact model without guessing which mask layout
+was in effect.
 
 ## Smoke test / full run
 

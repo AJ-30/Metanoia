@@ -12,7 +12,10 @@ The directories with the telemetry CSVs and the images are configurable, so
 the same server visualises VAE runs (--telemetry-dir ./VAE/telemetry_logs
 --recon-dir ./VAE/outputs) and YOLO runs (--telemetry-dir
 ./YOLO/telemetry_logs --recon-dir ./YOLO/outputs); panels belonging to the
-other pipeline simply show their empty state.
+other pipeline simply show their empty state. For mask_VAE runs the dashboard
+additionally renders a mask layout legend from the ``layout_<run_id>.json``
+sidecars (class colors, with excluded classes marked as background), and the
+per-class companion CSVs (``*_per_class.csv``) are not listed as runs.
 
 Usage:
     python helpers/server.py --telemetry-dir ./VAE/telemetry_logs --recon-dir ./VAE/outputs --port 8080
@@ -20,6 +23,7 @@ Usage:
 
 import argparse
 import csv
+import json
 import os
 import re
 from pathlib import Path
@@ -34,6 +38,17 @@ PAGE_TITLE: str = "Telemetry Dashboard"
 # Skip this file name: run_scripts/server.sh may create an index.csv symlink
 # that just points at the latest run CSV and is not itself a telemetry run.
 SKIP_NAMES: set[str] = {"index.csv"}
+
+# Suffix of the per-class companion CSVs (mask_VAE writes
+# "<run_id>_per_class.csv" next to "<run_id>.csv"). They hold per-class IoU /
+# Dice columns for the same run, not a run of their own, so the run list skips
+# them instead of showing every training run twice.
+PER_CLASS_SUFFIX: str = "_per_class.csv"
+
+# Prefix of the mask layout sidecar JSONs the mask_VAE runner writes next to
+# its grids ("layout_<run_id>.json"): mode, class colors and excluded classes.
+LAYOUT_FILE_PREFIX: str = "layout_"
+LAYOUT_FILE_SUFFIX: str = ".json"
 
 # Prefix of saved grid filenames, used to recover the epoch number from a name
 # such as "reconstruction_epoch_7_<run>.png" / "generation_epoch_7_<run>.png".
@@ -143,6 +158,23 @@ INDEX_HTML: str = """
     padding: 8px; text-align: center;
   }
   .recon-img-wrap img { max-width: 100%; max-height: 60vh; border-radius: 4px; }
+  .legend-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px 4px 6px;
+  }
+  .chip .swatch {
+    width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chip.excluded { opacity: .75; }
+  .chip.excluded .name { text-decoration: line-through; }
+  .chip .badge {
+    font-size: 10px; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 999px; padding: 1px 6px;
+  }
+  .layout-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -261,6 +293,51 @@ INDEX_HTML: str = """
     }
   }
 
+  // Load the mask layout sidecars and render the legend for the selected run
+  // (falling back to the newest sidecar when the run has none, e.g. a run
+  // from before sidecars existed). Runs without any sidecar keep a quiet
+  // one-line note instead of an empty panel.
+  async function loadLayout(runId) {
+    const meta = document.getElementById("layout-meta");
+    const chips = document.getElementById("layout-chips");
+    if (!meta || !chips) return;
+    try {
+      const list = await jsonFetch("/api/layouts");
+      if (list.length === 0) {
+        meta.textContent = "No layout sidecar yet — written at the start of each mask_VAE run.";
+        return;
+      }
+      const entry = list.find(r => r.run_id === runId) || list[0];
+      const excluded = new Set(entry.excluded_classes || []);
+      meta.textContent =
+        `Mode ${entry.mask_mode} · groups ${(entry.groups || []).join(", ") || "—"}` +
+        (excluded.size ? ` · excluded (as background): ${[...excluded].join(", ")}` : " · no excluded classes");
+      chips.innerHTML = "";
+      for (const ch of (entry.channels || [])) {
+        const chip = document.createElement("span");
+        chip.className = "chip" + (ch.excluded ? " excluded" : "");
+        chip.title = ch.excluded ? `${ch.label} is trained and rendered as background` : ch.label;
+        const swatch = document.createElement("span");
+        swatch.className = "swatch";
+        swatch.style.background = ch.color;
+        chip.appendChild(swatch);
+        const name = document.createElement("span");
+        name.className = "name";
+        name.textContent = ch.label;
+        chip.appendChild(name);
+        if (ch.excluded) {
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = "as background";
+          chip.appendChild(badge);
+        }
+        chips.appendChild(chip);
+      }
+    } catch (err) {
+      meta.textContent = "Could not load the mask layout.";
+    }
+  }
+
   function renderDashboard(data) {
     const container = document.getElementById("dashboard");
     container.className = "";
@@ -283,6 +360,20 @@ INDEX_HTML: str = """
       <div class="stat"><div class="label">Rows</div><div class="value">${data.rows.length}</div></div>
       <div class="stat"><div class="label">Metrics</div><div class="value">${data.metric_columns.length}</div></div>`;
     container.appendChild(stats);
+
+    // Mask layout panel: class legend with the dataset colors, so the
+    // colorized grids can be read without guessing which color is which
+    // class. Classes the run excludes (e.g. tv in arrangement_filtered) are
+    // struck through and badged "as background": they train and render as
+    // background and never appear in the grids.
+    const layoutPanel = document.createElement("div");
+    layoutPanel.className = "recon-panel";
+    layoutPanel.innerHTML = `
+      <h3>Mask layout</h3>
+      <div class="layout-meta" id="layout-meta">Loading layout…</div>
+      <div class="legend-chips" id="layout-chips"></div>`;
+    container.appendChild(layoutPanel);
+    loadLayout(data.run_id);
 
     // Reconstruction panel: shows the latest per-epoch grid and lets the user
     // flip back through any previous epoch's grid.
@@ -433,8 +524,13 @@ def discover_runs(telemetry_dir: str) -> list[dict[str, Any]]:
 
     runs: list[dict[str, Any]] = []
     for file_path in sorted(telemetry_path.glob("*.csv")):
-        # Skip the index.csv convenience symlink and unreadable files.
-        if file_path.name in SKIP_NAMES or not file_path.is_file():
+        # Skip the index.csv convenience symlink, the per-class companion
+        # CSVs (same run, not a new run) and unreadable files.
+        if (
+            file_path.name in SKIP_NAMES
+            or file_path.name.endswith(PER_CLASS_SUFFIX)
+            or not file_path.is_file()
+        ):
             continue
 
         try:
@@ -555,6 +651,59 @@ def discover_grids(grid_dir: str, kind: str) -> list[dict[str, Any]]:
     return grids
 
 
+def discover_layouts(grid_dir: str) -> list[dict[str, Any]]:
+    """Scan a directory for mask layout sidecar JSONs, newest first.
+
+    The mask_VAE runner writes one ``layout_<run_id>.json`` per training run
+    next to its colorized grids, naming the mask mode, the class colors and
+    the classes excluded as background (e.g. ``tv`` in
+    ``arrangement_filtered``). The dashboard renders this as a class legend so
+    an excluded class is visibly marked as background instead of silently
+    missing from the grids.
+
+    Args:
+        grid_dir (str): Directory holding the per-epoch grid images.
+
+    Returns:
+        list[dict[str, Any]]: One parsed sidecar payload per file with keys
+            file, run_id, mask_mode, groups, excluded_classes, channels and
+            updated_at. Unreadable files are skipped.
+    """
+    grid_path: Path = Path(grid_dir)
+    if not grid_path.is_dir():
+        return []
+
+    layouts: list[dict[str, Any]] = []
+    for file_path in sorted(grid_path.iterdir()):
+        if (
+            not file_path.name.startswith(LAYOUT_FILE_PREFIX)
+            or not file_path.name.endswith(LAYOUT_FILE_SUFFIX)
+            or not file_path.is_file()
+        ):
+            continue
+        try:
+            with open(file_path, encoding="utf-8") as f:
+                payload: dict[str, Any] = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        layouts.append({
+            "file": file_path.name,
+            "run_id": payload.get("run_id", file_path.stem),
+            "mask_mode": payload.get("mask_mode", "unknown"),
+            "groups": payload.get("groups", []),
+            "excluded_classes": payload.get("excluded_classes", []),
+            "channels": payload.get("channels", []),
+            "updated_at": file_path.stat().st_mtime,
+        })
+
+    # Newest sidecar first so the dashboard can fall back to the latest layout
+    # when the selected run has none (e.g. a run from before sidecars existed).
+    layouts.sort(key=lambda item: item["updated_at"], reverse=True)
+    return layouts
+
+
 def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
     """Create and configure the Flask application.
 
@@ -613,6 +762,11 @@ def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
     def api_curves() -> Response:
         """Return the list of YOLO training-curve figures as JSON."""
         return jsonify(discover_grids(str(recon_path), "curve"))
+
+    @app.route("/api/layouts")
+    def api_layouts() -> Response:
+        """Return the mask layout sidecars (mode, colors, exclusions) as JSON."""
+        return jsonify(discover_layouts(str(recon_path)))
 
     @app.route("/grid/<kind>/<path:filename>")
     def grid_images(kind: str, filename: str) -> Response:

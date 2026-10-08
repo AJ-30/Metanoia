@@ -170,7 +170,9 @@ def build_frozen_mask_vae(
         parameter.requires_grad_(False)
 
     # Single-group layout for this checkpoint: channel indices come from the
-    # checkpoint, names and colors from the dataset's color index.
+    # checkpoint, names and colors from the dataset's color index, and the
+    # excluded classes (if the checkpoint records any) from its exclusion
+    # record, so grids and encodings match the mask_VAE run that trained it.
     group_names: list[str] = list(checkpoint["mask_groups"])
     if len(group_names) != 1:
         raise ValueError(
@@ -187,18 +189,42 @@ def build_frozen_mask_vae(
             f"{color_index_path} defines {len(class_names)} classes but "
             f"{checkpoint_path} reserves {len(channel_indices)} channels."
         )
+    # Checkpoints written with excluded classes (e.g. arrangement_filtered
+    # without tv) record them as "group/name" labels. Honor them here so the
+    # frozen encoder input, the one-vs-rest targets and the grids remap those
+    # pixels to background exactly like the mask_VAE run did. Checkpoints from
+    # before exclusions existed carry no such record and behave as before.
+    excluded_labels: object = checkpoint.get("mask_excluded_classes", {})
+    excluded_local_ids: tuple[int, ...] = ()
+    if isinstance(excluded_labels, dict):
+        raw_labels: object = excluded_labels.get(group_name, [])
+        if isinstance(raw_labels, list):
+            name_to_id: dict[str, int] = {
+                name: local_id for local_id, name in enumerate(class_names)
+            }
+            matched_ids: list[int] = []
+            for label in raw_labels:
+                plain: str = str(label).split("/", 1)[-1]
+                if plain in name_to_id and name_to_id[plain] != 0:
+                    matched_ids.append(name_to_id[plain])
+            excluded_local_ids = tuple(sorted(set(matched_ids)))
     group = MaskGroup(
         name=group_name,
         mask_file_name=mask_file_name,
         class_names=tuple(class_names),
         colors=tuple(colors),
         channel_indices=channel_indices,
+        excluded_local_ids=excluded_local_ids,
     )
     layout = MaskLayout(
         groups=(group,),
         class_names=tuple(f"{group_name}/{name}" for name in class_names[1:]),
         num_channels=len(channel_indices),
         foreground_channels=tuple(range(1, len(channel_indices))),
+        excluded_channels=tuple(
+            channel_indices[local_id] for local_id in excluded_local_ids
+        ),
+        mode_name=str(checkpoint.get("mask_mode", "")),
     )
     # Prepend the shared background label so class_names indexes by channel.
     layout = MaskLayout(
@@ -206,6 +232,8 @@ def build_frozen_mask_vae(
         class_names=("background", *layout.class_names),
         num_channels=layout.num_channels,
         foreground_channels=layout.foreground_channels,
+        excluded_channels=layout.excluded_channels,
+        mode_name=layout.mode_name,
     )
     return vae.to(device), archparams, layout
 

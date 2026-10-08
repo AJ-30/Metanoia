@@ -54,6 +54,7 @@ def confusion_matrix(
     logits: torch.Tensor,
     targets: torch.Tensor,
     num_channels: int,
+    layout: MaskLayout | None = None,
 ) -> torch.Tensor:
     """
     Count predicted-versus-true class pairs, for later overlap measurement.
@@ -72,6 +73,10 @@ def confusion_matrix(
         targets (torch.Tensor): ``(B, num_channels, H, W)`` binary one-vs-rest
             target masks, valued ``0.0`` or ``1.0``.
         num_channels (int): Number of class channels, background included.
+        layout (MaskLayout | None): Channel layout whose excluded channels
+            (e.g. ``tv`` in ``arrangement_filtered``) never win the predicted
+            argmax, exactly like the renderer masks them. ``None`` keeps the
+            plain argmax for callers without a layout.
 
     Returns:
         torch.Tensor: ``(num_channels, num_channels)`` matrix whose entry
@@ -93,7 +98,13 @@ def confusion_matrix(
             f"Expected {num_channels} class channels, got {logits.shape[1]}."
         )
 
-    predicted: torch.Tensor = logits.argmax(dim=1).reshape(-1)
+    scored_logits: torch.Tensor = logits
+    if layout is not None and layout.excluded_channels:
+        # Mask the excluded channels so they can never be predicted, matching
+        # render_group_rgb: the metric and the picture must never disagree.
+        scored_logits = logits.clone()
+        scored_logits[:, list(layout.excluded_channels), :, :] = float("-inf")
+    predicted: torch.Tensor = scored_logits.argmax(dim=1).reshape(-1)
     true: torch.Tensor = targets.argmax(dim=1).reshape(-1)
     pair_index: torch.Tensor = predicted * num_channels + true
     return torch.bincount(
@@ -138,6 +149,7 @@ def class_overlap(
     logits: torch.Tensor,
     targets: torch.Tensor,
     num_channels: int,
+    layout: MaskLayout | None = None,
 ) -> ClassOverlap:
     """
     Measure per-class overlap between predicted and true one-vs-rest masks.
@@ -150,11 +162,15 @@ def class_overlap(
         targets (torch.Tensor): ``(B, num_channels, H, W)`` binary one-vs-rest
             target masks, valued ``0.0`` or ``1.0``.
         num_channels (int): Number of class channels, background included.
+        layout (MaskLayout | None): Channel layout whose excluded channels
+            never win the predicted argmax. ``None`` keeps the plain argmax.
 
     Returns:
         ClassOverlap: Per-class IoU and Dice, indexed by global channel.
     """
-    return overlap_from_confusion(confusion_matrix(logits, targets, num_channels))
+    return overlap_from_confusion(
+        confusion_matrix(logits, targets, num_channels, layout=layout)
+    )
 
 
 def _safe_ratio(
@@ -188,15 +204,18 @@ def foreground_mean(values: torch.Tensor, layout: MaskLayout) -> float:
 
     The background channel is excluded: it is the easiest class to get right and
     it dominates the pixel count, so including it would hide whether the floor
-    plan and furniture classes are actually being learned.
+    plan and furniture classes are actually being learned. Channels of excluded
+    classes (e.g. ``tv`` in ``arrangement_filtered``) are skipped as well: their
+    target is always 0, so their IoU is trivially 0 and would otherwise drag
+    the mean down for a class the run was told not to learn.
 
     Args:
         values (torch.Tensor): ``(num_channels,)`` per-class metric.
         layout (MaskLayout): Layout that defines which channels are foreground.
 
     Returns:
-        float: Mean over the foreground channels, or ``0.0`` when the layout has
-            no foreground channel at all.
+        float: Mean over the active (non-excluded) foreground channels, or
+            ``0.0`` when the layout has no such channel at all.
 
     Raises:
         ValueError: If the metric length does not match the layout.
@@ -205,7 +224,8 @@ def foreground_mean(values: torch.Tensor, layout: MaskLayout) -> float:
         raise ValueError(
             f"Expected {layout.num_channels} per-class values, got {values.shape[0]}."
         )
-    if not layout.foreground_channels:
+    active: tuple[int, ...] = layout.active_foreground_channels
+    if not active:
         return 0.0
-    foreground: torch.Tensor = values[list(layout.foreground_channels)]
+    foreground: torch.Tensor = values[list(active)]
     return float(foreground.mean().item())

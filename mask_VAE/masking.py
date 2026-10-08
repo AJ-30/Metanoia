@@ -78,7 +78,13 @@ class MaskGroup:
             class id is written to. Index 0 is always global channel 0 (the
             shared background); the rest are the group's own foreground
             channels. Selected with ``Tensor.index_select`` to get this group's
-            logits in local class order.
+            logits in local class order. Excluded classes keep their channel
+            (the architecture is identical to the unfiltered mode); their
+            target is always 0 and they never win the render argmax.
+        excluded_local_ids (tuple[int, ...]): LOCAL class ids treated as
+            background in this mode (e.g. ``(2,)`` for ``tv``). Their pixels
+            are remapped to id ``0`` before encoding, so they contribute to
+            the shared background channel instead of their own.
     """
 
     name: str
@@ -86,6 +92,7 @@ class MaskGroup:
     class_names: tuple[str, ...]
     colors: tuple[tuple[int, int, int], ...]
     channel_indices: tuple[int, ...]
+    excluded_local_ids: tuple[int, ...] = ()
 
     @property
     def num_classes(self) -> int:
@@ -105,6 +112,39 @@ class MaskGroup:
             f"{self.name}{GROUP_NAME_SEPARATOR}{name}"
             for name in self.class_names
         )
+
+    @property
+    def excluded_class_names(self) -> tuple[str, ...]:
+        """Plain class names excluded in this mode, e.g. ``("tv",)``."""
+        return tuple(self.class_names[local_id] for local_id in self.excluded_local_ids)
+
+    @property
+    def excluded_local_labels(self) -> tuple[str, ...]:
+        """Group-prefixed labels of the excluded classes, e.g. ``("furniture/tv",)``."""
+        return tuple(self.local_labels[local_id] for local_id in self.excluded_local_ids)
+
+    def remap_ids_to_background(self, ids: torch.Tensor) -> torch.Tensor:
+        """
+        Rewrite excluded class ids to background id ``0``.
+
+        Applied to the raw integer masks before any encoding, so an excluded
+        class (e.g. ``tv``) contributes to the shared background channel and
+        its own channel target stays 0. Idempotent: remapping twice is the
+        same as remapping once.
+
+        Args:
+            ids (torch.Tensor): Integer class-id tensor of any shape.
+
+        Returns:
+            torch.Tensor: Copy with every excluded id replaced by ``0``,
+                or the input unchanged when nothing is excluded.
+        """
+        if not self.excluded_local_ids:
+            return ids
+        remapped: torch.Tensor = ids.clone()
+        for local_id in self.excluded_local_ids:
+            remapped[ids == local_id] = 0
+        return remapped
 
     def color_tensor(self, device: torch.device) -> torch.Tensor:
         """
@@ -142,12 +182,49 @@ class MaskLayout:
         num_channels (int): Required encoder input and decoder output channels.
         foreground_channels (tuple[int, ...]): Global channels of every
             foreground class, i.e. all channels except the background one.
+        excluded_channels (tuple[int, ...]): Global channels whose class is
+            excluded in this mode. They keep their channel (the architecture
+            is unchanged) but their target is always 0, they never win the
+            render argmax, and the foreground metric means skip them.
+        mode_name (str): Resolved ``MASK_MODE`` name, empty for the legacy
+            ``MASK_GROUPS`` path. Recorded so checkpoints and the dashboard
+            sidecar can name the mode that produced this layout.
     """
 
     groups: tuple[MaskGroup, ...]
     class_names: tuple[str, ...]
     num_channels: int
     foreground_channels: tuple[int, ...]
+    excluded_channels: tuple[int, ...] = ()
+    mode_name: str = ""
+
+    @property
+    def active_foreground_channels(self) -> tuple[int, ...]:
+        """
+        Foreground channels that are actually learned in this mode.
+
+        The foreground metric means average over these, so an excluded class
+        (whose target is always 0) cannot drag the score down.
+
+        Returns:
+            tuple[int, ...]: ``foreground_channels`` minus
+                ``excluded_channels``.
+        """
+        excluded: set[int] = set(self.excluded_channels)
+        return tuple(c for c in self.foreground_channels if c not in excluded)
+
+    @property
+    def excluded_class_labels(self) -> tuple[str, ...]:
+        """
+        Group-prefixed labels of every excluded class, e.g. ``("furniture/tv",)``.
+
+        Returns:
+            tuple[str, ...]: Concatenated per-group exclusion labels.
+        """
+        labels: list[str] = []
+        for group in self.groups:
+            labels.extend(group.excluded_local_labels)
+        return tuple(labels)
 
     def describe(self) -> str:
         """
@@ -155,18 +232,26 @@ class MaskLayout:
 
         Returns:
             str: One line per group plus a channel count, listing the global
-                channel range each group occupies.
+                channel range each group occupies and, when classes are
+                excluded, which classes are treated as background.
         """
         lines: list[str] = [
             f"Mask layout: {len(self.groups)} group(s), "
             f"{self.num_channels} channels, "
             f"{len(self.foreground_channels)} foreground"
+            + (f" (mode {self.mode_name!r})" if self.mode_name else "")
         ]
         for group in self.groups:
             lines.append(
                 f"  - {group.name}: {group.mask_file_name} -> global channels "
                 f"{list(group.channel_indices)} "
                 f"({group.num_classes} classes: {', '.join(group.local_labels)})"
+            )
+        if self.excluded_class_labels:
+            lines.append(
+                f"  - excluded (as background): {', '.join(self.excluded_class_labels)} "
+                f"-> global channels {list(self.excluded_channels)} "
+                "(channels kept, targets always 0)"
             )
         return "\n".join(lines)
 
@@ -388,6 +473,114 @@ def resolve_mask_group_names(config: SimpleNamespace) -> list[str]:
     return group_names
 
 
+def resolve_excluded_class_names(
+    config: SimpleNamespace,
+    mode_name: str,
+) -> list[str]:
+    """
+    Resolve the classes a mode treats as background.
+
+    Reads the ``MASK_EXCLUDED_CLASSES`` table (mode name -> list of class
+    names, e.g. ``arrangement_filtered -> ["tv"]``). Each entry is either a
+    plain class name (``"tv"``, matched against every group the mode selects)
+    or a ``"group/name"`` pair (``"furniture/tv"``, matched only against that
+    group) for the case where two groups share a class name. Modes absent from
+    the table exclude nothing, as does the legacy ``MASK_GROUPS`` path (which
+    has no mode name).
+
+    Args:
+        config (SimpleNamespace): Parsed ``config.toml``. May expose
+            ``MASK_EXCLUDED_CLASSES``; absence means no exclusions.
+        mode_name (str): Resolved ``MASK_MODE`` name, or ``""`` for the legacy
+            path.
+
+    Returns:
+        list[str]: Raw exclusion entries for the mode, possibly empty.
+
+    Raises:
+        TypeError: If the table is not a mapping or a mode entry is not a
+            list of non-empty strings.
+    """
+    table: object = getattr(config, "MASK_EXCLUDED_CLASSES", {})
+    if table is None:
+        return []
+    if not isinstance(table, dict):
+        raise TypeError(
+            "mask_VAE/config.toml must define [default.MASK_EXCLUDED_CLASSES] as "
+            f"a table mapping mode name -> class-name list, got {type(table).__name__}."
+        )
+    if not mode_name or mode_name not in table:
+        return []
+    raw_entries: object = table[mode_name]
+    if not isinstance(raw_entries, list):
+        raise TypeError(
+            f"[default.MASK_EXCLUDED_CLASSES].{mode_name} must be a list of "
+            f"class names, got {type(raw_entries).__name__}."
+        )
+    entries: list[str] = []
+    for entry in raw_entries:
+        if not isinstance(entry, str) or not entry:
+            raise TypeError(
+                f"[default.MASK_EXCLUDED_CLASSES].{mode_name} must hold "
+                f"non-empty strings, got {entry!r}."
+            )
+        entries.append(entry)
+    return entries
+
+
+def match_excluded_local_ids(
+    group_name: str,
+    class_names: list[str],
+    exclusion_entries: list[str],
+) -> tuple[int, ...]:
+    """
+    Match a mode's exclusion entries against one group's class table.
+
+    A plain entry (``"tv"``) matches this group when the name is one of its
+    classes; a ``"group/name"`` entry matches only when the group part equals
+    this group's name. Background (local id ``0``) can never be excluded.
+
+    Args:
+        group_name (str): Mask group being matched, e.g. ``"furniture"``.
+        class_names (list[str]): Class names indexed by local class id, as read
+            from the group's color index JSON.
+        exclusion_entries (list[str]): Raw entries for the active mode.
+
+    Returns:
+        tuple[int, ...]: Sorted local class ids to treat as background.
+
+    Raises:
+        ValueError: If a ``"group/name"`` entry addresses this group but names
+            an unknown class of it, or if an entry tries to exclude the
+            background class. A plain entry that names no class of this group
+            is skipped here; when it matches no selected group at all the
+            caller reports it.
+    """
+    matched: set[int] = set()
+    for entry in exclusion_entries:
+        if GROUP_NAME_SEPARATOR in entry:
+            entry_group, _, entry_name = entry.partition(GROUP_NAME_SEPARATOR)
+            if entry_group != group_name:
+                continue
+        else:
+            entry_name = entry
+            if entry_name not in class_names:
+                continue
+        if entry_name not in class_names:
+            raise ValueError(
+                f"MASK_EXCLUDED_CLASSES entry {entry!r} names no class of group "
+                f"'{group_name}' (known: {class_names[1:]})."
+            )
+        local_id: int = class_names.index(entry_name)
+        if local_id == 0:
+            raise ValueError(
+                f"MASK_EXCLUDED_CLASSES entry {entry!r} tries to exclude the "
+                "background class, which is always background already."
+            )
+        matched.add(local_id)
+    return tuple(sorted(matched))
+
+
 def build_mask_layout(
     config: SimpleNamespace,
     fallback_color_index_dir: Path,
@@ -398,13 +591,17 @@ def build_mask_layout(
     The class ids of every selected mask group are laid out as follows: global
     channel ``0`` is the shared background, and each group then claims as many
     channels as it has foreground classes, in resolved mode order
-    (:func:`resolve_mask_group_names`).
+    (:func:`resolve_mask_group_names`). Classes listed for the active mode in
+    ``MASK_EXCLUDED_CLASSES`` keep their channel (so the architecture is
+    identical to the unfiltered mode) but are recorded on the layout and
+    remapped to background by the encoders, the renderers and the metrics.
 
     Args:
         config (SimpleNamespace): Parsed ``config.toml``. Must expose
             ``MASK_MODE`` plus ``MASK_MODES`` (or legacy ``MASK_GROUPS``),
             ``MASK_FILES`` and ``MASK_COLOR_INDEX_FILES`` in the active table,
-            plus ``MASK_COLOR_INDEX_DIR``.
+            plus ``MASK_COLOR_INDEX_DIR``. May expose
+            ``MASK_EXCLUDED_CLASSES``.
         fallback_color_index_dir (Path): Directory searched for the color index
             JSONs when ``MASK_COLOR_INDEX_DIR`` does not hold them. In practice
             the parent of the split folder.
@@ -414,9 +611,12 @@ def build_mask_layout(
 
     Raises:
         AttributeError: If a required config key is missing.
-        ValueError: If the resolved group list is empty or names a group twice.
+        ValueError: If the resolved group list is empty or names a group twice,
+            or if an exclusion entry matches no selected group.
     """
     group_names: list[str] = resolve_mask_group_names(config)
+    mode_name: str = str(config.MASK_MODE) if hasattr(config, "MASK_MODE") else ""
+    exclusion_entries: list[str] = resolve_excluded_class_names(config, mode_name)
 
     mask_files: object = _require_config_key(config, "MASK_FILES")
     color_index_files: object = _require_config_key(config, "MASK_COLOR_INDEX_FILES")
@@ -424,6 +624,7 @@ def build_mask_layout(
 
     groups: list[MaskGroup] = []
     global_class_names: list[str] = []
+    excluded_channels: list[int] = []
     # Global channel 0 is reserved for the shared background up front, so the
     # first group's foreground classes start at 1.
     next_channel: int = 1
@@ -447,6 +648,9 @@ def build_mask_layout(
         channel_indices: tuple[int, ...] = (0,) + tuple(
             range(next_channel, next_channel + num_foreground)
         )
+        excluded_local_ids: tuple[int, ...] = match_excluded_local_ids(
+            group_name, class_names, exclusion_entries
+        )
         next_channel += num_foreground
 
         group = MaskGroup(
@@ -455,17 +659,39 @@ def build_mask_layout(
             class_names=tuple(class_names),
             colors=tuple(colors),
             channel_indices=channel_indices,
+            excluded_local_ids=excluded_local_ids,
         )
         groups.append(group)
+        excluded_channels.extend(
+            channel_indices[local_id] for local_id in excluded_local_ids
+        )
         # Channel 0 keeps the plain "background" name; every foreground class is
         # labelled with its group so the names stay unique.
         global_class_names.extend(group.local_labels[1:])
+
+    # A "group/name" entry for a selected group that names no class of that
+    # group already raised inside match_excluded_local_ids. What is left to
+    # catch is a plain entry that matched no selected group at all (a typo
+    # like "tev"), which would otherwise silently exclude nothing.
+    unmatched: list[str] = [
+        entry
+        for entry in exclusion_entries
+        if GROUP_NAME_SEPARATOR not in entry
+        and not any(entry in group.class_names for group in groups)
+    ]
+    if unmatched:
+        raise ValueError(
+            f"MASK_EXCLUDED_CLASSES entries {unmatched} match no class of "
+            f"the selected groups {[group.name for group in groups]}."
+        )
 
     return MaskLayout(
         groups=tuple(groups),
         class_names=("background", *global_class_names),
         num_channels=next_channel,
         foreground_channels=tuple(range(1, next_channel)),
+        excluded_channels=tuple(sorted(excluded_channels)),
+        mode_name=mode_name,
     )
 
 
@@ -543,6 +769,10 @@ def encode_masks_to_channels(
     background channel when it is background in all groups. The result is what
     the encoder receives and what the binary cross-entropy is computed against.
 
+    Pixels of excluded classes are remapped to background first, so an
+    excluded channel is all zeros here while the background channel is 1 at
+    those pixels.
+
     Args:
         mask_arrays (list[torch.Tensor]): One ``(H, W)`` or ``(B, H, W)`` int64
             tensor of class ids per group, ordered like ``layout.groups``. All
@@ -564,7 +794,10 @@ def encode_masks_to_channels(
             f"{len(mask_arrays)}."
         )
 
-    batched: list[torch.Tensor] = [_as_batched_int_mask(array) for array in mask_arrays]
+    batched: list[torch.Tensor] = [
+        group.remap_ids_to_background(_as_batched_int_mask(array))
+        for group, array in zip(layout.groups, mask_arrays, strict=True)
+    ]
     reference: torch.Tensor = batched[0]
     # Every mask must share the batch and spatial shape of the first one, or the
     # scatter into the shared channel tensor below would be undefined.
@@ -608,7 +841,8 @@ def encode_masks_to_single_channel(
     One channel per group holding that group's class ids normalized to
     ``0..1`` by ``num_classes - 1``, so groups with different class counts
     share the same input scale. Values stay exact fractions of the integer
-    ids; no rounding is applied.
+    ids; no rounding is applied. Excluded class ids are remapped to
+    background first, so the encoder never sees an excluded id.
 
     Args:
         mask_arrays (list[torch.Tensor]): One ``(H, W)`` or ``(B, H, W)`` int
@@ -628,7 +862,10 @@ def encode_masks_to_single_channel(
             f"{len(mask_arrays)}."
         )
 
-    batched: list[torch.Tensor] = [_as_batched_int_mask(array) for array in mask_arrays]
+    batched: list[torch.Tensor] = [
+        group.remap_ids_to_background(_as_batched_int_mask(array))
+        for group, array in zip(layout.groups, mask_arrays, strict=True)
+    ]
     reference: torch.Tensor = batched[0]
     for group, array in zip(layout.groups[1:], batched[1:], strict=True):
         if array.shape != reference.shape:
@@ -659,7 +896,8 @@ def onehot_to_single_channel(
     normalized by the group's id range exactly like
     :func:`encode_masks_to_single_channel`. For ground-truth one-hot tensors
     the recovery is exact; for model logits it is the model's own decision,
-    matching what the colorized grids display.
+    matching what the colorized grids display. Excluded channels never win
+    the argmax (they are masked first), so a recovered id is never excluded.
 
     Args:
         onehot (torch.Tensor): ``(B, num_channels, H, W)`` one-vs-rest binary
@@ -681,10 +919,41 @@ def onehot_to_single_channel(
         channel_index: torch.Tensor = torch.tensor(
             group.channel_indices, dtype=torch.long, device=onehot.device
         )
-        class_ids: torch.Tensor = onehot.index_select(1, channel_index).argmax(dim=1)
+        local_scores: torch.Tensor = onehot.index_select(1, channel_index)
+        class_ids: torch.Tensor = _argmax_without_excluded(local_scores, group).to(
+            torch.int64
+        )
         scale: float = float(max(group.num_classes - 1, 1))
         channels.append(class_ids.to(torch.float32).unsqueeze(1) / scale)
     return torch.cat(channels, dim=1)
+
+
+def _argmax_without_excluded(
+    local_scores: torch.Tensor,
+    group: MaskGroup,
+) -> torch.Tensor:
+    """
+    Argmax over a group's local channels with excluded classes masked out.
+
+    Excluded channels are set to negative infinity first, so they can never
+    win: an excluded class renders and scores as background even when the
+    model's raw logit for it is the largest. The background channel (local id
+    ``0``) is never excluded, so the argmax always has a valid winner.
+
+    Args:
+        local_scores (torch.Tensor): ``(B, group.num_classes, H, W)`` scores
+            in local class order, as selected by the group's channel indices.
+        group (MaskGroup): Group carrying the excluded local ids.
+
+    Returns:
+        torch.Tensor: int64 ``(B, H, W)`` winning local class ids, never an
+            excluded id.
+    """
+    if not group.excluded_local_ids:
+        return local_scores.argmax(dim=1)
+    masked: torch.Tensor = local_scores.clone()
+    masked[:, list(group.excluded_local_ids), :, :] = float("-inf")
+    return masked.argmax(dim=1)
 
 
 def _as_batched_int_mask(mask_array: torch.Tensor) -> torch.Tensor:
@@ -720,7 +989,9 @@ def render_group_rgb(
     ``channel_tensor`` may be either raw one-vs-rest binary targets or model
     logits: in both cases an ``argmax`` over the group's own channels is the
     predicted class id, so the model needs no extra calibration step before it
-    can be looked at.
+    can be looked at. Excluded channels never win the argmax, so an excluded
+    class (e.g. ``tv``) renders with the background color wherever the model
+    would otherwise have drawn it.
 
     Args:
         channel_tensor (torch.Tensor): ``(B, num_channels, H, W)`` tensor of
@@ -738,7 +1009,7 @@ def render_group_rgb(
     )
     # (B, num_channels, H, W) -> (B, group.num_classes, H, W) in local class order.
     local_scores: torch.Tensor = channel_tensor.index_select(1, channel_index)
-    class_ids: torch.Tensor = local_scores.argmax(dim=1)
+    class_ids: torch.Tensor = _argmax_without_excluded(local_scores, group)
 
     color_lut: torch.Tensor = group.color_tensor(device)
     batch_size, height, width = class_ids.shape
