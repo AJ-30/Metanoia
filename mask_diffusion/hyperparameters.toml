@@ -1,0 +1,201 @@
+# Architecture and training hyperparameters for mask_diffusion.
+# Frozen-checkpoint paths, split dirs and the missing-component class name live
+# in mask_diffusion/config.toml.
+#
+# NOTE: every bare key must stay ABOVE the first [default.<TABLE>] header,
+# otherwise it belongs to that sub-table and the runner will not find it.
+
+[default]
+# Must match LATENT_DIM stored inside TARGET_VAE_CHECKPOINT_PATH (chief-yeti,
+# the diffusion space). Fails fast on mismatch.
+LATENT_DIM = 128
+# Must match LATENT_DIM of BOTH condition encoders (mint-akita floorplan and
+# fair-burro TV-free layout). Fails fast on mismatch. The two conditions are
+# concatenated, so the denoiser entry projection is LATENT_DIM + 2*COND_DIM wide.
+COND_DIM = 128
+# Denoiser MLP capacity. Input is concat(x_t, z_floorplan, z_partial).
+HIDDEN_DIM = 512
+NUM_LAYERS = 6
+# Dropout inside the denoiser (after the entry projection and inside each
+# residual block). Training only; sampling runs in eval mode unaffected.
+DROPOUT = 0.125
+# Sinusoidal timestep embedding size and period.
+TIME_EMB_DIM = 128
+TIME_MAX_PERIOD = 10000
+# ---------------------------------------------------------------------------
+# DDPM forward schedule (linear betas, Ho et al. 2020). The MSE phase trains the
+# FULL schedule; sample_conditional also walks all NUM_TIMESTEPS steps.
+# ---------------------------------------------------------------------------
+NUM_TIMESTEPS = 1000
+BETA_START = 0.0001
+BETA_END = 0.02
+
+# ---------------------------------------------------------------------------
+# OBJECTIVE SCHEDULE
+#
+# Two objectives, never summed within an epoch:
+#
+#   "mse"  Standard DDPM noise-prediction MSE in the 128-d latent space. The
+#          frozen decoder is NOT in the graph, so memory is tiny and
+#          MSE_BATCH_SIZE can be large. Timesteps are drawn from the FULL
+#          [0, NUM_TIMESTEPS) range - nothing has to be truncated, which is the
+#          whole reason this phase exists.
+#
+#   "bce"  The original pixel-space objective:
+#              1.0 * BCE(logits[:, tv], gt[:, tv]) + 0.1 * BCE(logits, gt)
+#          The frozen decoder IS in the graph (gradients flow through it), so
+#          BCE_BATCH_SIZE must stay small and timesteps are capped at
+#          BCE_TRAIN_T_MAX because x0_hat is only decodable at low noise.
+#
+# loss_schedule:
+#   "mse_bce_cycle" - REPEATING cycle of MSE_EPOCHS_PER_CYCLE latent-MSE epochs
+#                     then 1 pixel-BCE epoch, for the whole run. The pixel
+#                     objective therefore keeps reasserting itself instead of
+#                     being applied once and then slowly forgotten.
+#   "mse_then_bce"  - epochs 1..MSE_PHASE_EPOCHS use MSE, the rest use BCE
+#   "mse_only"      - latent MSE for the whole run (cheapest; reproduces a
+#                     standard latent DDPM)
+#   "bce_only"      - pixel BCE for the whole run (the original objective)
+# ---------------------------------------------------------------------------
+LOSS_SCHEDULE = "mse_bce_cycle"
+# ---------------------------------------------------------------------------
+# Cycle length for "mse_bce_cycle": this many MSE epochs, then one BCE epoch.
+# With 5 the pattern is MSE at epochs 1-5, BCE at 6, MSE at 7-11, BCE at 12, ...
+#
+# Cost, measured on MPS over the full 64k train split:
+#   mse @ batch 256 -> 0.039 s/step -> ~0.16 min/epoch
+#   bce @ batch 16  -> 0.084 s/step -> ~5.6  min/epoch
+# so one 5+1 cycle costs ~6.4 min and the BCE epoch dominates it. Raising this
+# amortizes the expensive pixel epochs; lowering it gives the component more
+# direct pixel-space attention at roughly linear extra cost.
+# ---------------------------------------------------------------------------
+MSE_EPOCHS_PER_CYCLE = 5
+# Only used by "mse_then_bce". With "mse_bce_cycle" the run lasts NUM_EPOCHS.
+# Timing note: 1000 MSE + 200 BCE epochs is roughly 2.7 h of MSE plus ~15 h of
+# BCE.
+MSE_PHASE_EPOCHS = 1000
+# MSE phase batch size. No decoder in the graph, so this is limited by nothing
+# but RAM: measured 0.039 s/step at 256 on MPS.
+MSE_BATCH_SIZE = 256
+# BCE phase batch size. The 11x256x256 decoder activations dominate memory;
+# measured 0.084 s/step at 16.
+BCE_BATCH_SIZE = 16
+# ---------------------------------------------------------------------------
+# Highest BCE-phase timestep, EXCLUSIVE. Applies ONLY to the pixel-space phase.
+# The BCE is informative only while x0_hat is still near the latent manifold: at
+# t=300 on the linear schedule alpha_bar=0.396, so the estimate is amplified
+# 1.59x, and beyond t~500 the decoded masks are meaningless and the gradient is
+# noise. The MSE phase ignores this and trains the full schedule.
+#
+# KNOWN MISMATCH: sampling walks all NUM_TIMESTEPS (1000), and the BCE phase
+# only ever sees t < BCE_TRAIN_T_MAX. If sampled output is noisy, raise this.
+# ---------------------------------------------------------------------------
+BCE_TRAIN_T_MAX = 300
+# Optimization.
+LEARNING_RATE = 0.0003
+# Must exceed MSE_PHASE_EPOCHS, or the pixel phase never runs.
+NUM_EPOCHS = 1200
+SEED = 42
+# Global gradient-norm clip. Set <= 0 to disable.
+GRAD_CLIP = 1.0
+
+# Logging / checkpointing.
+TELEMETRY_INTERVAL = 1
+CHECKPOINT_INTERVAL = 10
+# Epochs between per-channel BCE evals (every channel of the decoded mask, not
+# just TV). Independent of TELEMETRY_INTERVAL: the fresh value is written on
+# the next telemetry row, so differing intervals leave honest gaps in the curve.
+PER_CLASS_INTERVAL = 10
+
+# Data loading. NUM_WORKERS stays 0 on macOS: the worker spawn re-imports the
+# runner and the frozen mask VAEs with it.
+NUM_WORKERS = 0
+# Cap on samples per split; -1 uses everything (~70k train / ~10k test).
+MAX_SAMPLES = -1
+# Drop samples whose furniture mask contains no missing component. Such samples
+# contribute a pure-negative TV BCE term (about 11% of the split) that only
+# dilutes the signal. Set false to keep them.
+REQUIRE_MISSING_COMPONENT_SAMPLES = true
+
+# Batch size for the one-time frozen-encoder pass. Mask tensors are 1x256x256
+# per encoder input, so this can stay generous; it is separate from BATCH_SIZE
+# because it does not build the decoder graph.
+IMAGE_ENCODE_BATCH_SIZE = 64
+# Batches between progress lines while encoding a split. The heartbeat is what
+# tells you the 70k-sample pass is moving rather than stuck.
+ENCODE_LOG_INTERVAL = 200
+# Square side length the masks are resized to. Must equal ALL THREE frozen
+# checkpoints' IMAGE_SIZE (all are 256). Fails fast otherwise.
+IMAGE_SIZE = 256
+
+# ---------------------------------------------------------------------------
+# Pixel-space (BCE-epoch) loss. Only the missing component's channel is scored:
+#   loss = TV_LOSS_WEIGHT * BCE(decoded_tv, gt_tv)
+# The MSE epochs ignore both keys below.
+# ---------------------------------------------------------------------------
+# With a single term there is nothing left to balance, so TV_LOSS_WEIGHT no
+# longer sets a ratio between objectives - it is now effectively a learning-rate
+# multiplier for the pixel epochs (the BCE magnitude is ~0.008 against the MSE's
+# ~1.0). 1.0 keeps the two objectives on the same effective step size; raise it to
+# make each pixel epoch count for more.
+TV_LOSS_WEIGHT = 1.0
+# Positive-class weight INSIDE that BCE: a true TV pixel costs this much more than
+# a non-TV pixel, which puts the balanced operating point at sigmoid > w/(1+w)
+# (w=2 -> 0.667) instead of 0.5. Measured TV density is ~3% of pixels (median
+# 3.1%), so 2.0 is a mild recall correction, not a rebalancing; raise it only if
+# TV Dice stalls. Note the visualization thresholds at logit > 0, so raising this
+# also makes the pictures show more predicted TV.
+TV_BCE_POS_WEIGHT = 2.0
+
+# Evaluation.
+# Latent MSE is evaluated every epoch: it needs no decoder, so it is cheap.
+EVAL_BATCH_SIZE = 256
+TEST_LOSS_SAMPLES = 2048
+# Pixel-space evaluation DECODES, so it is ~20x more expensive per sample than
+# the latent MSE and is only run this often during MSE epochs. A BCE epoch
+# always evaluates it, because that IS the objective being trained.
+# In "mse_bce_cycle" mode with MSE_EPOCHS_PER_CYCLE=5 the BCE epoch already
+# refreshes these metrics every 6 epochs, so raising this mainly smooths the gap
+# between cycles.
+PIXEL_EVAL_INTERVAL = 5
+# Batch size for the pixel-space evaluation pass. The decoder is in the graph
+# only for the BCE, not for this no_grad decode, but the logits tensor is still
+# 11x256x256 per sample, so this stays modest.
+PIXEL_EVAL_BATCH_SIZE = 16
+# Full reverse-chain sampling during evaluation is NUM_TIMESTEPS forward passes
+# per batch, so it is far more expensive than a training step and only runs this
+# often.
+SAMPLE_INTERVAL = 10
+# Latent handling: true = latents from encoder mu (deterministic); false =
+# reparameterized samples (stochastic augmentation).
+USE_MU_ONLY = true
+# Standardize each latent space with its own dataset mean/std before training.
+# The three VAEs have independent latent geometries, so each gets its own
+# statistics; keeping the diffusion space unit-variance is what makes the fixed
+# noise schedule well conditioned.
+NORMALIZE_LATENTS = true
+NORMALIZE_FLOORPLAN = true
+NORMALIZE_PARTIAL = true
+# Samples used to estimate the normalization statistics.
+LATENT_STATS_SAMPLES = 2048
+# Floor for the per-dimension std so a dead latent dimension cannot blow up the
+# normalization.
+LATENT_STD_MIN = 0.001
+
+# ---------------------------------------------------------------------------
+# Visualization grid, saved to
+# outputs/reconstruction_epoch_<N>_<run_id>.png so the shared dashboard's
+# "Reconstructions" panel picks it up with no server change.
+# Rows, NUM_VIZ_SAMPLES columns each:
+#          a perfect prediction and a total miss render identically (measured: 0
+#          differing pixels), so the block could only ever show false positives.
+#          Every other channel stays ground truth, so the TV is judged against the
+#          true furniture rather than the model's own.
+# ---------------------------------------------------------------------------
+GRID_INTERVAL = 10
+NUM_VIZ_SAMPLES = 32
+NUM_GEN_DRAWS = 4
+# Blend weight of the overlaid furniture in rows 2+ of the visualization grid.
+# 1.0 = hard paint, 0.0 = base alone (row 2 would show the bare floorplan, rows
+# 3+ nothing at all).
+OVERLAY_ALPHA = 1.0

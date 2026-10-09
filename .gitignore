@@ -12,3 +12,7 @@ venv
 __pycache__
 old_outputs
 YOLO/augmented_dataset
+# Cached latent/mask arrays. Regenerated on demand and invalidated by a
+# fingerprint, and multi-GB: never worth versioning.
+*.npy
+latent_cache/

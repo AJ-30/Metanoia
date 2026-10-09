@@ -1,0 +1,1 @@
+"""Mask diffusion package: generating a missing furniture component (TV)."""

@@ -1,0 +1,86 @@
+# Non-model configuration for mask_diffusion: generating a MISSING furniture
+# component (the TV) in a frozen mask VAE latent space.
+#
+# Three FROZEN mask_VAE checkpoints define the whole pipeline and none of them
+# is trained here:
+#   FLOORPLAN_VAE_CHECKPOINT_PATH -> encodes floorplan_segmentation.png (18 ch).
+#      Supplies the spatial condition (where the rooms/walls are).
+#   PARTIAL_VAE_CHECKPOINT_PATH  -> encodes furniture_segmentation.png through a
+#      layout with `tv` remapped to background (fair-burro, run id recorded in
+#      the checkpoint's `mask_excluded_classes`). Supplies the "what is already
+#      there" condition, with the TV genuinely absent.
+#   TARGET_VAE_CHECKPOINT_PATH   -> encodes the SAME furniture mask keeping the
+#      TV (chief-yeti). This is the diffusion space AND the decoder that turns a
+#      generated latent back into a full arrangement mask.
+#
+# The partial/target pair is what makes this missing-component generation rather
+# than unconditional generation: both encode the identical class-id PNG through
+# two different layouts, so the only information difference between the
+# condition and the target is the TV.
+
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/mask_diffusion.log"
+MODEL_SAVE_PATH = "./mask_diffusion/models/"
+TELEMETRY_LOG_DIRECTORY = "./mask_diffusion/telemetry_logs/"
+PER_CLASS_TELEMETRY_LOG_DIRECTORY = "./mask_diffusion/telemetry_logs/"
+OUTPUT_SAMPLES_DIRECTORY = "./mask_diffusion/outputs/"
+DEVICE = "mps"
+
+# Split folders of the folder-per-sample dataset: each holds one sub-folder per
+# sample containing floorplan_segmentation.png and furniture_segmentation.png.
+# Only samples providing both masks are used, so every (floorplan, TV-free
+# layout, full layout) triple describes the same layout.
+TRAIN_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
+TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
+
+# ---------------------------------------------------------------------------
+# Frozen mask_VAE checkpoints, each rebuilt from its OWN embedded
+# hyperparameters so these stay loadable after mask_VAE config moves on.
+# These paths must match the files actually on disk - the two paths currently in
+# conditional_diffusion/config.toml are stale and will fail to load.
+# ---------------------------------------------------------------------------
+# mint-akita = floorplan VAE (18 channels), run id "mint-akita".
+FLOORPLAN_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt"
+# fair-burro = arrangement_filtered VAE (11 channels, furniture/tv excluded).
+# Its checkpoint stores the exclusion, which build_frozen_mask_vae turns into
+# excluded_local_ids so encoding the full mask yields a TV-free input.
+PARTIAL_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt"
+# chief-yeti = arrangement VAE (11 channels, TV included). Diffusion space +
+# decoder.
+TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt"
+
+# Name of the missing component, resolved against the target layout's class
+# names to find its channel. NEVER hardcoded as a channel index: the channel is
+# looked up here so pointing this at another missing class is a config edit.
+# The target class names are prefixed with the group, e.g. "furniture/tv".
+MISSING_COMPONENT_CLASS_NAME = "tv"
+# Group prefix the target checkpoint's class names carry. Used to build the
+# full lookup name; set to "" for an unprefixed color index.
+TARGET_CLASS_GROUP_PREFIX = "furniture"
+
+# Mask filenames inside each sample folder. Kept in TOML so no filename is
+# hardcoded in Python. PARTIAL and TARGET deliberately share one file: the TV
+# is removed by the layout, not by editing pixels here.
+FLOORPLAN_MASK_FILE = "floorplan_segmentation.png"
+PARTIAL_MASK_FILE = "furniture_segmentation.png"
+TARGET_MASK_FILE = "furniture_segmentation.png"
+
+# Directory holding the color index JSONs (dataset root, next to the splits).
+# Falls back to the parent of TRAIN_IMAGES_DIR when a file is missing there.
+MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
+FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
+
+# Cache for the one-time frozen-encoder pass over every sample. Holds, per
+# sample: the three latents and the resized uint8 class-id mask (so the training
+# loop never decodes a PNG). Any config/checkpoint/dataset change invalidates
+# it automatically through the stored fingerprint.
+LATENT_CACHE_DIR = "./mask_diffusion/latent_cache/"
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false
