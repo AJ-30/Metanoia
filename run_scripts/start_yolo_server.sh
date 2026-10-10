@@ -24,4 +24,4 @@ PORT="${1:-8080}"
 
 echo "Starting YOLO telemetry dashboard..."
 echo "Dashboard: http://127.0.0.1:${PORT}"
-python helpers/server.py --telemetry-dir ./YOLO/telemetry_logs --recon-dir ./YOLO/outputs --host 127.0.0.1 --port "${PORT}"
+python helpers/server.py --telemetry-dir ./YOLO/telemetry_logs --recon-dir ./YOLO/outputs --host 127.0.0.1 --port "${PORT}" --train-cmd ./train_YOLO.sh

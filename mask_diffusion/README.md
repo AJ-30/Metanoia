@@ -75,25 +75,24 @@ right default here:
   well defined at every noise level, so the "trains `t<300` but sampling starts
   at 1000" mismatch **disappears in this phase**.
 
-### `bce` — pixel BCE (one epoch per cycle)
+### `bce` — pixel epoch (one per cycle)
 
 ```
 x0_hat = denormalize( (x_t − sqrt(1−ᾱ_t)·ε̂) / sqrt(ᾱ_t) )
 logits = chief_yeti.decoder(x0_hat)                # frozen, 11×256×256
-loss   = TV_LOSS_WEIGHT · BCE(logits[:, tv], gt[:, tv])
+loss   = MSE_WEIGHT · MSE(noise pair, every epoch)
+       + BCE_WEIGHT · BCE(all 11 channels)
+       + TV_BCE_WEIGHT · BCE(tv channel only)
 ```
 
-**Only the missing component's channel is scored.** The other ten furniture
-classes get no pixel-space term at all, for two reasons:
-
-- the latent MSE has no notion of *which* class matters — it treats the whole
-  128-d latent equally;
-- a whole-mask BCE is dominated by the ~97% of pixels that are background, which
-  are trivially predicted. Measured on a real epoch the two terms were nearly the
-  same magnitude (`tv_bce 0.0084`, the whole-mask term 0.0091 — both since
-  removed from the hyperparameters), so a 0.1 weight had been needed just to stop
-  the easy background half from taking half the gradient. Dropping the term
-  entirely is cleaner than down-weighting it.
+The latent term from the `mse` epochs stays on, and two pixel terms join it.
+The whole-mask term is back (plain `pos_weight` 1.0 — one uniform weight cannot
+serve 11 channels spanning 97% of pixels down to under 1%), with the TV term
+carrying the component's own `TV_BCE_POS_WEIGHT`. Measured magnitudes on real
+epochs (MSE ~1.0, full BCE ~0.009, TV BCE ~0.008) make
+`1.0·1.0 + 2·0.009 + 10·0.008 ≈ 1.10`: the TV term is ~7% of the total and ~4.4x
+the full term. If the component does not move, raise `TV_BCE_WEIGHT` (or lower
+`MSE_WEIGHT`), not the architecture.
 
 Since the deliverable is the missing component, the pixel objective supervises
 exactly that channel.
@@ -227,18 +226,19 @@ obviously wrong rows rather than as a slow-learning curve.
 
 | column | meaning |
 |---|---|
-| `train_loss` | the objective actually active this epoch |
-| `train_mse` | latent MSE — filled on every `mse` epoch |
-| `train_tv_bce` | the TV-channel BCE — filled on every `bce` epoch |
+| `train_loss` | the composite actually optimized this epoch |
+| `train_mse` | latent MSE — filled on **every** epoch (it is part of both losses) |
+| `train_tv_bce` | the TV-channel BCE — filled on `bce` epochs only |
+| `train_full_bce` | the whole-mask BCE — filled on `bce` epochs only |
 | `test_mse` | held-out latent MSE, evaluated **every epoch** |
-| `test_tv_bce` | pixel terms, only on epochs a pixel eval ran |
+| `test_tv_bce`, `test_full_bce` | pixel terms, only on epochs a pixel eval ran |
 | `test_tv_dice` | TV Dice on the truncated path |
 | `sample_tv_dice`, `sample_tv_iou` | **full 1000-step reverse chain** |
 
 A metric that was not measured is written as an **empty cell**, never `0.0` —
 the established pattern in this repo. With the cycling schedule this makes the
-rhythm directly readable: `train_mse` filled, `train_tv_bce` empty, five times,
-then the reverse once, repeating. The log line also marks every alternation with
+rhythm directly readable: the two pixel columns fill once every
+`MSE_EPOCHS_PER_CYCLE + 1` epochs while `train_mse` never gaps. The log line also marks every alternation with
 `Epoch 6: objective 'bce' (batch 16)`. `test_mse` is measured every epoch (no
 decoder needed), so the latent curve is unbroken across the whole run.
 

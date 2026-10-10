@@ -1,0 +1,2 @@
+timestamp,runtime,epoch,train_loss,train_mse,train_tv_bce,train_full_bce,test_mse,test_tv_bce,test_full_bce,test_tv_dice,sample_tv_dice,sample_tv_iou
+1791543421.216991,78.97766089439392,1,0.524334987282753,0.524334987282753,,,0.22660233825445175,,,,,

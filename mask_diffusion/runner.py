@@ -34,16 +34,20 @@ Training runs two objectives in sequence, never summed (see LOSS_SCHEDULE):
    128-d latents, the batch size can be an order of magnitude larger, and the
    FULL timestep schedule is trainable - nothing needs truncating.
 
-2. **Pixel BCE** (``bce``, one epoch per cycle). Only the missing component::
+2. **Pixel BCE** (``bce``, one epoch per cycle). A weighted composite, after
+   conditional_diffusion's ``total = MSE + L1_WEIGHT * L1``::
 
        x0_hat = denormalize((x_t - sqrt(1-abar_t)*eps_hat) / sqrt(abar_t))
        logits = chief_yeti.decoder(x0_hat)
-       loss   = TV_LOSS_WEIGHT * BCE(logits[:, tv], gt[:, tv])
+       loss   = (MSE_WEIGHT * MSE on the noise pair)
+              + (BCE_WEIGHT * whole-mask BCE)
+              + (TV_BCE_WEIGHT * missing-channel BCE)
 
-   The other ten furniture classes get NO pixel-space term at all: the latent MSE
-   has no notion of which class matters, and a whole-mask BCE would be dominated
-   by the ~97% background that is trivially predicted. The deliverable is the
-   missing component, so the pixel objective supervises exactly that channel.
+   The whole-mask term is back (plain pos_weight 1.0) alongside the TV term, and
+   the latent MSE stays active instead of switching off: it anchors the epoch to
+   the full chief-yeti latent space while the two pixel terms steer the missing
+   component. Measured magnitudes (MSE ~1.0, full BCE ~0.009, TV BCE ~0.008) make
+   the TV term ~7% of the total and ~4x the full term on a BCE epoch.
 
    The decoder is frozen but NOT under ``no_grad``, so the pixel-space gradient
    flows back through it into the latent and into the denoiser. That is also why
@@ -405,8 +409,10 @@ class MaskDiffusionRunner:
             "train_loss",
             "train_mse",
             "train_tv_bce",
+            "train_full_bce",
             "test_mse",
             "test_tv_bce",
+            "test_full_bce",
             "test_tv_dice",
             "sample_tv_dice",
             "sample_tv_iou",
@@ -732,11 +738,12 @@ class MaskDiffusionRunner:
             f"Sampling walks all {self.model.num_timesteps} steps."
         )
         self.log.info(
-            f"BCE epoch loss = {float(self.hyperparams.TV_LOSS_WEIGHT)} * "
-            f"BCE(decoded_tv, gt_tv) on the missing component's channel ONLY, "
-            f"pos_weight={float(self.hyperparams.TV_BCE_POS_WEIGHT)}. The other "
-            "channels get no pixel-space term; the latent MSE is the only thing "
-            "supervising them."
+            f"BCE epoch loss = {float(self.hyperparams.MSE_WEIGHT)} * latent-MSE "
+            f"+ {float(self.hyperparams.BCE_WEIGHT)} * whole-mask BCE "
+            f"+ {float(self.hyperparams.TV_BCE_WEIGHT)} * TV-channel BCE "
+            f"(pos_weight={float(self.hyperparams.TV_BCE_POS_WEIGHT)}). "
+            "The latent term runs every epoch; the two pixel terms run on BCE "
+            "epochs only."
         )
 
     # ------------------------------------------------------------------
@@ -1458,6 +1465,13 @@ class MaskDiffusionRunner:
         point is that the pixel-space gradient reaches the denoiser through it.
         That is also why this epoch runs at a small batch size.
 
+        Like conditional_diffusion's ``total = MSE + L1_WEIGHT * L1``, the returned
+        loss is a weighted sum, not a single term::
+
+            loss = (MSE_WEIGHT * MSE on the noise pair, every epoch)
+                 + (BCE_WEIGHT * whole-mask BCE, BCE epochs only)
+                 + (TV_BCE_WEIGHT * TV-channel BCE, BCE epochs only)
+
         Args:
             target_latents (torch.Tensor): Standardized ``x_0``, ``(B, LATENT_DIM)``.
             floorplan_latents (torch.Tensor): Standardized condition, ``(B, COND_DIM)``.
@@ -1467,9 +1481,9 @@ class MaskDiffusionRunner:
                 valued ``0.0``/``1.0``.
 
         Returns:
-            dict[str, torch.Tensor]: ``loss``, ``tv_bce``, the detached ``logits``
-                for evaluation, the drawn ``timestep``, and the noise pair so the
-                caller can report the latent MSE of the same forward pass for free.
+            dict[str, torch.Tensor]: ``loss``, ``mse``, ``tv_bce``, ``full_bce``,
+                the detached ``logits`` for evaluation, and the drawn
+                ``timestep``.
 
         Raises:
             ValueError: If ``target_masks`` does not have the target's channel count.
@@ -1495,22 +1509,28 @@ class MaskDiffusionRunner:
         logits: torch.Tensor = self.frozen_vaes["target"].decode(
             self.denormalize_latents(estimated_clean)
         )
+        mse: torch.Tensor = F.mse_loss(predicted_noise, noise)
         tv_bce: torch.Tensor = self._mask_bce(
             logits[:, self.missing_channel],
             target_masks[:, self.missing_channel],
             float(self.hyperparams.TV_BCE_POS_WEIGHT),
         )
-        loss: torch.Tensor = float(self.hyperparams.TV_LOSS_WEIGHT) * tv_bce
+        # Plain pos_weight of 1.0: one uniform weight cannot serve 11 channels
+        # spanning 97% of pixels down to under 1%, so the whole-mask term is left
+        # uncorrected and the TV term carries the component's priorities.
+        full_bce: torch.Tensor = self._mask_bce(logits, target_masks, 1.0)
+        loss: torch.Tensor = (
+            float(self.hyperparams.MSE_WEIGHT) * mse
+            + float(self.hyperparams.BCE_WEIGHT) * full_bce
+            + float(self.hyperparams.TV_BCE_WEIGHT) * tv_bce
+        )
         return {
             "loss": loss,
+            "mse": mse,
             "tv_bce": tv_bce,
+            "full_bce": full_bce,
             "logits": logits.detach(),
             "timestep": timesteps,
-            # Returned so the caller can report the latent MSE of the very same
-            # forward pass, which keeps that curve continuous across the phase
-            # switch at no extra compute.
-            "noise": noise,
-            "predicted_noise": predicted_noise,
         }
 
     def _targets_to_device(self, class_ids: torch.Tensor) -> torch.Tensor:
@@ -1566,15 +1586,13 @@ class MaskDiffusionRunner:
                 target_masks=self._targets_to_device(batch["class_ids"]),
             )
             metrics["loss"].backward()
-            latent_mse: float = float(
-                F.mse_loss(metrics["predicted_noise"].detach(), metrics["noise"])
-            )
-            reported = {
+            reported: dict[str, float | None] = {
                 "loss": float(metrics["loss"].detach()),
-                # The MSE of this batch is measured for free from the same forward
-                # pass, so both objectives stay visible across the phase boundary.
-                "mse": latent_mse,
+                # The composite loss already contains the latent MSE, so it is
+                # reported on BCE epochs exactly like on MSE epochs.
+                "mse": float(metrics["mse"].detach()),
                 "tv_bce": float(metrics["tv_bce"].detach()),
+                "full_bce": float(metrics["full_bce"].detach()),
             }
         else:
             raise ValueError(f"Unknown objective {objective!r}; expected 'mse' or 'bce'.")
@@ -1594,12 +1612,14 @@ class MaskDiffusionRunner:
             objective (str): ``"mse"`` or ``"bce"``.
 
         Returns:
-            dict: Mean ``loss``, ``mse`` and ``tv_bce``. Keys that do not apply to
-                ``objective`` are ``None`` rather than ``0.0``, so telemetry writes
-                an empty cell instead of a misleading number.
+            dict: Mean ``loss``, ``mse``, ``tv_bce`` and ``full_bce``. Keys that do
+                not apply to ``objective`` are ``None`` rather than ``0.0``, so
+                telemetry writes an empty cell instead of a misleading number.
+                The latent MSE applies to both objectives, so it is the only key
+                that is never ``None``.
         """
         self.model.train()
-        totals: dict[str, float] = {"loss": 0.0, "mse": 0.0, "tv_bce": 0.0}
+        totals: dict[str, float] = {"loss": 0.0, "mse": 0.0, "tv_bce": 0.0, "full_bce": 0.0}
         batches: int = 0
         for batch in loader:
             metrics: dict[str, float | None] = self.training_step(batch, objective)
@@ -1610,8 +1630,12 @@ class MaskDiffusionRunner:
             batches += 1
         if batches == 0:
             self.log.error("Training loader produced no batches; nothing to train on.")
-            return {"loss": 0.0, "mse": 0.0, "tv_bce": 0.0}
-        active: set[str] = {"loss"} | ({"mse"} if objective == "mse" else {"tv_bce"})
+            return {"loss": 0.0, "mse": 0.0, "tv_bce": 0.0, "full_bce": 0.0}
+        # "mse" is always active now (it is part of both the MSE-epoch loss and
+        # the BCE-epoch composite); only the pixel terms gate on the objective.
+        active: set[str] = {"loss", "mse"} | (
+            set() if objective == "mse" else {"tv_bce", "full_bce"}
+        )
         averaged: dict[str, float | None] = {
             key: (value / batches if key in active else None)
             for key, value in totals.items()
@@ -1702,11 +1726,11 @@ class MaskDiffusionRunner:
             max_batches (int): Cap on evaluated batches; negative means all.
 
         Returns:
-            dict[str, float]: ``loss``, ``tv_bce``, ``tv_dice``, ``tv_iou`` and
-                ``samples``.
+            dict[str, float]: ``loss``, ``tv_bce``, ``full_bce``, ``tv_dice``,
+                ``tv_iou`` and ``samples``.
         """
         self.model.eval()
-        totals: dict[str, float] = {"loss": 0.0, "tv_bce": 0.0}
+        totals: dict[str, float] = {"loss": 0.0, "tv_bce": 0.0, "full_bce": 0.0}
         batches: int = 0
         confusion: torch.Tensor | None = None
         for batch_index, batch in enumerate(loader):
@@ -1729,7 +1753,7 @@ class MaskDiffusionRunner:
         if batches == 0:
             self.log.error("Pixel evaluation had no batches.")
             return {
-                "loss": 0.0, "tv_bce": 0.0,
+                "loss": 0.0, "tv_bce": 0.0, "full_bce": 0.0,
                 "tv_dice": 0.0, "tv_iou": 0.0, "samples": 0.0,
             }
         overlap: ClassOverlap = overlap_from_confusion(confusion)
@@ -1938,12 +1962,20 @@ class MaskDiffusionRunner:
            given, i.e. all furniture EXCEPT the missing component. This is the
            information the conditioning encoder saw, and the one class the model
            has to invent is visibly absent;
-        4..(3 + NUM_GEN_DRAWS) **floorplan + predicted component** - one row per
-           fresh diffusion draw, showing ONLY the model's missing component
-           painted on the bare floorplan.
+        4..(3 + NUM_GEN_DRAWS) **floorplan + the full generated arrangement** -
+           one row per fresh diffusion draw, with every predicted channel drawn
+           (argmax decides each pixel) and furniture background excluded so the
+           floorplan shows through.
+        4+NUM_GEN_DRAWS..(3 + 2*NUM_GEN_DRAWS) **floorplan + input furniture +
+           predicted component** - the completed reconstruction, one row per
+           draw. This is what the layout would look like if the generated
+           component were accepted: the input furniture PLUS the model's
+           component, with the prediction painted on top so it is never hidden
+           behind what it was placed against. Compare directly against row 2.
 
-        Rows 3 and 4+ read together as "given" + "generated" = the answer, so a
-        column can be checked against row 2 in one glance.
+        Rows 3, 4+ and the composite block read together as "given" +
+        "generated" = "completed", so a column can be checked against row 2 in
+        one glance.
 
         The base for row 3 and rows 4+ is the floorplan, which by construction
         contains no furniture at all. That is what makes row 4+ judgeable: every
@@ -2006,25 +2038,52 @@ class MaskDiffusionRunner:
             floor_rgb, input_rgb, input_foreground, alpha
         )
 
-        # Rows 4+: only the missing component comes from the model, painted on the
-        # bare floorplan. Nothing else is drawn, so nothing can be confused with it.
+        # Rows 4+: the FULL generated arrangement laid over the floorplan. Every
+        # predicted channel is drawn (argmax decides each pixel), with furniture
+        # background excluded so the rooms and walls show through.
         prediction_rows: list[torch.Tensor] = []
+        # Rows 4+D+: the completed reconstruction - the input furniture PLUS the
+        # model's component, on the floorplan. This is what the layout would look
+        # like if the generated component were accepted: compare it against row 2.
+        composite_rows: list[torch.Tensor] = []
         for draw in range(draws):
             # Draw d of every sample: strided because sample_and_score lays the
             # batch out sample-major with the draws adjacent to each sample.
             draw_logits: torch.Tensor = logits[draw::draws]
-            pred_component: torch.Tensor = draw_logits[:, channel] > 0.0
+            draw_rgb: torch.Tensor = render_group_rgb(
+                draw_logits, self.target_group, cpu
+            )
+            draw_foreground: torch.Tensor = (
+                draw_logits.argmax(dim=1) != 0
+            ).to(floor_rgb.dtype)
             prediction_rows.append(
                 overlay_component_on_base(
                     floor_rgb,
-                    self._component_rgb(pred_component, channel),
-                    pred_component,
+                    draw_rgb,
+                    draw_foreground,
                     alpha,
+                )
+            )
+            pred_component: torch.Tensor = draw_logits[:, channel] > 0.0
+            pred_rgb: torch.Tensor = self._component_rgb(pred_component, channel)
+            # Layered in this order: floorplan, then the input furniture, then the
+            # predicted component on top. The prediction wins overlaps on purpose -
+            # it is the new element under judgement, so it must never be hidden
+            # behind the furniture it was placed against.
+            furnished: torch.Tensor = overlay_component_on_base(
+                floor_rgb, input_rgb, input_foreground, alpha
+            )
+            composite_rows.append(
+                overlay_component_on_base(
+                    furnished, pred_rgb, pred_component, alpha
                 )
             )
 
         grid: torch.Tensor = make_grid(
-            torch.cat([gt_rgb, gt_overlay, input_overlay, *prediction_rows], dim=0),
+            torch.cat(
+                [gt_rgb, gt_overlay, input_overlay, *prediction_rows, *composite_rows],
+                dim=0,
+            ),
             nrow=num_viz,
             padding=2,
             normalize=False,
@@ -2178,6 +2237,7 @@ class MaskDiffusionRunner:
         # each metric forward; the inactive one is written as an empty cell.
         last_tv_dice: float | None = None
         last_tv_bce: float | None = None
+        last_full_bce: float | None = None
 
         total_start: float = time.time()
         for epoch in range(1, num_epochs + 1):
@@ -2214,6 +2274,7 @@ class MaskDiffusionRunner:
                 )
                 last_tv_dice = pixel["tv_dice"]
                 last_tv_bce = pixel["tv_bce"]
+                last_full_bce = pixel["full_bce"]
             if epoch % sample_interval == 0 or epoch == num_epochs:
                 self.last_sample_tv_dice, self.last_sample_tv_iou = self._score_sampled(fixed)
             if epoch % per_class_interval == 0 or epoch == num_epochs:
@@ -2227,7 +2288,8 @@ class MaskDiffusionRunner:
 
             self.log.info(
                 f"Epoch {epoch:>5} [{objective}] | loss {train_metrics['loss']:.4f} "
-                f"(mse {_fmt(train_metrics['mse'])}, tv {_fmt(train_metrics['tv_bce'])}) "
+                f"(mse {_fmt(train_metrics['mse'])}, tv {_fmt(train_metrics['tv_bce'])}, "
+                f"full {_fmt(train_metrics.get('full_bce'))}) "
                 f"| test mse {test_mse:.4f} tv_bce {_fmt(last_tv_bce)} "
                 f"tv_dice {_fmt(last_tv_dice)} | {time.time() - epoch_start:.1f}s"
             )
@@ -2238,8 +2300,14 @@ class MaskDiffusionRunner:
                     train_loss=train_metrics["loss"],
                     train_mse=train_metrics["mse"],
                     train_tv_bce=train_metrics["tv_bce"],
+                    train_full_bce=train_metrics.get("full_bce"),
                     test_mse=test_mse,
-                    test_tv_bce=last_tv_bce if objective == "bce" else None,
+                    test_full_bce=last_full_bce,
+                    # Both pixel metrics are logged whenever they exist, regardless of
+                    # the epoch's objective: they describe the latest pixel EVAL,
+                    # not the training step, so suppressing one while showing the
+                    # other would misreport what was measured.
+                    test_tv_bce=last_tv_bce,
                     test_tv_dice=last_tv_dice,
                     sample_tv_dice=self.last_sample_tv_dice,
                     sample_tv_iou=self.last_sample_tv_iou,

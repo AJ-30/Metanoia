@@ -28,4 +28,4 @@ PORT="${1:-8080}"
 
 echo "Starting mask VAE telemetry dashboard..."
 echo "Dashboard: http://127.0.0.1:${PORT}"
-python helpers/server.py --telemetry-dir ./mask_VAE/telemetry_logs --recon-dir ./mask_VAE/outputs --host 127.0.0.1 --port "${PORT}"
+python helpers/server.py --telemetry-dir ./mask_VAE/telemetry_logs --recon-dir ./mask_VAE/outputs --host 127.0.0.1 --port "${PORT}" --train-cmd ./train_mask_VAE.sh

@@ -30,4 +30,4 @@ PORT="${1:-8083}"
 
 echo "Starting mask diffusion telemetry dashboard..."
 echo "Dashboard: http://127.0.0.1:${PORT}"
-python helpers/server.py --telemetry-dir ./mask_diffusion/telemetry_logs --recon-dir ./mask_diffusion/outputs --host 127.0.0.1 --port "${PORT}"
+python helpers/server.py --telemetry-dir ./mask_diffusion/telemetry_logs --recon-dir ./mask_diffusion/outputs --host 127.0.0.1 --port "${PORT}" --train-cmd ./train_mask_diffusion.sh

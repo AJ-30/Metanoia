@@ -29,4 +29,4 @@ PORT="${1:-8081}"
 
 echo "Starting diffusion telemetry dashboard..."
 echo "Dashboard: http://127.0.0.1:${PORT}"
-python helpers/server.py --telemetry-dir ./Diffusion/telemetry_logs --recon-dir ./Diffusion/outputs --host 127.0.0.1 --port "${PORT}"
+python helpers/server.py --telemetry-dir ./Diffusion/telemetry_logs --recon-dir ./Diffusion/outputs --host 127.0.0.1 --port "${PORT}" --train-cmd ./train_diffusion.sh

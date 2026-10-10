@@ -22,11 +22,12 @@ hyperparameters, and the runner for the loop):
 * the **latent MSE** - this model's native output, the noise estimate, scored
   against the noise that was actually added. Timesteps span the FULL schedule.
 * the **pixel BCE** - ``x0_from_eps`` estimates the clean latent, the frozen
-  target decoder turns it into mask logits, and those logits are scored with a
-  binary cross-entropy on the missing channel ONLY (weight ``TV_LOSS_WEIGHT``).
-  That is why the decoder must stay in the autograd graph, and why this epoch
-  caps its timesteps at ``BCE_TRAIN_T_MAX`` - a decoded BCE is only meaningful
-  while the estimate is still close to the latent manifold.
+  target decoder turns it into mask logits, and those logits feed a weighted
+  composite (``MSE_WEIGHT`` on the noise pair, ``BCE_WEIGHT`` on the whole mask,
+  ``TV_BCE_WEIGHT`` on the missing channel). That is why the decoder must stay
+  in the autograd graph, and why this epoch caps its timesteps at
+  ``BCE_TRAIN_T_MAX`` - a decoded BCE is only meaningful while the estimate is
+  still close to the latent manifold.
 
 Conditioning is concatenation: ``[x_t, z_floorplan, z_partial]`` is projected
 to the hidden width at the entry, and each residual block additionally re-adds

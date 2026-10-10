@@ -30,4 +30,4 @@ PORT="${1:-8082}"
 
 echo "Starting conditional diffusion telemetry dashboard..."
 echo "Dashboard: http://127.0.0.1:${PORT}"
-python helpers/server.py --telemetry-dir ./conditional_diffusion/telemetry_logs --recon-dir ./conditional_diffusion/outputs --host 127.0.0.1 --port "${PORT}"
+python helpers/server.py --telemetry-dir ./conditional_diffusion/telemetry_logs --recon-dir ./conditional_diffusion/outputs --host 127.0.0.1 --port "${PORT}" --train-cmd ./train_conditional_diffusion.sh

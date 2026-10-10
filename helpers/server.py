@@ -210,7 +210,7 @@ INDEX_HTML: str = """
         currentRunId = null;
         lastDashboardKey = null;
         document.getElementById("run-list").innerHTML =
-          `<div class="empty">No telemetry runs yet.<br>Start training:<br><code>./train_VAE.sh</code></div>`;
+          `<div class="empty">No telemetry runs yet.<br>Start training:<br><code>{{ train_cmd }}</code></div>`;
         document.getElementById("dashboard").className = "empty";
         document.getElementById("dashboard").innerHTML =
           `No telemetry found yet. Start training and this page refreshes automatically.`;
@@ -704,12 +704,15 @@ def discover_layouts(grid_dir: str) -> list[dict[str, Any]]:
     return layouts
 
 
-def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
+def create_app(telemetry_dir: str, recon_dir: str, train_cmd: str = "./train_VAE.sh") -> Flask:
     """Create and configure the Flask application.
 
     Args:
         telemetry_dir (str): Directory read for telemetry CSV files.
         recon_dir (str): Directory read for reconstruction grid PNGs.
+        train_cmd (str): Training command shown in the empty-state panel when no
+            telemetry exists yet. Defaults to the VAE script so existing launchers
+            that do not pass one keep working unchanged.
 
     Returns:
         Flask: Configured application with the dashboard routes.
@@ -724,7 +727,7 @@ def create_app(telemetry_dir: str, recon_dir: str) -> Flask:
     @app.route("/")
     def index() -> str:
         """Serve the single-page dashboard."""
-        return render_template_string(INDEX_HTML, title=PAGE_TITLE)
+        return render_template_string(INDEX_HTML, title=PAGE_TITLE, train_cmd=train_cmd)
 
     @app.route("/api/runs")
     def api_runs() -> Response:
@@ -799,13 +802,15 @@ def main() -> None:
                         help="Directory with reconstruction grid PNGs (default: ./VAE/outputs)")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=default_port, help="Port to bind (default: 8080)")
+    parser.add_argument("--train-cmd", default="./train_VAE.sh",
+                        help="Training command shown when no telemetry exists yet (default: ./train_VAE.sh)")
     args: argparse.Namespace = parser.parse_args()
 
     # The telemetry/recon directories may not exist yet when start_server.sh runs.
     os.makedirs(args.telemetry_dir, exist_ok=True)
     os.makedirs(args.recon_dir, exist_ok=True)
 
-    app: Flask = create_app(args.telemetry_dir, args.recon_dir)
+    app: Flask = create_app(args.telemetry_dir, args.recon_dir, args.train_cmd)
     print(f"Telemetry dashboard for '{args.telemetry_dir}': http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=False)
 

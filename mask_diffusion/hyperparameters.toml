@@ -129,22 +129,33 @@ ENCODE_LOG_INTERVAL = 200
 IMAGE_SIZE = 256
 
 # ---------------------------------------------------------------------------
-# Pixel-space (BCE-epoch) loss. Only the missing component's channel is scored:
-#   loss = TV_LOSS_WEIGHT * BCE(decoded_tv, gt_tv)
-# The MSE epochs ignore both keys below.
+# Composite loss, after conditional_diffusion's total = MSE + L1_WEIGHT * L1.
+# Three weighted terms, never all active at once:
+#
+#   loss = MSE_WEIGHT * MSE(denoiser noise)          EVERY epoch
+#        + BCE_WEIGHT * BCE(decoded all channels)     BCE epochs only
+#        + TV_BCE_WEIGHT * BCE(decoded tv channel)    BCE epochs only
+#
+# The latent MSE anchors every epoch to the full chief-yeti latent space (all
+# furniture), while the two pixel terms steer the missing component on the
+# scheduled BCE epochs. Measured magnitudes on real epochs, so the balance is
+# concrete rather than guessed:
+#   MSE ~1.0, full BCE ~0.009, TV BCE ~0.008, giving on a BCE epoch
+#   1.0*1.0 + 2*0.009 + 10*0.008 = ~1.10, i.e. the TV term is ~7% of the total
+#   and ~4.4x the full term. If the component does not move, raise
+#   TV_BCE_WEIGHT (or lower MSE_WEIGHT) rather than touching anything else.
 # ---------------------------------------------------------------------------
-# With a single term there is nothing left to balance, so TV_LOSS_WEIGHT no
-# longer sets a ratio between objectives - it is now effectively a learning-rate
-# multiplier for the pixel epochs (the BCE magnitude is ~0.008 against the MSE's
-# ~1.0). 1.0 keeps the two objectives on the same effective step size; raise it to
-# make each pixel epoch count for more.
-TV_LOSS_WEIGHT = 1.0
-# Positive-class weight INSIDE that BCE: a true TV pixel costs this much more than
-# a non-TV pixel, which puts the balanced operating point at sigmoid > w/(1+w)
-# (w=2 -> 0.667) instead of 0.5. Measured TV density is ~3% of pixels (median
-# 3.1%), so 2.0 is a mild recall correction, not a rebalancing; raise it only if
-# TV Dice stalls. Note the visualization thresholds at logit > 0, so raising this
-# also makes the pictures show more predicted TV.
+MSE_WEIGHT = 1.0
+BCE_WEIGHT = 2.0
+TV_BCE_WEIGHT = 10.0
+# Positive-class weight INSIDE the TV-channel BCE: a true TV pixel costs this
+# much more than a non-TV pixel, which puts the balanced operating point at
+# sigmoid > w/(1+w) (w=2 -> 0.667) instead of 0.5. Measured TV density is ~3% of
+# pixels (median 3.1%), so 2.0 is a mild recall correction, not a rebalancing;
+# raise it only if TV Dice stalls. Note the visualization thresholds at
+# logit > 0, so raising this also makes the pictures show more predicted TV.
+# The full-mask BCE uses a plain pos_weight of 1.0: one uniform weight cannot
+# serve 11 channels spanning 97% down to under 1% density.
 TV_BCE_POS_WEIGHT = 2.0
 
 # Evaluation.
@@ -157,7 +168,7 @@ TEST_LOSS_SAMPLES = 2048
 # In "mse_bce_cycle" mode with MSE_EPOCHS_PER_CYCLE=5 the BCE epoch already
 # refreshes these metrics every 6 epochs, so raising this mainly smooths the gap
 # between cycles.
-PIXEL_EVAL_INTERVAL = 5
+PIXEL_EVAL_INTERVAL = 4
 # Batch size for the pixel-space evaluation pass. The decoder is in the graph
 # only for the BCE, not for this no_grad decode, but the logits tensor is still
 # 11x256x256 per sample, so this stays modest.
