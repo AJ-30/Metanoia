@@ -6,7 +6,16 @@ produced by ``helpers/telemetry_writer.TelemetryWriter``), plots the logged
 metrics (epoch vs train/test/recon/KL loss, YOLO box/cls/dfl loss and mAP,
 etc.) using Chart.js, and displays per-run figures: the VAE's per-epoch
 reconstruction/generation grids plus the YOLO GT-vs-pred overlays and
-training-curve figures (results/PR/F1/confusion matrix).
+training-curve figures (results/PR/F1/confusion matrix), plus the YOLO live
+training snapshots (overlay | overlay+boxes per stem/epoch, published by the
+``YOLO/live_watch.py`` sidecar while training runs).
+
+Live-training note (YOLO): the YOLO runner mirrors Ultralytics results.csv
+into its telemetry CSV incrementally at every epoch end, so curves grow while
+training runs — no server change was needed for that beyond polling (3 s).
+YOLO26 names the distribution-focal loss ``*/l1_loss``; the runner maps it
+onto the ``train_dfl``/``val_dfl`` telemetry columns, so the dashboard keeps
+plotting the same column names as before.
 
 The directories with the telemetry CSVs and the images are configurable, so
 the same server visualises VAE runs (--telemetry-dir ./VAE/telemetry_logs
@@ -52,15 +61,18 @@ LAYOUT_FILE_SUFFIX: str = ".json"
 
 # Prefix of saved grid filenames, used to recover the epoch number from a name
 # such as "reconstruction_epoch_7_<run>.png" / "generation_epoch_7_<run>.png".
-# YOLO runs instead save "val_pred_<tag>_<stem>_<run>.png" overlays (no epoch
-# number) and "<run>_results.png / _PR_curve.png / _F1_curve.png /
-# _confusion_matrix.png / labels" curve artifacts, matched by substring below.
+# YOLO runs instead save "val_pred_final_<stem>_<run>.png" overlays (saved once
+# after training; no epoch number) and
+# "train_results.png / train_PR_curve.png / train_F1_curve.png /
+# train_confusion_matrix.png / train_labels.jpg" curve artifacts (the "train_"
+# prefix is the Ultralytics run-subdir name), matched by substring below.
 # Plain prefix lists keep this server agnostic to run ids.
 IMAGE_KIND_PREFIXES: dict[str, list[str]] = {
     "reconstruction": ["reconstruction_epoch_"],
     "generation": ["generation_epoch_"],
     "pred": ["val_pred_"],
     "curve": ["results", "PR_curve", "F1_curve", "confusion_matrix", "labels"],
+    "live": ["live_epoch_"],
 }
 
 # Image extensions served as dashboard figures.
@@ -194,6 +206,7 @@ INDEX_HTML: str = """
   let selectedRecon = { value: null };  // reconstruction grid chosen in the epoch dropdown
   let selectedGen = { value: null };    // generation grid chosen in the epoch dropdown
   let selectedPred = { value: null };   // YOLO overlay chosen in the file dropdown
+  let selectedLive = { value: null };   // YOLO live snapshot (overlay | overlay+boxes)
   let selectedCurve = { value: null };  // YOLO curve figure chosen in the file dropdown
 
   async function jsonFetch(url) {
@@ -426,6 +439,21 @@ INDEX_HTML: str = """
       <div class="recon-img-wrap"><img id="curve-img" alt="No curve figures yet — copied from the Ultralytics run dir."></div>`;
     container.appendChild(curvePanel);
 
+    // Live panel: sidecar snapshots published while YOLO trains — left half is
+    // the current-epoch diffusion overlay for a fixed stem, right half adds
+    // GT (green) + predicted (red) boxes from the latest best.pt. The epoch
+    // dropdown auto-advances as new snapshots land. Empty for non-YOLO runs.
+    const livePanel = document.createElement("div");
+    livePanel.className = "recon-panel";
+    livePanel.innerHTML = `
+      <h3>Live training (overlay | overlay + boxes, per epoch)</h3>
+      <div class="recon-controls">
+        <label for="live-select">Snapshot</label>
+        <select id="live-select"></select>
+      </div>
+      <div class="recon-img-wrap"><img id="live-img" alt="No live snapshots yet — start YOLO/live_watch.py while training runs."></div>`;
+    container.appendChild(livePanel);
+
     const xCol = data.x_column;
     const labels = data.rows.map(r => (xCol ? r[xCol] : r.index));
 
@@ -483,6 +511,9 @@ INDEX_HTML: str = """
     loadGrids("/api/curves", "curve-select", "curve-img", selectedCurve,
       "No curve figures yet — copied from the Ultralytics run dir.",
       "YOLO training curve figure");
+    loadGrids("/api/live", "live-select", "live-img", selectedLive,
+      "No live snapshots yet — start YOLO/live_watch.py while training runs.",
+      "Live overlay (left) and overlay with GT/predicted boxes (right)");
   }
 
   refresh();
@@ -616,7 +647,9 @@ def discover_grids(grid_dir: str, kind: str) -> list[dict[str, Any]]:
     Args:
         grid_dir (str): Directory holding the per-epoch grid images.
         kind (str): Image kind, one of "reconstruction", "generation", "pred"
-            (YOLO GT-vs-pred overlays) or "curve" (YOLO training curves).
+            (YOLO GT-vs-pred overlays), "live" (YOLO live training snapshots:
+            overlay | overlay+boxes side-by-side per stem/epoch) or "curve"
+            (YOLO training curves).
 
     Returns:
         list[dict[str, Any]]: One dict per image with keys file, epoch (None
@@ -766,6 +799,11 @@ def create_app(telemetry_dir: str, recon_dir: str, train_cmd: str = "./train_VAE
         """Return the list of YOLO training-curve figures as JSON."""
         return jsonify(discover_grids(str(recon_path), "curve"))
 
+    @app.route("/api/live")
+    def api_live() -> Response:
+        """Return the list of YOLO live training snapshots as JSON."""
+        return jsonify(discover_grids(str(recon_path), "live"))
+
     @app.route("/api/layouts")
     def api_layouts() -> Response:
         """Return the mask layout sidecars (mode, colors, exclusions) as JSON."""
@@ -773,15 +811,15 @@ def create_app(telemetry_dir: str, recon_dir: str, train_cmd: str = "./train_VAE
 
     @app.route("/grid/<kind>/<path:filename>")
     def grid_images(kind: str, filename: str) -> Response:
-        """Serve a dashboard image (reconstruction, generation, pred or curve).
+        """Serve a dashboard image (reconstruction, generation, pred, live or curve).
 
         Args:
             kind (str): Image kind, one of "reconstruction", "generation",
-                "pred" or "curve", used to keep the static route somewhat
+                "pred", "live" or "curve", used to keep the static route somewhat
                 self-documenting.
             filename (str): Name of the image file.
         """
-        if kind not in {"reconstruction", "generation", "pred", "curve"}:
+        if kind not in {"reconstruction", "generation", "pred", "live", "curve"}:
             return jsonify({"error": "Unknown grid kind"}), 404
         return send_from_directory(str(recon_path), filename)
 

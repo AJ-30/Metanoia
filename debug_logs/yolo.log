@@ -93,3 +93,65 @@
 [social-hornet] 2026-09-23 18:32:15 | INFO | YOLO.runner:163 - Starting YOLO training run_id: social-hornet on device: mps
 [social-hornet] 2026-09-23 18:32:17 | INFO | YOLO.runner:227 - Dataset OK: 226125 train images, manifest 226125 rows.
 [social-hornet] 2026-09-23 18:32:18 | INFO | YOLO.runner:332 - Loaded pretrained weights: yolo26n.pt
+[tight-skink] 2026-10-10 18:38:04 | INFO | __main__:368 - Live watcher watching /Users/aatmaj/Downloads/datasets/yolo_live (stems=4, device=mps)
+[real-stud] 2026-10-10 19:53:33 | INFO | YOLO.live_diffusion:450 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps.
+[real-stud] 2026-10-10 19:53:53 | INFO | YOLO.live_diffusion:556 - Cached 64 condition latents.
+[unique-rhino] 2026-10-10 20:13:06 | INFO | YOLO.live_diffusion:642 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps. Label source: drawn arrangement (self-consistent); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[unique-rhino] 2026-10-10 20:13:19 | INFO | YOLO.live_diffusion:751 - Cached 8 condition latents.
+[unique-rhino] 2026-10-10 20:13:25 | INFO | YOLO.live_diffusion:961 - Live train epoch 0: redrew 8 overlays with 97 boxes (seed=1234, labels=drawn).
+[actual-dane] 2026-10-10 20:13:45 | INFO | YOLO.live_diffusion:642 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps. Label source: drawn arrangement (self-consistent); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[actual-dane] 2026-10-10 20:13:52 | INFO | YOLO.live_diffusion:751 - Cached 24 condition latents.
+[actual-dane] 2026-10-10 20:14:03 | INFO | YOLO.live_diffusion:961 - Live train epoch 0: redrew 24 overlays with 274 boxes (seed=1234, labels=drawn).
+[fleet-louse] 2026-10-10 20:21:11 | INFO | YOLO.runner:275 - Starting YOLO training run_id: fleet-louse on device: mps
+[fleet-louse] 2026-10-10 20:21:12 | INFO | YOLO.live_diffusion:642 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps. Label source: drawn arrangement (self-consistent); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[fleet-louse] 2026-10-10 20:21:37 | INFO | YOLO.runner:338 - Indexed 69776 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[fleet-louse] 2026-10-10 20:21:37 | INFO | YOLO.runner:182 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 12 over 3 epochs.
+[fleet-louse] 2026-10-10 20:21:37 | INFO | YOLO.runner:385 - Live train set: 32 stems (pool 69776, redrawn from fresh diffusion draws every epoch).
+[fleet-louse] 2026-10-10 20:21:37 | INFO | YOLO.runner:299 - Removed 3 stale Ultralytics cache files.
+[fleet-louse] 2026-10-10 20:21:43 | INFO | YOLO.runner:338 - Indexed 19920 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[fleet-louse] 2026-10-10 20:21:46 | INFO | YOLO.runner:338 - Indexed 10043 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[fleet-louse] 2026-10-10 20:21:47 | INFO | YOLO.live_diffusion:751 - Cached 32 condition latents.
+[fleet-louse] 2026-10-10 20:21:56 | INFO | YOLO.live_diffusion:961 - Live train epoch 0: redrew 32 overlays with 294 boxes (seed=1234, labels=drawn).
+[fleet-louse] 2026-10-10 20:21:56 | INFO | YOLO.runner:576 - Loaded pretrained weights: yolo26n.pt
+[fleet-louse] 2026-10-10 20:22:04 | INFO | YOLO.runner:597 - Epoch 1 done; redrawing live train pixels...
+[tight-skink] 2026-10-10 20:22:10 | INFO | __main__:423 - Published 4 live snapshots for epoch 0.
+[fleet-louse] 2026-10-10 20:22:20 | INFO | YOLO.live_diffusion:961 - Live train epoch 1: redrew 32 overlays with 304 boxes (seed=1235, labels=drawn).
+[normal-mammal] 2026-10-10 20:22:42 | INFO | YOLO.runner:275 - Starting YOLO training run_id: normal-mammal on device: mps
+[normal-mammal] 2026-10-10 20:22:43 | INFO | YOLO.live_diffusion:642 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps. Label source: drawn arrangement (self-consistent); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[normal-mammal] 2026-10-10 20:23:12 | INFO | YOLO.runner:338 - Indexed 69776 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[normal-mammal] 2026-10-10 20:23:12 | INFO | YOLO.runner:182 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 12 over 3 epochs.
+[normal-mammal] 2026-10-10 20:23:12 | INFO | YOLO.runner:385 - Live train set: 32 stems (pool 69776, redrawn from fresh diffusion draws every epoch).
+[normal-mammal] 2026-10-10 20:23:13 | INFO | YOLO.runner:299 - Removed 2 stale Ultralytics cache files.
+[normal-mammal] 2026-10-10 20:23:19 | INFO | YOLO.runner:338 - Indexed 19920 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[normal-mammal] 2026-10-10 20:23:22 | INFO | YOLO.runner:338 - Indexed 10043 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[normal-mammal] 2026-10-10 20:23:23 | INFO | YOLO.live_diffusion:751 - Cached 32 condition latents.
+[normal-mammal] 2026-10-10 20:23:31 | INFO | YOLO.live_diffusion:961 - Live train epoch 0: redrew 32 overlays with 294 boxes (seed=1234, labels=drawn).
+[normal-mammal] 2026-10-10 20:23:31 | INFO | YOLO.runner:576 - Loaded pretrained weights: yolo26n.pt
+[normal-mammal] 2026-10-10 20:23:40 | INFO | YOLO.runner:597 - Epoch 1 done; redrawing live train pixels...
+[normal-mammal] 2026-10-10 20:23:53 | INFO | YOLO.live_diffusion:961 - Live train epoch 1: redrew 32 overlays with 304 boxes (seed=1235, labels=drawn).
+[normal-mammal] 2026-10-10 20:24:03 | INFO | YOLO.runner:597 - Epoch 2 done; redrawing live train pixels...
+[tight-skink] 2026-10-10 20:24:10 | INFO | __main__:485 - Mirrored 1 telemetry rows to normal-mammal_live.csv.
+[normal-mammal] 2026-10-10 20:24:16 | INFO | YOLO.live_diffusion:961 - Live train epoch 2: redrew 32 overlays with 295 boxes (seed=1236, labels=drawn).
+[normal-mammal] 2026-10-10 20:24:26 | INFO | YOLO.runner:597 - Epoch 3 done; redrawing live train pixels...
+[normal-mammal] 2026-10-10 20:24:39 | INFO | YOLO.live_diffusion:961 - Live train epoch 3: redrew 32 overlays with 291 boxes (seed=1237, labels=drawn).
+[normal-mammal] 2026-10-10 20:24:54 | INFO | YOLO.runner:551 - Copied artifact results.png to outputs.
+[normal-mammal] 2026-10-10 20:24:54 | INFO | YOLO.runner:551 - Copied artifact confusion_matrix.png to outputs.
+[normal-mammal] 2026-10-10 20:24:54 | INFO | YOLO.runner:551 - Copied artifact labels.jpg to outputs.
+[normal-mammal] 2026-10-10 20:24:54 | INFO | YOLO.runner:551 - Copied artifact results.csv to outputs.
+[chief-boa] 2026-10-10 20:36:58 | INFO | YOLO.runner:275 - Starting YOLO training run_id: chief-boa on device: mps
+[chief-boa] 2026-10-10 20:36:58 | INFO | YOLO.live_diffusion:730 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps. Label source: drawn arrangement (self-consistent); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[tight-skink] 2026-10-10 20:37:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[chief-boa] 2026-10-10 20:37:27 | INFO | YOLO.runner:338 - Indexed 69776 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[chief-boa] 2026-10-10 20:37:27 | INFO | YOLO.runner:182 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 12 over 3 epochs.
+[chief-boa] 2026-10-10 20:37:27 | INFO | YOLO.runner:385 - Live train set: 32 stems (pool 69776, redrawn from fresh diffusion draws every epoch).
+[chief-boa] 2026-10-10 20:37:33 | INFO | YOLO.runner:338 - Indexed 19920 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[tight-skink] 2026-10-10 20:38:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:39:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:40:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:41:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:42:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:43:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:44:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:45:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:46:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[tight-skink] 2026-10-10 20:47:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.

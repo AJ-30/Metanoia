@@ -64,7 +64,9 @@ from VAE.runner import resolve_image_file_name
 SOURCE_IMAGE_VARIANT_KEY: str = "SOURCE_IMAGE_VARIANT"
 
 
-def resolve_class_name_to_id(class_names: list[str]) -> dict[str, int]:
+def resolve_class_name_to_id(
+    class_names: list[str], aliases: dict[str, str] | None = None
+) -> dict[str, int]:
     """Build the label class-name -> numeric-id map from the TOML vocabulary.
 
     Ultralytics' label format stores a numeric class id, but the source
@@ -74,13 +76,19 @@ def resolve_class_name_to_id(class_names: list[str]) -> dict[str, int]:
 
     Args:
         class_names (list[str]): Ordered class vocabulary; index == class id.
+        aliases (dict[str, str] | None): Optional source-name -> CLASS_NAMES
+            entry overrides, used where the dataset's names cannot be told
+            apart by the rendered pixels (e.g. the three Dining_table sizes all
+            become one ``Dining_table``). Alias targets must exist in
+            ``class_names``.
 
     Returns:
-        dict[str, int]: Mapping of class name to class id.
+        dict[str, int]: Mapping of source class name to class id.
 
     Raises:
-        ValueError: If the vocabulary is empty or contains a duplicate name
-            (a duplicate would silently drop one of the two classes).
+        ValueError: If the vocabulary is empty, contains a duplicate name (a
+            duplicate would silently drop one of the two classes), or an alias
+            points at a name outside the vocabulary.
     """
     if not class_names:
         raise ValueError("CLASS_NAMES must list at least one class.")
@@ -91,6 +99,12 @@ def resolve_class_name_to_id(class_names: list[str]) -> dict[str, int]:
                 f"CLASS_NAMES contains duplicate name {name!r} "
                 f"(ids {name_to_id[name]} and {class_id}).")
         name_to_id[name] = class_id
+    for source_name, target_name in (aliases or {}).items():
+        if target_name not in name_to_id:
+            raise ValueError(
+                f"CLASS_ALIASES maps {source_name!r} -> {target_name!r}, which is "
+                f"not in CLASS_NAMES {class_names}.")
+        name_to_id[source_name] = name_to_id[target_name]
     return name_to_id
 
 
@@ -755,7 +769,9 @@ def run_augmentation(
         source_samples = source_samples[:max_samples]
     aug_factor: int = int(hyperparams.AUG_FACTOR)
     class_name_to_id: dict[str, int] = resolve_class_name_to_id(
-        list(hyperparams.CLASS_NAMES))
+        list(hyperparams.CLASS_NAMES),
+        dict(getattr(hyperparams, "CLASS_ALIASES", {}) or {}),
+    )
     log.info(
         f"Found {len(source_samples)} labeled train samples using "
         f"'{image_file_name}' (variant '{config.SOURCE_IMAGE_VARIANT}') + "

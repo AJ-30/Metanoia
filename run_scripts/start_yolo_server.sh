@@ -3,6 +3,8 @@
 # Starts the Flask telemetry dashboard server that visualises the YOLO
 # training metrics read from YOLO/telemetry_logs (telemetry CSVs) with
 # GT-vs-pred overlays and training curves from YOLO/outputs.
+# Telemetry rows are mirrored live at every training epoch, so curves grow
+# while ./train_YOLO.sh runs — start this first, then train.
 #
 # Usage:
 #   ./run_scripts/start_yolo_server.sh [port]

@@ -1,7 +1,9 @@
 # YOLO training-only hyperparameters (YOLO/runner.py, via ./train_YOLO.sh).
 # Every tunable constant lives here (never hardcoded in .py files).
-# The trainer never triggers augmentation; build the dataset first with
-# ./run_augmentation.sh (knobs in YOLO/augment_hyperparameters.toml).
+# The trainer regenerates its own train images live from the frozen
+# floorplan->arrangement diffusion model (LIVE_* knobs below); it never reads
+# the frozen-VAE 2x dataset (see YOLO/augment_hyperparameters.toml, kept only
+# for the standalone ./run_augmentation.sh pipeline).
 #
 # NOTE: CLASS_NAMES is duplicated in YOLO/augment_hyperparameters.toml
 # (needed there for data.yaml). Keep both copies in sync.
@@ -10,19 +12,33 @@
 # ---- Reproducibility ----
 BASE_SEED = 1234
 
-# ---- Dataset ontology (11 classes, IDs 0-10) ----
-CLASS_NAMES = ["Center_table", "Chair", "Couch", "Dining_table_big", "Dining_table_round", "Showcase", "Side_table", "Sofa", "Sofa_cum_bed", "TV", "Vase_table"]
+# ---- Dataset ontology ----
+# CLASS_NAMES is the label vocabulary Ultralytics trains against: index == class
+# id, and data.yaml is written from this exact order.
+#
+# It must match what the rendered pixels can actually express. The arrangement
+# mask vocabulary is 10 classes (sofa, tv, dining_set, side_table, showcase,
+# couch, chair, center_table, vase_table, sofa_cum_bed), so the source dataset's
+# three Dining_table_* names cannot be told apart by the mask or the render and
+# are merged here into a single "Dining_table" class. Naming all three
+# separately (the previous 12-class list) made the train targets unrepresentable:
+# the pipeline now rejects an ontology the mask cannot express rather than
+# silently training on a shifted one.
+#
+# 10 classes, IDs 0-9. IDs 0-8 keep their previous meaning; Dining_table_big
+# (formerly 3) becomes 3 and Dining_table_round/_medium are folded into it.
+CLASS_NAMES = ["Center_table", "Chair", "Couch", "Dining_table", "Showcase", "Side_table", "Sofa", "Sofa_cum_bed", "TV", "Vase_table"]
 
 # ---- YOLO26 finetune ----
 # NOTE on scale: train images are VAE-native 256px, so IMG_SIZE=416 (not 640)
 # avoids a 2.5x upscaling of VAE blur artifacts and cuts MPS/CPU cost.
-# NOTE on budget: every source sample yields AUG_FACTOR=2 variants
-# (YOLO/augment_hyperparameters.toml); NUM_EPOCHS=30 with early-stopping
+# NOTE on budget: the live train set holds LIVE_TRAIN_SAMPLES stems redrawn
+# from fresh diffusion draws every epoch; NUM_EPOCHS=30 with early-stopping
 # PATIENCE=10 bounds the worst case of 100 epochs.
 YOLO_MODEL = "yolo26n.pt"
 IMG_SIZE = 416
-BATCH_SIZE = 16
-NUM_EPOCHS = 30
+BATCH_SIZE = 8
+NUM_EPOCHS = 3
 # LR0=0.01 is the Ultralytics default tuned for OPTIMIZER="auto" (MuSGD/SGD
 # family for YOLO26); keep the pair pinned together, change jointly.
 LR0 = 0.01
@@ -30,11 +46,99 @@ OPTIMIZER = "auto"
 PATIENCE = 10
 WORKERS = 0
 CONF_THRESHOLD = 0.25
-VAL_PLOT_EVERY = 5
 NUM_OVERLAY_SAMPLES = 16
 TELEMETRY_INTERVAL = 1
 
+# ---- Optimizer-step budget (critical) ----
+# Ultralytics' "nominal batch size" (nbs) sets the gradient-accumulation
+# factor: accumulate = round(nbs / batch_size), and the optimizer only steps
+# once every `accumulate` batches. With the Ultralytics default nbs=64 and a
+# batch of 16 that is accumulate=4, so a run needs >= 4 batches per epoch
+# before it takes a SINGLE optimizer step. A small LIVE_TRAIN_SAMPLES therefore
+# produces an "epoch" loop that never updates the weights (observed: 30 epochs,
+# 10 optimizer steps, flat val metrics, mAP50 ~0.05).
+#
+# Pinning NOMINAL_BATCH_SIZE = BATCH_SIZE makes accumulate = 1, so every batch
+# updates the weights and the epoch count means what it says. Raise
+# LIVE_TRAIN_SAMPLES (below) for real convergence; this only removes the
+# starvation, it does not substitute for data.
+NOMINAL_BATCH_SIZE = 8
+
+# ---- Live conditional-diffusion overlays (YOLO/live_diffusion.py) ----
+# Train images are NOT a fixed dataset: before epoch 1 and at the end of every
+# epoch the train PNGs are redrawn from fresh diffusion draws conditioned on
+# the GT floorplan mask, blended over the floorplan base with LIVE_OVERLAY_ALPHA
+# (same overlay code as the conditional-diffusion grids). GT labels.txt boxes
+# are copied verbatim as the prediction target even though the sampled
+# furniture layout will not coincide with them spatially (intentional
+# noisy-label regime: YOLO learns a floorplan-conditioned layout prior).
+# Val/test are deterministic GT overlays (GT floorplan + GT arrangement, no
+# diffusion), so early stopping and the final report stay stable.
+# Train stems are selected ONCE per run (seeded subset of the live pool) and
+# only their pixels change per epoch, because Ultralytics indexes the file list
+# once at train start.
+# Pool cap over live source samples; negative keeps every sample.
+LIVE_MAX_SOURCES = -1
+# Train stems per run (seeded subset of the pool); negative keeps the pool.
+# SIZE IS A TRAINING BUDGET, NOT A SMOKE-TEST KNOB: every stem costs one
+# 1000-step reverse diffusion chain per epoch (~0.3-0.6 s/image measured on
+# MPS), and Ultralytics only updates the weights once per optimizer step, so a
+# too-small set starves training outright. The previous value of 8 with
+# BATCH_SIZE=16 produced 1 batch/epoch and 10 optimizer steps across 30 epochs.
+#
+# Rule of thumb: keep LIVE_TRAIN_SAMPLES a multiple of BATCH_SIZE and >= a few
+# hundred so each epoch has many batches. 256 gives 16 batches/epoch at
+# batch 16 (~77 s/epoch of redraw). Smoke-test temporarily, then restore.
+LIVE_TRAIN_SAMPLES = 32
+LIVE_OVERLAY_ALPHA = 0.6
+# Batch size for the frozen-encoder + diffusion + decoder passes.
+LIVE_DIFFUSION_BATCH_SIZE = 8
+# Square side length of the overlay domain. Must equal both frozen VAEs'
+# IMAGE_SIZE (both are 256). Fails fast otherwise.
+LIVE_IMAGE_SIZE = 256
+# True = condition latents from encoder mu (deterministic); false =
+# reparameterized samples (extra stochasticity on top of diffusion draws).
+LIVE_USE_MU_ONLY = true
+# PNG zlib level 0-9 for regenerated train PNGs (pixels identical either way).
+LIVE_PNG_COMPRESS_LEVEL = 1
+# Label source for the redrawn train images.
+# true  = derive boxes from the arrangement that was actually drawn
+#         (connected components per furniture class). Image and label always
+#         agree, so this is a genuine detection task and matches what val/test
+#         measure.
+# false = copy the GT labels.txt boxes verbatim while the pixels come from a
+#         fresh draw. Measured on this dataset only ~27% of those boxes overlap
+#         the drawn furniture at IoU>0.5 (vs ~94% for the GT overlays), so the
+#         supervision contradicts the image. Kept for ablations only.
+LIVE_REGENERATE_LABELS = true
+# Smallest connected region (pixels, in the 256x256 live domain) counted as a
+# furniture instance when deriving boxes from a draw. Below this the decoder
+# leaves speckle that would otherwise become spurious boxes.
+LIVE_MIN_INSTANCE_AREA = 200
+# ---- Live watcher sidecar (YOLO/live_watch.py, separate process) ----
+# The watcher only READS the live dataset + best.pt and WRITES snapshots to
+# YOLO/outputs/, so these knobs never affect a running trainer.
+# Fixed snapshot stems per epoch (sorted-stem order); the same layouts are
+# published every epoch so pixels changing + boxes improving stay comparable.
+LIVE_WATCH_STEMS = 4
+# Seconds between watcher polls in daemon mode.
+LIVE_WATCH_INTERVAL_SEC = 60
+# Watcher inference confidence for the Live panel snapshots. Deliberately a
+# little below CONF_THRESHOLD so predictions are visible slightly earlier than
+# the validation report, but NOT near-zero: at conf=0.001 an undertrained model
+# emits its full 300-box NMS output and the snapshot becomes unreadable red
+# spaghetti that hides the GT boxes. Matches the trainer's threshold by default
+# so the panel shows what evaluation would actually count.
+LIVE_WATCH_CONF = 0.25
+# Cap on boxes drawn per snapshot, highest-confidence first, so an early-epoch
+# model cannot bury the image under hundreds of boxes. Keeps the panel readable
+# while still showing a model that has not converged.
+LIVE_WATCH_MAX_BOXES = 25
 # ---- Ultralytics internal augmentation overrides ----
+# NOTE on live training: Ultralytics' image cache (`cache=True/ram/disk`,
+# which snapshots train pixels once) must stay OFF — train PNGs are rewritten
+# every epoch and a cache would freeze the first epoch's pixels forever. The
+# trainer passes cache=False explicitly.
 # The VAE pipeline above already applies VAE-latent + blur augmentation,
 # so Ultralytics mosaic/mixup (multi-image composites) and its own flips are
 # disabled to keep the data distribution exactly as designed. Photometric
@@ -47,3 +151,15 @@ FLIPUD = 0.0
 HSV_H = 0.015
 HSV_S = 0.7
 HSV_V = 0.4
+
+# Source-label name -> CLASS_NAMES entry, applied when reading labels.txt.
+# The dataset writes furniture display names that do not always match
+# CLASS_NAMES verbatim ("Dining_table_big", ...), so aliases fold them onto the
+# id the mask/render can actually represent. Names not listed here must match a
+# CLASS_NAMES entry exactly or the run aborts. Declared last so this table
+# header cannot swallow the scalar keys above it.
+[default.CLASS_ALIASES]
+"Dining_table_big" = "Dining_table"
+"Dining_table_round" = "Dining_table"
+"Dining_table_medium" = "Dining_table"
+"dining_set" = "Dining_table"

@@ -62,7 +62,22 @@ PNG_COMPRESS_LEVEL = 1
 # Log images/sec + ETA every PROGRESS_LOG_SOURCES sources (tqdm shows live rate).
 PROGRESS_LOG_SOURCES = 200
 
-# ---- Dataset ontology (11 classes, IDs 0-10) ----
-# Order defines the class id. These names must match the first field of every
-# source labels.txt line exactly; an unknown name aborts the run.
-CLASS_NAMES = ["Center_table", "Chair", "Couch", "Dining_table_big", "Dining_table_round", "Showcase", "Side_table", "Sofa", "Sofa_cum_bed", "TV", "Vase_table"]
+# ---- Dataset ontology (10 classes, IDs 0-9) ----
+# Order defines the class id. Must stay identical to CLASS_NAMES in
+# YOLO/hyperparameters.toml (that copy drives the live trainer, this one the
+# standalone frozen-VAE augmentation path).
+#
+# The dataset's three Dining_table_* names are folded into one "Dining_table":
+# the arrangement mask and its render cannot distinguish the sizes, so naming
+# them separately made the targets unrepresentable. CLASS_ALIASES maps the
+# source spellings onto this vocabulary; anything else must match exactly or
+# the run aborts.
+CLASS_NAMES = ["Center_table", "Chair", "Couch", "Dining_table", "Showcase", "Side_table", "Sofa", "Sofa_cum_bed", "TV", "Vase_table"]
+
+# Source-label name -> CLASS_NAMES entry (see YOLO/hyperparameters.toml).
+# Declared last so this table header cannot swallow the scalar keys above it.
+[default.CLASS_ALIASES]
+"Dining_table_big" = "Dining_table"
+"Dining_table_round" = "Dining_table"
+"Dining_table_medium" = "Dining_table"
+"dining_set" = "Dining_table"

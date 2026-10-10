@@ -9,6 +9,36 @@ OUTPUT_SAMPLES_DIRECTORY = "./YOLO/outputs/"
 AUGMENTED_DATASET_ROOT = "/Users/aatmaj/Downloads/datasets/yolo_augmented"
 DATA_YAML_PATH = "/Users/aatmaj/Downloads/datasets/yolo_augmented/data.yaml"
 AUGMENT_MANIFEST_PATH = "/Users/aatmaj/Downloads/datasets/yolo_augmented/augment_manifest.csv"
+# Live-diffusion training dataset root (rewritten in place, never prebuilt).
+# Train PNGs are regenerated from fresh diffusion draws before epoch 1 and at
+# the end of every epoch (see YOLO/live_diffusion.py); val/test hold
+# deterministic GT overlays so early stopping and the final report stay stable.
+LIVE_DATASET_ROOT = "/Users/aatmaj/Downloads/datasets/yolo_live"
+LIVE_DATA_YAML_PATH = "/Users/aatmaj/Downloads/datasets/yolo_live/data.yaml"
+LIVE_MANIFEST_PATH = "/Users/aatmaj/Downloads/datasets/yolo_live/live_manifest.csv"
+# Folder-per-sample mask dataset feeding the live pipeline. Each sample folder
+# must carry the floorplan mask (diffusion condition), the arrangement mask
+# (deterministic val/test overlays) and labels.txt (GT boxes, copied verbatim).
+# NOTE: this is the mask dataset (FurnitureArranger), NOT the render-only
+# SOURCE_*_SPLIT_DIR below, which carries no segmentation masks.
+LIVE_SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
+LIVE_SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/validate"
+LIVE_SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
+# Frozen floorplan->arrangement diffusion checkpoint (TV-inclusive arrangement;
+# matches the 12 YOLO classes including TV and Dining_table_medium).
+COND_DIFFUSION_CHECKPOINT_PATH = "./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt"
+# Frozen mask VAEs rebuilt from their own checkpoint hyperparams. These must
+# match the VAEs the diffusion run trained against (mint-akita floorplan
+# condition, chief-yeti TV-inclusive arrangement target).
+COND_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt"
+TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt"
+# Mask filenames inside each live source sample folder.
+COND_MASK_FILE = "floorplan_segmentation.png"
+TARGET_MASK_FILE = "furniture_segmentation.png"
+# Color index JSONs rendering the overlay (dataset root, next to split dirs).
+MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+COND_COLOR_INDEX_FILE = "floorplan_color_index.json"
+TARGET_COLOR_INDEX_FILE = "furniture_color_index.json"
 VAE_MODELS_DIR = "./VAE/models/"
 VAE_RUN_ID = "next-collie"
 DEVICE = "mps"

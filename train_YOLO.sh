@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-# Finetunes YOLO26 on the prebuilt frozen-VAE augmented floor-plan dataset.
+# Finetunes YOLO26 on live conditional-diffusion overlay floor plans.
 # Archives artifacts from any previous run, then launches YOLO/run.py.
-# This script never touches the dataset (build it first with
-# ./run_augmentation.sh); the trainer fails fast if it is missing/incomplete.
+# No prebuilt dataset is needed: the trainer indexes the live mask dataset,
+# redraws every train image from a fresh diffusion draw each epoch, and keeps
+# GT boxes as the target (see YOLO/live_diffusion.py and YOLO/README.md).
+# (The standalone frozen-VAE 2x pipeline via ./run_augmentation.sh is kept for
+# ablations only; this trainer never reads it.)
 #
 # Usage:
 #   ./train_YOLO.sh          # debug mode

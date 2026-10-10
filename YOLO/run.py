@@ -1,8 +1,8 @@
-"""Entry point for YOLO26 training (no augmentation).
+"""Entry point for live-diffusion YOLO26 training.
 
-Trains on the prebuilt augmented dataset; build it first if missing:
+Trains on overlays redrawn live from the frozen floorplan->arrangement
+diffusion model (no prebuilt dataset; see YOLO/live_diffusion.py):
 
-    ./run_augmentation.sh          # one-time dataset build
     python YOLO/run.py --mode debug
     python YOLO/run.py --mode prod
 """
@@ -22,8 +22,8 @@ from YOLO.runner import YOLORunner
 
 
 def main() -> None:
-    """Parse CLI args and launch the YOLO finetune run."""
-    parser = argparse.ArgumentParser(description="Finetune YOLO26 on VAE-augmented data.")
+    """Parse CLI args and launch the live-diffusion YOLO finetune run."""
+    parser = argparse.ArgumentParser(description="Finetune YOLO26 on live diffusion overlays.")
     parser.add_argument("--mode", choices=["debug", "prod"], default="debug")
     args: argparse.Namespace = parser.parse_args()
     YOLORunner(mode=args.mode).train()

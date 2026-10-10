@@ -1,18 +1,18 @@
 task: detect
 mode: train
 model: yolo26n.pt
-data: /Users/aatmaj/Downloads/FurnitureArrangerDataset-main/YOLO Augmented Dataset/data.yaml
-epochs: 30
+data: /Users/aatmaj/Downloads/datasets/yolo_live/data.yaml
+epochs: 3
 time: null
 patience: 10
-batch: 16
+batch: 8
 imgsz: 416
 save: true
 save_period: -1
 cache: false
 device: mps
 workers: 0
-project: /Users/aatmaj/Metanoia/YOLO/outputs/ultralytics_social-hornet
+project: /Users/aatmaj/Metanoia/YOLO/outputs/ultralytics_fleet-louse
 name: train
 exist_ok: false
 pretrained: true
@@ -91,7 +91,7 @@ angle: 1.0
 dlog: 1.0
 dgrad: 0.5
 dlam: 1.0
-nbs: 64
+nbs: 8
 hsv_h: 0.015
 hsv_s: 0.7
 hsv_v: 0.4
@@ -112,4 +112,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: tracktrack.yaml
-save_dir: /Users/aatmaj/Metanoia/YOLO/outputs/ultralytics_social-hornet/train
+save_dir: /Users/aatmaj/Metanoia/YOLO/outputs/ultralytics_fleet-louse/train

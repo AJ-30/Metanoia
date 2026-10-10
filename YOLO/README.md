@@ -1,16 +1,40 @@
-# YOLO — Detection on Frozen-VAE Augmented Floor Plans
+# YOLO — Detection on Live Conditional-Diffusion Overlays
 
 Finetunes the latest Mac-compatible Ultralytics YOLO (**YOLO26n**, Jan 2026,
 Roboflow-supported, MPS/CPU friendly) to predict the dataset's ground-truth
-furniture boxes on images decoded from **frozen VAE latents**.
+furniture boxes on images drawn **live from the frozen floorplan→arrangement
+diffusion model** (`conditional_diffusion_strong-fawn_epoch_2480`, TV-inclusive).
 
-Two independent runners (separate hyperparameter files, separate launch
-scripts) — augmentation never runs as a side effect of training:
+There is NO fixed train dataset. Per run, `LIVE_TRAIN_SAMPLES` train stems are
+selected once from the live mask dataset; before epoch 1 and at the end of
+every epoch (Ultralytics `on_train_epoch_end` callback) every train PNG is
+redrawn from a fresh diffusion draw conditioned on the GT floorplan mask:
 
-- **Augmentation:** `YOLO/augment_runner.py` + `YOLO/augment_hyperparameters.toml`,
-  launched via `./run_augmentation.sh`.
-- **Training:** `YOLO/runner.py` + `YOLO/hyperparameters.toml`, launched via
-  `./train_YOLO.sh`. Fails fast if the dataset is missing/incomplete.
+1. GT `floorplan_segmentation.png` → frozen floorplan VAE encoder → condition
+   `c` (encoded once per run and cached; `seed = BASE_SEED + epoch` only
+   changes the diffusion noise, never the condition).
+2. `c` + fresh noise → 1000-step reverse chain → arrangement latent.
+3. Latent → frozen TV-inclusive arrangement decoder → furniture render blended
+   over the GT floorplan base with `LIVE_OVERLAY_ALPHA` (the same
+   `overlay_furniture_on_floorplan` helper the conditional-diffusion grids use).
+4. GT `labels.txt` boxes are copied **verbatim** as the target, even though the
+   sampled furniture will generally not coincide with them spatially. This is
+   an intentional noisy-label regime: YOLO learns a floorplan-conditioned
+   layout prior. Expect lower mAP than the reconstruction baseline.
+
+Val/test are **deterministic GT overlays** (GT floorplan + GT arrangement, no
+diffusion) in the same color domain, so early stopping and the final unbiased
+report stay stable. The single Ultralytics `model.train()` call keeps its
+scheduler, patience and `results.csv` untouched; `cache=False` is load-bearing
+(a snapshot cache would freeze the first epoch's pixels forever). Per-epoch
+provenance (`epoch, output, source, seed`) lands in `live_manifest.csv`.
+
+Implementation: `YOLO/live_diffusion.py` (frozen stack + rendering, reusing the
+conditional-diffusion/mask_VAE helpers) + `YOLO/runner.py` (indexing, epoch
+callback, finetune, telemetry). Knobs: `LIVE_*` in `YOLO/config.toml` /
+`YOLO/hyperparameters.toml`. The older frozen image-VAE 2x pipeline
+(`YOLO/augment*.py`, `./run_augmentation.sh`) is kept standalone for ablations;
+the trainer never reads it.
 
 ## Source dataset layout
 
@@ -100,8 +124,9 @@ I/O is vectorized throughout: `torchvision` C-speed tensor↔PIL conversion
 (~3x faster PNG encoding than the default 6, pixels identical).
 
 **Step B — finetune (`runner.py`):** `YOLO("yolo26n.pt")` → `.train()` on the
-augmented set (`nc=11`: Center_table, Chair, Couch, Dining_table_big,
-Dining_table_round, Showcase, Side_table, Sofa, Sofa_cum_bed, TV, Vase_table).
+augmented set (`nc=12`: Center_table, Chair, Couch, Dining_table_big,
+Dining_table_round, Showcase, Side_table, Sofa, Sofa_cum_bed, TV, Vase_table,
+Dining_table_medium).
 Device `mps` (fallback CPU), `workers=0` for macOS, `imgsz=416` (train images
 are VAE-native 256px), 30 epochs with early-stopping patience 10. Ultralytics'
 internal mosaic/mixup/flips are disabled (the VAE pipeline already applies
@@ -120,10 +145,16 @@ weak minority-class AP without further sampling/focal tuning.
 
 - Per-epoch `TelemetryWriter` CSV (`YOLO/telemetry_logs/<run>.csv`):
   `epoch, train_box/cls/dfl, val_box/cls/dfl, precision, recall, mAP50,
-  mAP50-95, lr` — mirrored from Ultralytics `results.csv`, plotted live by the
-  existing dashboard.
+  mAP50-95, lr` — mirrored incrementally from Ultralytics `results.csv` at
+  every epoch end (plus a final sweep), so the dashboard plots live while
+  training runs. (`train_dfl`/`val_dfl` are sourced from YOLO26's `l1_loss`
+  column; see `RESULTS_CSV_MAP` in `YOLO/runner.py`.)
 - Val overlays `YOLO/outputs/val_pred_final_*_<run>.png`: green GT boxes +
   red predicted boxes with `class + confidence` annotations.
+- Live snapshots `YOLO/outputs/live_epoch_<E>_<stem>.png` (side-by-side:
+  current-epoch overlay | overlay + GT/pred boxes), published while training
+  runs by the read-only sidecar `YOLO/live_watch.py` (see below). Shown in the
+  dashboard's Live panel.
 - Ultralytics curves copied to `YOLO/outputs/`: `results.png`, `PR_curve.png`,
   `F1_curve.png`, `confusion_matrix.png`, `labels.jpg`.
 - Best weights: `YOLO/models/yolo_<run>_best.pt`.
@@ -132,15 +163,30 @@ weak minority-class AP without further sampling/focal tuning.
 
 ```bash
 ./venv/bin/pip install "ultralytics>=8.3.0"  # one-time (pulls opencv, torch deps)
-./venv/bin/pip install tqdm                  # one-time (augment progress bar)
-./run_augmentation.sh       # build 2x dataset (once; reruns regenerate)
-./train_YOLO.sh             # debug train (fails fast if dataset incomplete)
+./train_YOLO.sh             # debug train (tiny live subset; see LIVE_* knobs)
 ./train_YOLO.sh prod        # prod train
 ./run_scripts/start_yolo_server.sh   # dashboard: loss/mAP curves + overlays + figures
 ```
 
-Smoke test: set `MAX_SAMPLES=64` in `YOLO/augment_hyperparameters.toml`, then
-`./run_augmentation.sh`.
+## Live snapshots while training runs
+
+`YOLO/live_watch.py` (via `./run_scripts/start_live_watch.sh`) is a read-only
+sidecar: it polls `live_manifest.csv` for new epochs, snapshots the fixed
+`LIVE_WATCH_STEMS` stems (overlay | overlay+boxes, using a temp copy of the
+latest `best.pt` so the trainer is never disturbed), and writes
+`live_epoch_<E>_<stem>.png` for the dashboard's Live panel. Only the current
+epoch is ever published — past epochs' pixels are already overwritten, so
+backfilling would mislabel them. Boxes use `LIVE_WATCH_CONF` (far below the
+trainer's `CONF_THRESHOLD` so emerging predictions stay visible; raise it as
+mAP improves). Each tick also appends new Ultralytics rows to
+`<run>_live.csv`, so curves plot live even though the trainer mirrors only at
+the end. Only `LIVE_WATCH_*` knobs affect it; it is safe to start/stop anytime
+mid-training.
+
+Smoke test: set `LIVE_MAX_SOURCES=4` in `YOLO/hyperparameters.toml`, then
+`./train_YOLO.sh` (2 epochs exercise the redraw callback; restore afterwards).
+The frozen-VAE ablation path is unchanged: `./run_augmentation.sh` builds the
+2x dataset (once; reruns regenerate); the live trainer never reads it.
 
 > **Mac note:** `train_YOLO.sh` exports `PYTORCH_ENABLE_MPS_FALLBACK=1`.
 > Ultralytics runs NMS (`torchvision::nms`) during validation, which has no
@@ -150,9 +196,12 @@ Smoke test: set `MAX_SAMPLES=64` in `YOLO/augment_hyperparameters.toml`, then
 
 ## Configuration
 
-`YOLO/config.toml`: device, source split dirs, source render variant
-(`SOURCE_IMAGE_VARIANT` + `SOURCE_LABEL_FILE_NAME` + `[default.IMAGE_VARIANTS]`),
-generated dataset root, VAE dir/run id, output dirs.
+`YOLO/config.toml`: device, live mask-dataset split dirs
+(`LIVE_SOURCE_*_SPLIT_DIR`), frozen checkpoint paths
+(`COND_DIFFUSION_CHECKPOINT_PATH`, `COND/TARGET_VAE_CHECKPOINT_PATH`), mask
+filenames + color indexes, live dataset root, output dirs. The legacy
+render-only `SOURCE_*_SPLIT_DIR` / `SOURCE_IMAGE_VARIANT` keys serve only the
+standalone frozen-VAE augmentation below.
 `YOLO/augment_hyperparameters.toml`: augmentation knobs (seeds, `AUG_FACTOR`,
 noise std, blur ranges, save workers, class names).
 `YOLO/hyperparameters.toml`: training knobs (YOLO model/imgsz/batch/epochs/lr,
@@ -161,8 +210,9 @@ both hyperparameter files — keep in sync.
 
 ## Outputs
 
-- Augmented images/labels: `/Users/aatmaj/Downloads/datasets/yolo_augmented/{images,labels}/{train,val,test}/`
-- Manifest + data config: `augment_manifest.csv`, `data.yaml` (train/val/test) in the same root
+- Live images/labels: `/Users/aatmaj/Downloads/datasets/yolo_live/{images,labels}/{train,val,test}/`
+  (train redrawn every epoch; val/test deterministic GT overlays)
+- Manifest + data config: `live_manifest.csv`, `data.yaml` (train/val/test) in the same root
 - Telemetry: `YOLO/telemetry_logs/<run>.csv`
 - Overlays + curves: `YOLO/outputs/`
 - Weights: `YOLO/models/yolo_<run>_best.pt`
