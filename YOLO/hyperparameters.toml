@@ -37,8 +37,8 @@ CLASS_NAMES = ["Center_table", "Chair", "Couch", "Dining_table", "Showcase", "Si
 # PATIENCE=10 bounds the worst case of 100 epochs.
 YOLO_MODEL = "yolo26n.pt"
 IMG_SIZE = 416
-BATCH_SIZE = 8
-NUM_EPOCHS = 3
+BATCH_SIZE = 16
+NUM_EPOCHS = 30
 # LR0=0.01 is the Ultralytics default tuned for OPTIMIZER="auto" (MuSGD/SGD
 # family for YOLO26); keep the pair pinned together, change jointly.
 LR0 = 0.01
@@ -62,7 +62,7 @@ TELEMETRY_INTERVAL = 1
 # updates the weights and the epoch count means what it says. Raise
 # LIVE_TRAIN_SAMPLES (below) for real convergence; this only removes the
 # starvation, it does not substitute for data.
-NOMINAL_BATCH_SIZE = 8
+NOMINAL_BATCH_SIZE = 16
 
 # ---- Live conditional-diffusion overlays (YOLO/live_diffusion.py) ----
 # Train images are NOT a fixed dataset: before epoch 1 and at the end of every
@@ -89,10 +89,10 @@ LIVE_MAX_SOURCES = -1
 # Rule of thumb: keep LIVE_TRAIN_SAMPLES a multiple of BATCH_SIZE and >= a few
 # hundred so each epoch has many batches. 256 gives 16 batches/epoch at
 # batch 16 (~77 s/epoch of redraw). Smoke-test temporarily, then restore.
-LIVE_TRAIN_SAMPLES = 32
+LIVE_TRAIN_SAMPLES = 256
 LIVE_OVERLAY_ALPHA = 0.6
 # Batch size for the frozen-encoder + diffusion + decoder passes.
-LIVE_DIFFUSION_BATCH_SIZE = 8
+LIVE_DIFFUSION_BATCH_SIZE = 16
 # Square side length of the overlay domain. Must equal both frozen VAEs'
 # IMAGE_SIZE (both are 256). Fails fast otherwise.
 LIVE_IMAGE_SIZE = 256

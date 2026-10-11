@@ -14,16 +14,19 @@ Flow per training run (no fixed dataset is ever built):
      the sampled arrangement latent is decoded with the frozen arrangement
      (TV-inclusive) decoder, and the predicted furniture is blended over the
      GT floorplan base with the shared overlay helper. Only the PNG pixels
-     change; stems and labels never do, because Ultralytics indexes the file
-     list once at train start.
-  4. The GT ``labels.txt`` boxes are copied VERBATIM as the YOLO target even
-     though the sampled furniture layout will generally not coincide with
-     them spatially. This is an intentional noisy-label regime: YOLO learns a
-     floorplan-conditioned layout prior instead of a clean detector. Expect
-     lower mAP than the reconstruction baseline and compare against it.
+     change; stems never do, because Ultralytics indexes the file list once at
+     train start.
+  4. Train labels are derived FROM THE DRAWN ARRANGEMENT (connected components
+     per furniture class, mapped through the mask->YOLO id table), so the boxes
+     always describe the pixels next to them. Copying the GT ``labels.txt``
+     instead is available via ``LIVE_REGENERATE_LABELS = false`` for ablations
+     only: a fresh draw generally lands somewhere else, so those boxes
+     contradict the image.
   5. Val/test are DETERMINISTIC GT overlays (GT floorplan + GT arrangement, no
-     diffusion), rendered through the same color tables so the domain matches
-     train while early stopping and the final report stay stable across runs.
+     diffusion), labelled by the same routine, so all three splits share one
+     convention and early stopping plus the final report stay stable across
+     runs. Each mirror carries a signature; an ontology/alpha/size change
+     re-renders instead of reusing labels written under the old class ids.
 
 All rendering reuses the conditional-diffusion grid helpers
 (``overlay_furniture_on_floorplan``) and the mask color tables
@@ -107,8 +110,9 @@ class LiveSource:
         stem (str): Stable output stem (the folder name); never changes, so
             Ultralytics' once-indexed file list stays valid across regens.
         label_lines (list[str]): Validated YOLO label lines with numeric class
-            ids, copied verbatim on every regen (GT boxes are the target even
-            though sampled pixels will not match them; see module docstring).
+            ids read from the source ``labels.txt``. Used as the target only in
+            the noisy-label ablation mode; by default labels are derived from
+            the drawn pixels (see the module docstring).
     """
 
     src_dir: Path

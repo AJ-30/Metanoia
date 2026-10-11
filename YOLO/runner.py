@@ -4,24 +4,32 @@ Flow (no fixed dataset is ever built):
   1. Index the live mask dataset (GT floorplan + GT arrangement + GT labels),
      pick the run's train stems once, and encode their GT floorplans once
      with the frozen floorplan VAE (see ``YOLO/live_diffusion.py``).
-  2. Redraw every train PNG from a FRESH diffusion draw before epoch 1 and at
-     the end of every epoch (Ultralytics ``on_train_epoch_end`` callback);
-     GT labels stay the target despite the layout mismatch (intentional
-     noisy-label regime — YOLO learns a floorplan-conditioned layout prior).
-  3. Finetune ``YOLO(<YOLO_MODEL>)`` (default ``yolo26n.pt``) with Ultralytics
+  2. Validate the training budget: Ultralytics only steps the optimizer once
+     per gradient-accumulation group, so a small train set with the default
+     ``nbs`` updates the weights a handful of times per run. The run aborts
+     before training if the resulting step count cannot train
+     (:func:`validate_training_budget`).
+  3. Redraw every train PNG from a FRESH diffusion draw before epoch 1 and at
+     the end of every epoch (Ultralytics ``on_train_epoch_end`` callback), and
+     rewrite the labels from the arrangement that was just drawn so image and
+     target always agree.
+  4. Finetune ``YOLO(<YOLO_MODEL>)`` (default ``yolo26n.pt``) with Ultralytics
      on MPS (fallback CPU), ``workers=0`` for macOS, ``cache=False`` so the
      per-epoch pixel rewrites are actually seen (a cache would freeze the
-     first epoch's pixels forever).
-  4. Mirror Ultralytics ``results.csv`` rows into the shared
+     first epoch's pixels forever), and ``nbs = batch`` so gradient
+     accumulation does not swallow the updates.
+  5. Mirror Ultralytics ``results.csv`` rows into the shared
      ``TelemetryWriter`` CSV incrementally at every epoch end (plus a final
      sweep), so the existing Flask dashboard plots loss, mAP, precision and
      recall live while training runs.
-  5. Save validation overlays (ground-truth green + predicted red boxes with
+  6. Save validation overlays (ground-truth green + predicted red boxes with
      class names and confidence) plus Ultralytics curves (PR, F1, confusion
      matrix) into the outputs directory for qualitative inspection.
 
-Val/test are deterministic GT overlays (no diffusion), so early stopping and
-the final unbiased report stay stable while train pixels vary every epoch.
+Val/test are deterministic GT overlays (no diffusion), labelled by the same
+box-derivation routine as train, so early stopping and the final unbiased
+report stay stable while train pixels vary every epoch. Mirrors carry a
+signature so an ontology change re-renders instead of reusing stale labels.
 
 The ``ultralytics`` import is lazy (inside the training method) so that unit
 tests run without the YOLO dependency installed. Torch/diffusion imports stay

@@ -80,7 +80,7 @@ arrangement_filtered = ["furniture"]
 floorplan = []
 arrangement = []
 both = []
-arrangement_filtered = ["tv"]
+arrangement_filtered = ["center_table"]
 
 # Group name -> mask filename inside each sample folder. Kept in TOML so the
 # filenames are never hardcoded in Python.

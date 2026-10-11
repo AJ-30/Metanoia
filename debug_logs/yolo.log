@@ -155,3 +155,40 @@
 [tight-skink] 2026-10-10 20:45:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
 [tight-skink] 2026-10-10 20:46:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
 [tight-skink] 2026-10-10 20:47:11 | INFO | __main__:506 - No manifest epochs yet; waiting for the first regen.
+[chief-boa] 2026-10-10 20:53:45 | INFO | YOLO.live_diffusion:1144 - Mirrored 19920 deterministic GT overlays to /Users/aatmaj/Downloads/datasets/yolo_live/images/val.
+[chief-boa] 2026-10-10 20:53:47 | INFO | YOLO.runner:338 - Indexed 10043 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[chief-boa] 2026-10-10 21:02:24 | INFO | YOLO.live_diffusion:1144 - Mirrored 10043 deterministic GT overlays to /Users/aatmaj/Downloads/datasets/yolo_live/images/test.
+[chief-boa] 2026-10-10 21:02:26 | INFO | YOLO.live_diffusion:839 - Cached 32 condition latents.
+[chief-boa] 2026-10-10 21:02:35 | INFO | YOLO.live_diffusion:1049 - Live train epoch 0: redrew 32 overlays with 294 boxes (seed=1234, labels=drawn).
+[chief-boa] 2026-10-10 21:02:35 | INFO | YOLO.runner:576 - Loaded pretrained weights: yolo26n.pt
+[chief-boa] 2026-10-10 21:02:53 | INFO | YOLO.runner:597 - Epoch 1 done; redrawing live train pixels...
+[chief-boa] 2026-10-10 21:03:14 | INFO | YOLO.live_diffusion:1049 - Live train epoch 1: redrew 32 overlays with 304 boxes (seed=1235, labels=drawn).
+[chief-boa] 2026-10-10 21:13:59 | INFO | YOLO.runner:597 - Epoch 2 done; redrawing live train pixels...
+[chief-boa] 2026-10-10 21:14:14 | INFO | YOLO.live_diffusion:1049 - Live train epoch 2: redrew 32 overlays with 295 boxes (seed=1236, labels=drawn).
+[chief-boa] 2026-10-10 21:24:55 | INFO | YOLO.runner:597 - Epoch 3 done; redrawing live train pixels...
+[chief-boa] 2026-10-10 21:25:10 | INFO | YOLO.live_diffusion:1049 - Live train epoch 3: redrew 32 overlays with 291 boxes (seed=1237, labels=drawn).
+[tidy-feline] 2026-10-10 21:27:08 | INFO | YOLO.runner:275 - Starting YOLO training run_id: tidy-feline on device: mps
+[tidy-feline] 2026-10-10 21:27:09 | INFO | YOLO.live_diffusion:730 - Live diffusion ready: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt) on mps. Label source: drawn arrangement (self-consistent); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[tidy-feline] 2026-10-10 21:27:37 | INFO | YOLO.runner:338 - Indexed 69776 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[tidy-feline] 2026-10-10 21:27:37 | INFO | YOLO.runner:182 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 12 over 3 epochs.
+[tidy-feline] 2026-10-10 21:27:37 | INFO | YOLO.runner:385 - Live train set: 32 stems (pool 69776, redrawn from fresh diffusion draws every epoch).
+[tidy-feline] 2026-10-10 21:27:38 | INFO | YOLO.runner:299 - Removed 2 stale Ultralytics cache files.
+[tidy-feline] 2026-10-10 21:27:45 | INFO | YOLO.runner:338 - Indexed 19920 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[tidy-feline] 2026-10-10 21:27:48 | INFO | YOLO.runner:338 - Indexed 10043 live sources from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[tidy-feline] 2026-10-10 21:27:49 | INFO | YOLO.live_diffusion:839 - Cached 32 condition latents.
+[tidy-feline] 2026-10-10 21:27:58 | INFO | YOLO.live_diffusion:1049 - Live train epoch 0: redrew 32 overlays with 294 boxes (seed=1234, labels=drawn).
+[tidy-feline] 2026-10-10 21:27:59 | INFO | YOLO.runner:576 - Loaded pretrained weights: yolo26n.pt
+[tidy-feline] 2026-10-10 21:28:10 | INFO | YOLO.runner:597 - Epoch 1 done; redrawing live train pixels...
+[tidy-feline] 2026-10-10 21:28:24 | INFO | YOLO.live_diffusion:1049 - Live train epoch 1: redrew 32 overlays with 304 boxes (seed=1235, labels=drawn).
+[tidy-feline] 2026-10-10 21:41:38 | INFO | YOLO.runner:597 - Epoch 2 done; redrawing live train pixels...
+[tidy-feline] 2026-10-10 21:41:51 | INFO | YOLO.live_diffusion:1049 - Live train epoch 2: redrew 32 overlays with 295 boxes (seed=1236, labels=drawn).
+[tidy-feline] 2026-10-10 21:55:11 | INFO | YOLO.runner:597 - Epoch 3 done; redrawing live train pixels...
+[tidy-feline] 2026-10-10 21:55:26 | INFO | YOLO.live_diffusion:1049 - Live train epoch 3: redrew 32 overlays with 291 boxes (seed=1237, labels=drawn).
+[tidy-feline] 2026-10-10 22:17:24 | INFO | YOLO.runner:551 - Copied artifact results.png to outputs.
+[tidy-feline] 2026-10-10 22:17:24 | INFO | YOLO.runner:551 - Copied artifact confusion_matrix.png to outputs.
+[tidy-feline] 2026-10-10 22:17:24 | INFO | YOLO.runner:551 - Copied artifact labels.jpg to outputs.
+[tidy-feline] 2026-10-10 22:17:24 | INFO | YOLO.runner:551 - Copied artifact results.csv to outputs.
+[tidy-feline] 2026-10-10 22:17:26 | INFO | YOLO.runner:534 - Saved 16 val prediction overlays (tag=final).
+[tidy-feline] 2026-10-10 22:17:26 | INFO | YOLO.runner:667 - Saved best weights to ./YOLO/models/yolo_tidy-feline_best.pt
+[tidy-feline] 2026-10-10 22:26:12 | INFO | YOLO.runner:673 - FINAL VAL: mAP50=0.0496 mAP50-95=0.0407 precision=0.0034 recall=0.2026
+[tidy-feline] 2026-10-10 22:30:47 | INFO | YOLO.runner:684 - FINAL TEST: mAP50=0.0488 mAP50-95=0.0403 precision=0.0035 recall=0.2041

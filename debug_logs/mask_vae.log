@@ -3963,3 +3963,544 @@
 [fair-burro] 2026-10-08 10:54:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_334_fair-burro.png
 [fair-burro] 2026-10-08 10:54:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_334_fair-burro.png
 [fair-burro] 2026-10-08 10:54:46 | INFO | mask_VAE.runner:774 - Epoch 334/2500 | train_loss: 12655.5768 (bce: 12186.8193, kl/dim: 4.882891) | test_loss: 12675.4038 | test_fg_iou: 0.7290 | test_fg_dice: 0.7994 (N=100) | epoch_time: 275.1s | total: 100302.1s
+[wanted-grub] 2026-10-10 20:48:28 | WARNING | mask_VAE.runner:325 - MASK_CHANNELS=28 in mask_VAE/hyperparameters.toml does not match the 11 channels of mode 'arrangement_filtered'; auto-syncing the model input/output to the layout.
+[wanted-grub] 2026-10-10 20:48:28 | INFO | mask_VAE.runner:282 - Starting mask VAE training with run_id: wanted-grub at time: 2026-10-10 20:48:28.431378 on device: mps | seed: 42
+[wanted-grub] 2026-10-10 20:48:28 | INFO | mask_VAE.runner:288 - Mask layout: 1 group(s), 11 channels, 10 foreground (mode 'arrangement_filtered')
+  - furniture: furniture_segmentation.png -> global channels [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] (11 classes: furniture/background, furniture/sofa, furniture/tv, furniture/dining_set, furniture/side_table, furniture/showcase, furniture/couch, furniture/chair, furniture/center_table, furniture/vase_table, furniture/sofa_cum_bed)
+  - excluded (as background): furniture/center_table -> global channels [8] (channels kept, targets always 0)
+[wanted-grub] 2026-10-10 20:48:28 | INFO | mask_VAE.runner:620 - Saved mask layout sidecar to mask_VAE/outputs/layout_wanted-grub.json
+[wanted-grub] 2026-10-10 20:48:28 | INFO | mask_VAE.runner:354 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/train (groups: ['furniture'], preload into RAM: True)...
+[wanted-grub] 2026-10-10 20:52:28 | INFO | mask_VAE.runner:354 - Building mask dataset from /Users/aatmaj/FurnitureArranger/datasets/work/test (groups: ['furniture'], preload into RAM: True)...
+[wanted-grub] 2026-10-10 20:53:08 | INFO | mask_VAE.runner:393 - Train masks: 69776 | Test masks: 10043
+[wanted-grub] 2026-10-10 20:53:09 | INFO | mask_VAE.runner:734 - Torch version: 2.13.0
+[wanted-grub] 2026-10-10 20:57:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_1_wanted-grub.png
+[wanted-grub] 2026-10-10 20:57:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_1_wanted-grub.png
+[wanted-grub] 2026-10-10 20:57:56 | INFO | mask_VAE.runner:774 - Epoch 1/2500 | train_loss: 112845.5924 (bce: 112190.4273, kl/dim: 6.824636) | test_loss: 66043.2409 | test_fg_iou: 0.0221 | test_fg_dice: 0.0368 (N=100) | epoch_time: 287.6s | total: 287.6s
+[wanted-grub] 2026-10-10 21:02:55 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_2_wanted-grub.png
+[wanted-grub] 2026-10-10 21:02:55 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_2_wanted-grub.png
+[wanted-grub] 2026-10-10 21:02:55 | INFO | mask_VAE.runner:774 - Epoch 2/2500 | train_loss: 59940.8254 (bce: 59409.8359, kl/dim: 5.531140) | test_loss: 54820.7203 | test_fg_iou: 0.0642 | test_fg_dice: 0.0994 (N=100) | epoch_time: 299.0s | total: 586.5s
+[wanted-grub] 2026-10-10 21:08:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_3_wanted-grub.png
+[wanted-grub] 2026-10-10 21:08:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_3_wanted-grub.png
+[wanted-grub] 2026-10-10 21:08:12 | INFO | mask_VAE.runner:774 - Epoch 3/2500 | train_loss: 47267.1203 (bce: 46787.5073, kl/dim: 4.995969) | test_loss: 43697.2383 | test_fg_iou: 0.1620 | test_fg_dice: 0.2305 (N=100) | epoch_time: 316.5s | total: 903.0s
+[wanted-grub] 2026-10-10 21:13:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_4_wanted-grub.png
+[wanted-grub] 2026-10-10 21:13:28 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_4_wanted-grub.png
+[wanted-grub] 2026-10-10 21:13:28 | INFO | mask_VAE.runner:774 - Epoch 4/2500 | train_loss: 40144.2723 (bce: 39654.5603, kl/dim: 5.101166) | test_loss: 37686.3036 | test_fg_iou: 0.2624 | test_fg_dice: 0.3381 (N=100) | epoch_time: 316.0s | total: 1219.0s
+[wanted-grub] 2026-10-10 21:18:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_5_wanted-grub.png
+[wanted-grub] 2026-10-10 21:18:47 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_5_wanted-grub.png
+[wanted-grub] 2026-10-10 21:18:47 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_5.pt
+[wanted-grub] 2026-10-10 21:18:47 | INFO | mask_VAE.runner:774 - Epoch 5/2500 | train_loss: 35812.2115 (bce: 35331.3780, kl/dim: 5.008682) | test_loss: 32945.1267 | test_fg_iou: 0.3022 | test_fg_dice: 0.3715 (N=100) | epoch_time: 319.3s | total: 1538.3s
+[wanted-grub] 2026-10-10 21:24:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_6_wanted-grub.png
+[wanted-grub] 2026-10-10 21:24:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_6_wanted-grub.png
+[wanted-grub] 2026-10-10 21:24:06 | INFO | mask_VAE.runner:774 - Epoch 6/2500 | train_loss: 33072.4777 (bce: 32601.4503, kl/dim: 4.906535) | test_loss: 30320.3980 | test_fg_iou: 0.3392 | test_fg_dice: 0.4164 (N=100) | epoch_time: 319.5s | total: 1857.8s
+[wanted-grub] 2026-10-10 21:29:35 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_7_wanted-grub.png
+[wanted-grub] 2026-10-10 21:29:35 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_7_wanted-grub.png
+[wanted-grub] 2026-10-10 21:29:35 | INFO | mask_VAE.runner:774 - Epoch 7/2500 | train_loss: 31013.7730 (bce: 30542.9219, kl/dim: 4.904699) | test_loss: 28773.2194 | test_fg_iou: 0.4029 | test_fg_dice: 0.4877 (N=100) | epoch_time: 328.9s | total: 2186.7s
+[wanted-grub] 2026-10-10 21:35:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_8_wanted-grub.png
+[wanted-grub] 2026-10-10 21:35:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_8_wanted-grub.png
+[wanted-grub] 2026-10-10 21:35:29 | INFO | mask_VAE.runner:774 - Epoch 8/2500 | train_loss: 29297.0700 (bce: 28827.4828, kl/dim: 4.891534) | test_loss: 26089.9036 | test_fg_iou: 0.4663 | test_fg_dice: 0.5581 (N=100) | epoch_time: 354.0s | total: 2540.7s
+[wanted-grub] 2026-10-10 21:41:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_9_wanted-grub.png
+[wanted-grub] 2026-10-10 21:41:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_9_wanted-grub.png
+[wanted-grub] 2026-10-10 21:41:25 | INFO | mask_VAE.runner:774 - Epoch 9/2500 | train_loss: 26836.0541 (bce: 26359.1118, kl/dim: 4.968148) | test_loss: 23188.9308 | test_fg_iou: 0.5118 | test_fg_dice: 0.6086 (N=100) | epoch_time: 355.9s | total: 2896.6s
+[wanted-grub] 2026-10-10 21:47:19 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_10_wanted-grub.png
+[wanted-grub] 2026-10-10 21:47:20 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_10_wanted-grub.png
+[wanted-grub] 2026-10-10 21:47:20 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_10.pt
+[wanted-grub] 2026-10-10 21:47:20 | INFO | mask_VAE.runner:774 - Epoch 10/2500 | train_loss: 24534.8012 (bce: 24062.5241, kl/dim: 4.919552) | test_loss: 20796.5835 | test_fg_iou: 0.5496 | test_fg_dice: 0.6394 (N=100) | epoch_time: 354.7s | total: 3251.3s
+[wanted-grub] 2026-10-10 21:53:15 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_11_wanted-grub.png
+[wanted-grub] 2026-10-10 21:53:15 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_11_wanted-grub.png
+[wanted-grub] 2026-10-10 21:53:16 | INFO | mask_VAE.runner:774 - Epoch 11/2500 | train_loss: 22954.6025 (bce: 22485.7723, kl/dim: 4.883649) | test_loss: 19595.2086 | test_fg_iou: 0.5680 | test_fg_dice: 0.6557 (N=100) | epoch_time: 355.7s | total: 3607.0s
+[wanted-grub] 2026-10-10 21:59:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_12_wanted-grub.png
+[wanted-grub] 2026-10-10 21:59:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_12_wanted-grub.png
+[wanted-grub] 2026-10-10 21:59:07 | INFO | mask_VAE.runner:774 - Epoch 12/2500 | train_loss: 21676.3695 (bce: 21211.9280, kl/dim: 4.837933) | test_loss: 17745.6681 | test_fg_iou: 0.6004 | test_fg_dice: 0.6913 (N=100) | epoch_time: 351.1s | total: 3958.1s
+[wanted-grub] 2026-10-10 22:04:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_13_wanted-grub.png
+[wanted-grub] 2026-10-10 22:04:59 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_13_wanted-grub.png
+[wanted-grub] 2026-10-10 22:04:59 | INFO | mask_VAE.runner:774 - Epoch 13/2500 | train_loss: 20773.2966 (bce: 20311.0301, kl/dim: 4.815276) | test_loss: 16924.2391 | test_fg_iou: 0.6242 | test_fg_dice: 0.7171 (N=100) | epoch_time: 352.1s | total: 4310.2s
+[wanted-grub] 2026-10-10 22:10:37 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_14_wanted-grub.png
+[wanted-grub] 2026-10-10 22:10:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_14_wanted-grub.png
+[wanted-grub] 2026-10-10 22:10:38 | INFO | mask_VAE.runner:774 - Epoch 14/2500 | train_loss: 19973.5975 (bce: 19514.2951, kl/dim: 4.784401) | test_loss: 16207.5598 | test_fg_iou: 0.6451 | test_fg_dice: 0.7366 (N=100) | epoch_time: 338.9s | total: 4649.1s
+[wanted-grub] 2026-10-10 22:15:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_15_wanted-grub.png
+[wanted-grub] 2026-10-10 22:15:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_15_wanted-grub.png
+[wanted-grub] 2026-10-10 22:15:55 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_15.pt
+[wanted-grub] 2026-10-10 22:15:55 | INFO | mask_VAE.runner:774 - Epoch 15/2500 | train_loss: 19401.4260 (bce: 18944.9836, kl/dim: 4.754608) | test_loss: 15764.5480 | test_fg_iou: 0.6550 | test_fg_dice: 0.7452 (N=100) | epoch_time: 317.2s | total: 4966.2s
+[wanted-grub] 2026-10-10 22:21:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_16_wanted-grub.png
+[wanted-grub] 2026-10-10 22:21:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_16_wanted-grub.png
+[wanted-grub] 2026-10-10 22:21:11 | INFO | mask_VAE.runner:774 - Epoch 16/2500 | train_loss: 18873.5542 (bce: 18419.1922, kl/dim: 4.732937) | test_loss: 15265.9521 | test_fg_iou: 0.6685 | test_fg_dice: 0.7557 (N=100) | epoch_time: 315.9s | total: 5282.1s
+[wanted-grub] 2026-10-10 22:26:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_17_wanted-grub.png
+[wanted-grub] 2026-10-10 22:26:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_17_wanted-grub.png
+[wanted-grub] 2026-10-10 22:26:25 | INFO | mask_VAE.runner:774 - Epoch 17/2500 | train_loss: 18395.8478 (bce: 17943.2275, kl/dim: 4.714794) | test_loss: 15225.1318 | test_fg_iou: 0.6686 | test_fg_dice: 0.7559 (N=100) | epoch_time: 314.8s | total: 5596.8s
+[wanted-grub] 2026-10-10 22:31:32 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_18_wanted-grub.png
+[wanted-grub] 2026-10-10 22:31:33 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_18_wanted-grub.png
+[wanted-grub] 2026-10-10 22:31:33 | INFO | mask_VAE.runner:774 - Epoch 18/2500 | train_loss: 17997.4956 (bce: 17545.6526, kl/dim: 4.706698) | test_loss: 14486.9798 | test_fg_iou: 0.6832 | test_fg_dice: 0.7670 (N=100) | epoch_time: 307.4s | total: 5904.2s
+[wanted-grub] 2026-10-10 22:36:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_19_wanted-grub.png
+[wanted-grub] 2026-10-10 22:36:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_19_wanted-grub.png
+[wanted-grub] 2026-10-10 22:36:29 | INFO | mask_VAE.runner:774 - Epoch 19/2500 | train_loss: 17736.4911 (bce: 17284.2557, kl/dim: 4.710786) | test_loss: 14149.2887 | test_fg_iou: 0.6866 | test_fg_dice: 0.7693 (N=100) | epoch_time: 296.3s | total: 6200.5s
+[wanted-grub] 2026-10-10 22:41:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_20_wanted-grub.png
+[wanted-grub] 2026-10-10 22:41:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_20_wanted-grub.png
+[wanted-grub] 2026-10-10 22:41:26 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_20.pt
+[wanted-grub] 2026-10-10 22:41:26 | INFO | mask_VAE.runner:774 - Epoch 20/2500 | train_loss: 17437.0283 (bce: 16984.5059, kl/dim: 4.713775) | test_loss: 14024.0989 | test_fg_iou: 0.6895 | test_fg_dice: 0.7723 (N=100) | epoch_time: 297.4s | total: 6497.9s
+[wanted-grub] 2026-10-10 22:46:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_21_wanted-grub.png
+[wanted-grub] 2026-10-10 22:46:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_21_wanted-grub.png
+[wanted-grub] 2026-10-10 22:46:23 | INFO | mask_VAE.runner:774 - Epoch 21/2500 | train_loss: 17130.1956 (bce: 16677.4837, kl/dim: 4.715749) | test_loss: 13886.1665 | test_fg_iou: 0.6900 | test_fg_dice: 0.7721 (N=100) | epoch_time: 297.1s | total: 6794.9s
+[wanted-grub] 2026-10-10 22:51:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_22_wanted-grub.png
+[wanted-grub] 2026-10-10 22:51:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_22_wanted-grub.png
+[wanted-grub] 2026-10-10 22:51:21 | INFO | mask_VAE.runner:774 - Epoch 22/2500 | train_loss: 16953.3189 (bce: 16499.7157, kl/dim: 4.725034) | test_loss: 13888.9910 | test_fg_iou: 0.6881 | test_fg_dice: 0.7706 (N=100) | epoch_time: 297.6s | total: 7092.5s
+[wanted-grub] 2026-10-10 22:56:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_23_wanted-grub.png
+[wanted-grub] 2026-10-10 22:56:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_23_wanted-grub.png
+[wanted-grub] 2026-10-10 22:56:22 | INFO | mask_VAE.runner:774 - Epoch 23/2500 | train_loss: 16753.9243 (bce: 16299.5777, kl/dim: 4.732777) | test_loss: 13663.7786 | test_fg_iou: 0.6974 | test_fg_dice: 0.7779 (N=100) | epoch_time: 300.8s | total: 7393.3s
+[wanted-grub] 2026-10-10 23:01:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_24_wanted-grub.png
+[wanted-grub] 2026-10-10 23:01:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_24_wanted-grub.png
+[wanted-grub] 2026-10-10 23:01:22 | INFO | mask_VAE.runner:774 - Epoch 24/2500 | train_loss: 16582.6186 (bce: 16128.2673, kl/dim: 4.732826) | test_loss: 13620.0542 | test_fg_iou: 0.6971 | test_fg_dice: 0.7778 (N=100) | epoch_time: 299.9s | total: 7693.3s
+[wanted-grub] 2026-10-10 23:06:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_25_wanted-grub.png
+[wanted-grub] 2026-10-10 23:06:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_25_wanted-grub.png
+[wanted-grub] 2026-10-10 23:06:21 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_25.pt
+[wanted-grub] 2026-10-10 23:06:21 | INFO | mask_VAE.runner:774 - Epoch 25/2500 | train_loss: 16405.1762 (bce: 15950.5578, kl/dim: 4.735608) | test_loss: 13305.0464 | test_fg_iou: 0.7017 | test_fg_dice: 0.7805 (N=100) | epoch_time: 299.7s | total: 7992.9s
+[wanted-grub] 2026-10-10 23:11:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_26_wanted-grub.png
+[wanted-grub] 2026-10-10 23:11:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_26_wanted-grub.png
+[wanted-grub] 2026-10-10 23:11:22 | INFO | mask_VAE.runner:774 - Epoch 26/2500 | train_loss: 16271.7293 (bce: 15816.0974, kl/dim: 4.746166) | test_loss: 13256.7888 | test_fg_iou: 0.7042 | test_fg_dice: 0.7819 (N=100) | epoch_time: 300.6s | total: 8293.6s
+[wanted-grub] 2026-10-10 23:16:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_27_wanted-grub.png
+[wanted-grub] 2026-10-10 23:16:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_27_wanted-grub.png
+[wanted-grub] 2026-10-10 23:16:23 | INFO | mask_VAE.runner:774 - Epoch 27/2500 | train_loss: 16116.2292 (bce: 15660.4593, kl/dim: 4.747603) | test_loss: 13382.7979 | test_fg_iou: 0.7012 | test_fg_dice: 0.7798 (N=100) | epoch_time: 300.7s | total: 8594.3s
+[wanted-grub] 2026-10-10 23:21:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_28_wanted-grub.png
+[wanted-grub] 2026-10-10 23:21:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_28_wanted-grub.png
+[wanted-grub] 2026-10-10 23:21:21 | INFO | mask_VAE.runner:774 - Epoch 28/2500 | train_loss: 15997.9474 (bce: 15540.2326, kl/dim: 4.767863) | test_loss: 12924.9219 | test_fg_iou: 0.7057 | test_fg_dice: 0.7834 (N=100) | epoch_time: 298.6s | total: 8892.8s
+[wanted-grub] 2026-10-10 23:26:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_29_wanted-grub.png
+[wanted-grub] 2026-10-10 23:26:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_29_wanted-grub.png
+[wanted-grub] 2026-10-10 23:26:22 | INFO | mask_VAE.runner:774 - Epoch 29/2500 | train_loss: 15845.1126 (bce: 15388.0611, kl/dim: 4.760953) | test_loss: 12775.6991 | test_fg_iou: 0.7094 | test_fg_dice: 0.7858 (N=100) | epoch_time: 301.1s | total: 9193.9s
+[wanted-grub] 2026-10-10 23:31:24 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_30_wanted-grub.png
+[wanted-grub] 2026-10-10 23:31:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_30_wanted-grub.png
+[wanted-grub] 2026-10-10 23:31:25 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_30.pt
+[wanted-grub] 2026-10-10 23:31:25 | INFO | mask_VAE.runner:774 - Epoch 30/2500 | train_loss: 15776.2767 (bce: 15319.2386, kl/dim: 4.760813) | test_loss: 12905.8632 | test_fg_iou: 0.7058 | test_fg_dice: 0.7834 (N=100) | epoch_time: 302.4s | total: 9496.3s
+[wanted-grub] 2026-10-10 23:36:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_31_wanted-grub.png
+[wanted-grub] 2026-10-10 23:36:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_31_wanted-grub.png
+[wanted-grub] 2026-10-10 23:36:27 | INFO | mask_VAE.runner:774 - Epoch 31/2500 | train_loss: 15681.6623 (bce: 15223.6467, kl/dim: 4.770996) | test_loss: 12463.9745 | test_fg_iou: 0.7117 | test_fg_dice: 0.7874 (N=100) | epoch_time: 302.6s | total: 9798.9s
+[wanted-grub] 2026-10-10 23:41:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_32_wanted-grub.png
+[wanted-grub] 2026-10-10 23:41:30 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_32_wanted-grub.png
+[wanted-grub] 2026-10-10 23:41:30 | INFO | mask_VAE.runner:774 - Epoch 32/2500 | train_loss: 15538.6811 (bce: 15080.9711, kl/dim: 4.767812) | test_loss: 12631.0585 | test_fg_iou: 0.7079 | test_fg_dice: 0.7847 (N=100) | epoch_time: 302.2s | total: 10101.0s
+[wanted-grub] 2026-10-10 23:46:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_33_wanted-grub.png
+[wanted-grub] 2026-10-10 23:46:27 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_33_wanted-grub.png
+[wanted-grub] 2026-10-10 23:46:27 | INFO | mask_VAE.runner:774 - Epoch 33/2500 | train_loss: 15484.7195 (bce: 15027.0889, kl/dim: 4.766986) | test_loss: 12351.8980 | test_fg_iou: 0.7070 | test_fg_dice: 0.7839 (N=100) | epoch_time: 297.0s | total: 10398.0s
+[wanted-grub] 2026-10-10 23:51:24 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_34_wanted-grub.png
+[wanted-grub] 2026-10-10 23:51:24 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_34_wanted-grub.png
+[wanted-grub] 2026-10-10 23:51:24 | INFO | mask_VAE.runner:774 - Epoch 34/2500 | train_loss: 15355.2522 (bce: 14896.7882, kl/dim: 4.775666) | test_loss: 12511.6367 | test_fg_iou: 0.7079 | test_fg_dice: 0.7844 (N=100) | epoch_time: 297.6s | total: 10695.6s
+[wanted-grub] 2026-10-10 23:56:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_35_wanted-grub.png
+[wanted-grub] 2026-10-10 23:56:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_35_wanted-grub.png
+[wanted-grub] 2026-10-10 23:56:26 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_35.pt
+[wanted-grub] 2026-10-10 23:56:26 | INFO | mask_VAE.runner:774 - Epoch 35/2500 | train_loss: 15252.8321 (bce: 14793.6140, kl/dim: 4.783522) | test_loss: 12678.3136 | test_fg_iou: 0.7093 | test_fg_dice: 0.7851 (N=100) | epoch_time: 302.0s | total: 10997.6s
+[wanted-grub] 2026-10-11 00:01:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_36_wanted-grub.png
+[wanted-grub] 2026-10-11 00:01:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_36_wanted-grub.png
+[wanted-grub] 2026-10-11 00:01:25 | INFO | mask_VAE.runner:774 - Epoch 36/2500 | train_loss: 15169.0197 (bce: 14710.9312, kl/dim: 4.771756) | test_loss: 12360.6801 | test_fg_iou: 0.7126 | test_fg_dice: 0.7878 (N=100) | epoch_time: 299.1s | total: 11296.8s
+[wanted-grub] 2026-10-11 00:06:31 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_37_wanted-grub.png
+[wanted-grub] 2026-10-11 00:06:32 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_37_wanted-grub.png
+[wanted-grub] 2026-10-11 00:06:32 | INFO | mask_VAE.runner:774 - Epoch 37/2500 | train_loss: 15118.4624 (bce: 14660.8241, kl/dim: 4.767066) | test_loss: 12639.7557 | test_fg_iou: 0.7142 | test_fg_dice: 0.7887 (N=100) | epoch_time: 306.4s | total: 11603.2s
+[wanted-grub] 2026-10-11 00:11:39 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_38_wanted-grub.png
+[wanted-grub] 2026-10-11 00:11:39 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_38_wanted-grub.png
+[wanted-grub] 2026-10-11 00:11:39 | INFO | mask_VAE.runner:774 - Epoch 38/2500 | train_loss: 15018.4759 (bce: 14559.5024, kl/dim: 4.780974) | test_loss: 12196.7873 | test_fg_iou: 0.7144 | test_fg_dice: 0.7890 (N=100) | epoch_time: 307.2s | total: 11910.4s
+[wanted-grub] 2026-10-11 00:16:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_39_wanted-grub.png
+[wanted-grub] 2026-10-11 00:16:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_39_wanted-grub.png
+[wanted-grub] 2026-10-11 00:16:46 | INFO | mask_VAE.runner:774 - Epoch 39/2500 | train_loss: 14922.8013 (bce: 14463.7278, kl/dim: 4.782016) | test_loss: 12224.2254 | test_fg_iou: 0.7178 | test_fg_dice: 0.7912 (N=100) | epoch_time: 306.7s | total: 12217.2s
+[wanted-grub] 2026-10-11 00:21:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_40_wanted-grub.png
+[wanted-grub] 2026-10-11 00:21:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_40_wanted-grub.png
+[wanted-grub] 2026-10-11 00:21:52 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_40.pt
+[wanted-grub] 2026-10-11 00:21:52 | INFO | mask_VAE.runner:774 - Epoch 40/2500 | train_loss: 14871.8076 (bce: 14410.8757, kl/dim: 4.801374) | test_loss: 12338.6759 | test_fg_iou: 0.7138 | test_fg_dice: 0.7891 (N=100) | epoch_time: 306.7s | total: 12523.9s
+[wanted-grub] 2026-10-11 00:26:55 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_41_wanted-grub.png
+[wanted-grub] 2026-10-11 00:26:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_41_wanted-grub.png
+[wanted-grub] 2026-10-11 00:26:56 | INFO | mask_VAE.runner:774 - Epoch 41/2500 | train_loss: 14806.3238 (bce: 14346.4609, kl/dim: 4.790238) | test_loss: 12089.5578 | test_fg_iou: 0.7173 | test_fg_dice: 0.7917 (N=100) | epoch_time: 303.5s | total: 12827.4s
+[wanted-grub] 2026-10-11 00:31:55 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_42_wanted-grub.png
+[wanted-grub] 2026-10-11 00:31:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_42_wanted-grub.png
+[wanted-grub] 2026-10-11 00:31:56 | INFO | mask_VAE.runner:774 - Epoch 42/2500 | train_loss: 14740.6762 (bce: 14280.3675, kl/dim: 4.794882) | test_loss: 12295.0706 | test_fg_iou: 0.7186 | test_fg_dice: 0.7925 (N=100) | epoch_time: 299.9s | total: 13127.3s
+[wanted-grub] 2026-10-11 00:36:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_43_wanted-grub.png
+[wanted-grub] 2026-10-11 00:36:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_43_wanted-grub.png
+[wanted-grub] 2026-10-11 00:36:56 | INFO | mask_VAE.runner:774 - Epoch 43/2500 | train_loss: 14688.5973 (bce: 14228.8120, kl/dim: 4.789430) | test_loss: 12435.5310 | test_fg_iou: 0.7182 | test_fg_dice: 0.7922 (N=100) | epoch_time: 300.3s | total: 13427.5s
+[wanted-grub] 2026-10-11 00:41:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_44_wanted-grub.png
+[wanted-grub] 2026-10-11 00:41:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_44_wanted-grub.png
+[wanted-grub] 2026-10-11 00:41:49 | INFO | mask_VAE.runner:774 - Epoch 44/2500 | train_loss: 14628.1136 (bce: 14168.6364, kl/dim: 4.786221) | test_loss: 12240.3195 | test_fg_iou: 0.7166 | test_fg_dice: 0.7910 (N=100) | epoch_time: 293.1s | total: 13720.6s
+[wanted-grub] 2026-10-11 00:46:42 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_45_wanted-grub.png
+[wanted-grub] 2026-10-11 00:46:42 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_45_wanted-grub.png
+[wanted-grub] 2026-10-11 00:46:42 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_45.pt
+[wanted-grub] 2026-10-11 00:46:42 | INFO | mask_VAE.runner:774 - Epoch 45/2500 | train_loss: 14608.6276 (bce: 14148.7928, kl/dim: 4.789947) | test_loss: 12102.8397 | test_fg_iou: 0.7145 | test_fg_dice: 0.7895 (N=100) | epoch_time: 293.3s | total: 14013.9s
+[wanted-grub] 2026-10-11 00:51:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_46_wanted-grub.png
+[wanted-grub] 2026-10-11 00:51:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_46_wanted-grub.png
+[wanted-grub] 2026-10-11 00:51:45 | INFO | mask_VAE.runner:774 - Epoch 46/2500 | train_loss: 14485.1872 (bce: 14025.1807, kl/dim: 4.791734) | test_loss: 11899.5298 | test_fg_iou: 0.7235 | test_fg_dice: 0.7954 (N=100) | epoch_time: 302.6s | total: 14316.6s
+[wanted-grub] 2026-10-11 00:56:50 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_47_wanted-grub.png
+[wanted-grub] 2026-10-11 00:56:51 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_47_wanted-grub.png
+[wanted-grub] 2026-10-11 00:56:51 | INFO | mask_VAE.runner:774 - Epoch 47/2500 | train_loss: 14473.1809 (bce: 14012.5665, kl/dim: 4.798066) | test_loss: 11892.0205 | test_fg_iou: 0.7225 | test_fg_dice: 0.7949 (N=100) | epoch_time: 305.7s | total: 14622.3s
+[wanted-grub] 2026-10-11 01:01:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_48_wanted-grub.png
+[wanted-grub] 2026-10-11 01:01:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_48_wanted-grub.png
+[wanted-grub] 2026-10-11 01:01:54 | INFO | mask_VAE.runner:774 - Epoch 48/2500 | train_loss: 14417.0507 (bce: 13957.2535, kl/dim: 4.789555) | test_loss: 11919.3594 | test_fg_iou: 0.7193 | test_fg_dice: 0.7929 (N=100) | epoch_time: 303.2s | total: 14925.4s
+[wanted-grub] 2026-10-11 01:06:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_49_wanted-grub.png
+[wanted-grub] 2026-10-11 01:06:57 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_49_wanted-grub.png
+[wanted-grub] 2026-10-11 01:06:57 | INFO | mask_VAE.runner:774 - Epoch 49/2500 | train_loss: 14357.8433 (bce: 13896.0537, kl/dim: 4.810309) | test_loss: 12059.9168 | test_fg_iou: 0.7170 | test_fg_dice: 0.7916 (N=100) | epoch_time: 302.6s | total: 15228.0s
+[wanted-grub] 2026-10-11 01:11:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_50_wanted-grub.png
+[wanted-grub] 2026-10-11 01:11:59 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_50_wanted-grub.png
+[wanted-grub] 2026-10-11 01:11:59 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_50.pt
+[wanted-grub] 2026-10-11 01:11:59 | INFO | mask_VAE.runner:774 - Epoch 50/2500 | train_loss: 14295.5474 (bce: 13834.6680, kl/dim: 4.800826) | test_loss: 11787.9530 | test_fg_iou: 0.7225 | test_fg_dice: 0.7947 (N=100) | epoch_time: 302.1s | total: 15530.2s
+[wanted-grub] 2026-10-11 01:17:01 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_51_wanted-grub.png
+[wanted-grub] 2026-10-11 01:17:01 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_51_wanted-grub.png
+[wanted-grub] 2026-10-11 01:17:01 | INFO | mask_VAE.runner:774 - Epoch 51/2500 | train_loss: 14239.4551 (bce: 13778.3122, kl/dim: 4.803572) | test_loss: 12061.5663 | test_fg_iou: 0.7173 | test_fg_dice: 0.7917 (N=100) | epoch_time: 302.6s | total: 15832.8s
+[wanted-grub] 2026-10-11 01:22:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_52_wanted-grub.png
+[wanted-grub] 2026-10-11 01:22:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_52_wanted-grub.png
+[wanted-grub] 2026-10-11 01:22:04 | INFO | mask_VAE.runner:774 - Epoch 52/2500 | train_loss: 14194.6482 (bce: 13733.3255, kl/dim: 4.805445) | test_loss: 11947.0765 | test_fg_iou: 0.7188 | test_fg_dice: 0.7927 (N=100) | epoch_time: 302.9s | total: 16135.7s
+[wanted-grub] 2026-10-11 01:27:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_53_wanted-grub.png
+[wanted-grub] 2026-10-11 01:27:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_53_wanted-grub.png
+[wanted-grub] 2026-10-11 01:27:08 | INFO | mask_VAE.runner:774 - Epoch 53/2500 | train_loss: 14150.9785 (bce: 13690.2515, kl/dim: 4.799240) | test_loss: 11905.0020 | test_fg_iou: 0.7192 | test_fg_dice: 0.7930 (N=100) | epoch_time: 303.8s | total: 16439.5s
+[wanted-grub] 2026-10-11 01:32:15 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_54_wanted-grub.png
+[wanted-grub] 2026-10-11 01:32:15 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_54_wanted-grub.png
+[wanted-grub] 2026-10-11 01:32:15 | INFO | mask_VAE.runner:774 - Epoch 54/2500 | train_loss: 14109.7917 (bce: 13648.9753, kl/dim: 4.800170) | test_loss: 12217.2655 | test_fg_iou: 0.7164 | test_fg_dice: 0.7913 (N=100) | epoch_time: 307.4s | total: 16746.9s
+[wanted-grub] 2026-10-11 01:37:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_55_wanted-grub.png
+[wanted-grub] 2026-10-11 01:37:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_55_wanted-grub.png
+[wanted-grub] 2026-10-11 01:37:23 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_55.pt
+[wanted-grub] 2026-10-11 01:37:23 | INFO | mask_VAE.runner:774 - Epoch 55/2500 | train_loss: 14080.8207 (bce: 13619.7516, kl/dim: 4.802803) | test_loss: 12198.6711 | test_fg_iou: 0.7181 | test_fg_dice: 0.7920 (N=100) | epoch_time: 307.8s | total: 17054.7s
+[wanted-grub] 2026-10-11 01:42:30 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_56_wanted-grub.png
+[wanted-grub] 2026-10-11 01:42:30 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_56_wanted-grub.png
+[wanted-grub] 2026-10-11 01:42:30 | INFO | mask_VAE.runner:774 - Epoch 56/2500 | train_loss: 14052.6120 (bce: 13590.7012, kl/dim: 4.811570) | test_loss: 11791.2337 | test_fg_iou: 0.7231 | test_fg_dice: 0.7957 (N=100) | epoch_time: 306.9s | total: 17361.7s
+[wanted-grub] 2026-10-11 01:47:36 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_57_wanted-grub.png
+[wanted-grub] 2026-10-11 01:47:37 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_57_wanted-grub.png
+[wanted-grub] 2026-10-11 01:47:37 | INFO | mask_VAE.runner:774 - Epoch 57/2500 | train_loss: 13994.9484 (bce: 13532.4736, kl/dim: 4.817446) | test_loss: 12125.6475 | test_fg_iou: 0.7182 | test_fg_dice: 0.7928 (N=100) | epoch_time: 306.6s | total: 17668.2s
+[wanted-grub] 2026-10-11 01:52:44 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_58_wanted-grub.png
+[wanted-grub] 2026-10-11 01:52:44 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_58_wanted-grub.png
+[wanted-grub] 2026-10-11 01:52:44 | INFO | mask_VAE.runner:774 - Epoch 58/2500 | train_loss: 13961.0868 (bce: 13499.1282, kl/dim: 4.812070) | test_loss: 11610.9293 | test_fg_iou: 0.7249 | test_fg_dice: 0.7969 (N=100) | epoch_time: 307.3s | total: 17975.5s
+[wanted-grub] 2026-10-11 01:57:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_59_wanted-grub.png
+[wanted-grub] 2026-10-11 01:57:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_59_wanted-grub.png
+[wanted-grub] 2026-10-11 01:57:49 | INFO | mask_VAE.runner:774 - Epoch 59/2500 | train_loss: 13922.8816 (bce: 13461.6272, kl/dim: 4.804734) | test_loss: 11596.2150 | test_fg_iou: 0.7227 | test_fg_dice: 0.7954 (N=100) | epoch_time: 304.9s | total: 18280.4s
+[wanted-grub] 2026-10-11 02:02:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_60_wanted-grub.png
+[wanted-grub] 2026-10-11 02:02:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_60_wanted-grub.png
+[wanted-grub] 2026-10-11 02:02:52 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_60.pt
+[wanted-grub] 2026-10-11 02:02:52 | INFO | mask_VAE.runner:774 - Epoch 60/2500 | train_loss: 13877.4302 (bce: 13416.7076, kl/dim: 4.799194) | test_loss: 11921.5868 | test_fg_iou: 0.7221 | test_fg_dice: 0.7951 (N=100) | epoch_time: 303.2s | total: 18583.7s
+[wanted-grub] 2026-10-11 02:08:00 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_61_wanted-grub.png
+[wanted-grub] 2026-10-11 02:08:01 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_61_wanted-grub.png
+[wanted-grub] 2026-10-11 02:08:01 | INFO | mask_VAE.runner:774 - Epoch 61/2500 | train_loss: 13874.8775 (bce: 13410.9595, kl/dim: 4.832480) | test_loss: 11599.3886 | test_fg_iou: 0.7267 | test_fg_dice: 0.7981 (N=100) | epoch_time: 308.3s | total: 18892.0s
+[wanted-grub] 2026-10-11 02:13:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_62_wanted-grub.png
+[wanted-grub] 2026-10-11 02:13:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_62_wanted-grub.png
+[wanted-grub] 2026-10-11 02:13:09 | INFO | mask_VAE.runner:774 - Epoch 62/2500 | train_loss: 13848.0446 (bce: 13385.5316, kl/dim: 4.817844) | test_loss: 11812.9330 | test_fg_iou: 0.7220 | test_fg_dice: 0.7951 (N=100) | epoch_time: 308.7s | total: 19200.6s
+[wanted-grub] 2026-10-11 02:18:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_63_wanted-grub.png
+[wanted-grub] 2026-10-11 02:18:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_63_wanted-grub.png
+[wanted-grub] 2026-10-11 02:18:12 | INFO | mask_VAE.runner:774 - Epoch 63/2500 | train_loss: 13813.0655 (bce: 13350.5336, kl/dim: 4.818041) | test_loss: 11755.2160 | test_fg_iou: 0.7213 | test_fg_dice: 0.7947 (N=100) | epoch_time: 302.9s | total: 19503.6s
+[wanted-grub] 2026-10-11 02:23:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_64_wanted-grub.png
+[wanted-grub] 2026-10-11 02:23:13 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_64_wanted-grub.png
+[wanted-grub] 2026-10-11 02:23:13 | INFO | mask_VAE.runner:774 - Epoch 64/2500 | train_loss: 13772.4867 (bce: 13310.6564, kl/dim: 4.810733) | test_loss: 11787.6299 | test_fg_iou: 0.7235 | test_fg_dice: 0.7963 (N=100) | epoch_time: 300.7s | total: 19804.3s
+[wanted-grub] 2026-10-11 02:28:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_65_wanted-grub.png
+[wanted-grub] 2026-10-11 02:28:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_65_wanted-grub.png
+[wanted-grub] 2026-10-11 02:28:12 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_65.pt
+[wanted-grub] 2026-10-11 02:28:12 | INFO | mask_VAE.runner:774 - Epoch 65/2500 | train_loss: 13746.1680 (bce: 13282.3211, kl/dim: 4.831739) | test_loss: 11608.5687 | test_fg_iou: 0.7232 | test_fg_dice: 0.7959 (N=100) | epoch_time: 299.6s | total: 20103.9s
+[wanted-grub] 2026-10-11 02:33:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_66_wanted-grub.png
+[wanted-grub] 2026-10-11 02:33:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_66_wanted-grub.png
+[wanted-grub] 2026-10-11 02:33:07 | INFO | mask_VAE.runner:774 - Epoch 66/2500 | train_loss: 13704.7897 (bce: 13242.2493, kl/dim: 4.818129) | test_loss: 11799.3103 | test_fg_iou: 0.7214 | test_fg_dice: 0.7948 (N=100) | epoch_time: 294.5s | total: 20398.4s
+[wanted-grub] 2026-10-11 02:38:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_67_wanted-grub.png
+[wanted-grub] 2026-10-11 02:38:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_67_wanted-grub.png
+[wanted-grub] 2026-10-11 02:38:03 | INFO | mask_VAE.runner:774 - Epoch 67/2500 | train_loss: 13710.6990 (bce: 13247.2231, kl/dim: 4.827874) | test_loss: 11411.0370 | test_fg_iou: 0.7261 | test_fg_dice: 0.7978 (N=100) | epoch_time: 296.0s | total: 20694.4s
+[wanted-grub] 2026-10-11 02:42:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_68_wanted-grub.png
+[wanted-grub] 2026-10-11 02:42:59 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_68_wanted-grub.png
+[wanted-grub] 2026-10-11 02:42:59 | INFO | mask_VAE.runner:774 - Epoch 68/2500 | train_loss: 13647.2213 (bce: 13183.8463, kl/dim: 4.826823) | test_loss: 11375.1134 | test_fg_iou: 0.7272 | test_fg_dice: 0.7983 (N=100) | epoch_time: 295.6s | total: 20990.0s
+[wanted-grub] 2026-10-11 02:47:57 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_69_wanted-grub.png
+[wanted-grub] 2026-10-11 02:47:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_69_wanted-grub.png
+[wanted-grub] 2026-10-11 02:47:58 | INFO | mask_VAE.runner:774 - Epoch 69/2500 | train_loss: 13621.0486 (bce: 13158.1696, kl/dim: 4.821656) | test_loss: 11405.7468 | test_fg_iou: 0.7280 | test_fg_dice: 0.7989 (N=100) | epoch_time: 299.0s | total: 21289.0s
+[wanted-grub] 2026-10-11 02:52:57 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_70_wanted-grub.png
+[wanted-grub] 2026-10-11 02:52:57 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_70_wanted-grub.png
+[wanted-grub] 2026-10-11 02:52:57 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_70.pt
+[wanted-grub] 2026-10-11 02:52:57 | INFO | mask_VAE.runner:774 - Epoch 70/2500 | train_loss: 13609.0398 (bce: 13145.1502, kl/dim: 4.832183) | test_loss: 11635.4600 | test_fg_iou: 0.7240 | test_fg_dice: 0.7965 (N=100) | epoch_time: 299.9s | total: 21589.0s
+[wanted-grub] 2026-10-11 02:57:51 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_71_wanted-grub.png
+[wanted-grub] 2026-10-11 02:57:51 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_71_wanted-grub.png
+[wanted-grub] 2026-10-11 02:57:51 | INFO | mask_VAE.runner:774 - Epoch 71/2500 | train_loss: 13576.1127 (bce: 13111.8717, kl/dim: 4.835844) | test_loss: 11489.5841 | test_fg_iou: 0.7274 | test_fg_dice: 0.7984 (N=100) | epoch_time: 293.9s | total: 21882.9s
+[wanted-grub] 2026-10-11 03:02:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_72_wanted-grub.png
+[wanted-grub] 2026-10-11 03:02:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_72_wanted-grub.png
+[wanted-grub] 2026-10-11 03:02:46 | INFO | mask_VAE.runner:774 - Epoch 72/2500 | train_loss: 13587.3914 (bce: 13123.3929, kl/dim: 4.833317) | test_loss: 11414.2648 | test_fg_iou: 0.7288 | test_fg_dice: 0.7994 (N=100) | epoch_time: 294.4s | total: 22177.3s
+[wanted-grub] 2026-10-11 03:07:43 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_73_wanted-grub.png
+[wanted-grub] 2026-10-11 03:07:43 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_73_wanted-grub.png
+[wanted-grub] 2026-10-11 03:07:43 | INFO | mask_VAE.runner:774 - Epoch 73/2500 | train_loss: 13569.0021 (bce: 13104.7849, kl/dim: 4.835596) | test_loss: 11723.7873 | test_fg_iou: 0.7222 | test_fg_dice: 0.7951 (N=100) | epoch_time: 297.3s | total: 22474.6s
+[wanted-grub] 2026-10-11 03:12:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_74_wanted-grub.png
+[wanted-grub] 2026-10-11 03:12:46 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_74_wanted-grub.png
+[wanted-grub] 2026-10-11 03:12:46 | INFO | mask_VAE.runner:774 - Epoch 74/2500 | train_loss: 13489.3086 (bce: 13023.8006, kl/dim: 4.849041) | test_loss: 11587.2973 | test_fg_iou: 0.7272 | test_fg_dice: 0.7985 (N=100) | epoch_time: 303.1s | total: 22777.7s
+[wanted-grub] 2026-10-11 03:17:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_75_wanted-grub.png
+[wanted-grub] 2026-10-11 03:17:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_75_wanted-grub.png
+[wanted-grub] 2026-10-11 03:17:49 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_75.pt
+[wanted-grub] 2026-10-11 03:17:49 | INFO | mask_VAE.runner:774 - Epoch 75/2500 | train_loss: 13507.3297 (bce: 13040.8355, kl/dim: 4.859315) | test_loss: 11418.5690 | test_fg_iou: 0.7283 | test_fg_dice: 0.7991 (N=100) | epoch_time: 302.9s | total: 23080.6s
+[wanted-grub] 2026-10-11 03:22:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_76_wanted-grub.png
+[wanted-grub] 2026-10-11 03:22:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_76_wanted-grub.png
+[wanted-grub] 2026-10-11 03:22:52 | INFO | mask_VAE.runner:774 - Epoch 76/2500 | train_loss: 13472.2747 (bce: 13006.1861, kl/dim: 4.855090) | test_loss: 11483.5213 | test_fg_iou: 0.7282 | test_fg_dice: 0.7993 (N=100) | epoch_time: 302.9s | total: 23383.4s
+[wanted-grub] 2026-10-11 03:27:55 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_77_wanted-grub.png
+[wanted-grub] 2026-10-11 03:27:56 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_77_wanted-grub.png
+[wanted-grub] 2026-10-11 03:27:56 | INFO | mask_VAE.runner:774 - Epoch 77/2500 | train_loss: 13499.9913 (bce: 13035.2327, kl/dim: 4.841236) | test_loss: 11352.3570 | test_fg_iou: 0.7307 | test_fg_dice: 0.8008 (N=100) | epoch_time: 303.8s | total: 23687.2s
+[wanted-grub] 2026-10-11 03:33:01 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_78_wanted-grub.png
+[wanted-grub] 2026-10-11 03:33:01 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_78_wanted-grub.png
+[wanted-grub] 2026-10-11 03:33:01 | INFO | mask_VAE.runner:774 - Epoch 78/2500 | train_loss: 13426.4200 (bce: 12960.4098, kl/dim: 4.854273) | test_loss: 11402.3976 | test_fg_iou: 0.7295 | test_fg_dice: 0.8000 (N=100) | epoch_time: 305.3s | total: 23992.6s
+[wanted-grub] 2026-10-11 03:38:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_79_wanted-grub.png
+[wanted-grub] 2026-10-11 03:38:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_79_wanted-grub.png
+[wanted-grub] 2026-10-11 03:38:07 | INFO | mask_VAE.runner:774 - Epoch 79/2500 | train_loss: 13400.1127 (bce: 12934.4062, kl/dim: 4.851109) | test_loss: 11442.8849 | test_fg_iou: 0.7283 | test_fg_dice: 0.7992 (N=100) | epoch_time: 306.0s | total: 24298.5s
+[wanted-grub] 2026-10-11 03:43:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_80_wanted-grub.png
+[wanted-grub] 2026-10-11 03:43:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_80_wanted-grub.png
+[wanted-grub] 2026-10-11 03:43:11 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_80.pt
+[wanted-grub] 2026-10-11 03:43:11 | INFO | mask_VAE.runner:774 - Epoch 80/2500 | train_loss: 13393.1314 (bce: 12928.0868, kl/dim: 4.844215) | test_loss: 11349.2725 | test_fg_iou: 0.7310 | test_fg_dice: 0.8006 (N=100) | epoch_time: 304.4s | total: 24603.0s
+[wanted-grub] 2026-10-11 03:48:15 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_81_wanted-grub.png
+[wanted-grub] 2026-10-11 03:48:16 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_81_wanted-grub.png
+[wanted-grub] 2026-10-11 03:48:16 | INFO | mask_VAE.runner:774 - Epoch 81/2500 | train_loss: 13369.2237 (bce: 12902.8804, kl/dim: 4.857742) | test_loss: 11225.7365 | test_fg_iou: 0.7301 | test_fg_dice: 0.8000 (N=100) | epoch_time: 304.4s | total: 24907.3s
+[wanted-grub] 2026-10-11 03:53:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_82_wanted-grub.png
+[wanted-grub] 2026-10-11 03:53:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_82_wanted-grub.png
+[wanted-grub] 2026-10-11 03:53:22 | INFO | mask_VAE.runner:774 - Epoch 82/2500 | train_loss: 13364.1688 (bce: 12898.4015, kl/dim: 4.851743) | test_loss: 11408.2911 | test_fg_iou: 0.7277 | test_fg_dice: 0.7986 (N=100) | epoch_time: 306.2s | total: 25213.5s
+[wanted-grub] 2026-10-11 03:58:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_83_wanted-grub.png
+[wanted-grub] 2026-10-11 03:58:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_83_wanted-grub.png
+[wanted-grub] 2026-10-11 03:58:26 | INFO | mask_VAE.runner:774 - Epoch 83/2500 | train_loss: 13309.1825 (bce: 12841.7710, kl/dim: 4.868870) | test_loss: 11543.1328 | test_fg_iou: 0.7252 | test_fg_dice: 0.7973 (N=100) | epoch_time: 304.3s | total: 25517.8s
+[wanted-grub] 2026-10-11 04:03:30 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_84_wanted-grub.png
+[wanted-grub] 2026-10-11 04:03:30 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_84_wanted-grub.png
+[wanted-grub] 2026-10-11 04:03:30 | INFO | mask_VAE.runner:774 - Epoch 84/2500 | train_loss: 13334.7979 (bce: 12868.6031, kl/dim: 4.856196) | test_loss: 11361.7092 | test_fg_iou: 0.7277 | test_fg_dice: 0.7986 (N=100) | epoch_time: 304.1s | total: 25821.9s
+[wanted-grub] 2026-10-11 04:08:37 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_85_wanted-grub.png
+[wanted-grub] 2026-10-11 04:08:37 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_85_wanted-grub.png
+[wanted-grub] 2026-10-11 04:08:37 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_85.pt
+[wanted-grub] 2026-10-11 04:08:37 | INFO | mask_VAE.runner:774 - Epoch 85/2500 | train_loss: 13315.9984 (bce: 12848.8755, kl/dim: 4.865863) | test_loss: 11491.1870 | test_fg_iou: 0.7300 | test_fg_dice: 0.8005 (N=100) | epoch_time: 306.6s | total: 26128.5s
+[wanted-grub] 2026-10-11 04:13:40 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_86_wanted-grub.png
+[wanted-grub] 2026-10-11 04:13:40 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_86_wanted-grub.png
+[wanted-grub] 2026-10-11 04:13:40 | INFO | mask_VAE.runner:774 - Epoch 86/2500 | train_loss: 13270.0139 (bce: 12802.8542, kl/dim: 4.866246) | test_loss: 11361.4429 | test_fg_iou: 0.7321 | test_fg_dice: 0.8016 (N=100) | epoch_time: 303.4s | total: 26431.9s
+[wanted-grub] 2026-10-11 04:18:42 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_87_wanted-grub.png
+[wanted-grub] 2026-10-11 04:18:42 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_87_wanted-grub.png
+[wanted-grub] 2026-10-11 04:18:42 | INFO | mask_VAE.runner:774 - Epoch 87/2500 | train_loss: 13251.5981 (bce: 12784.2266, kl/dim: 4.868452) | test_loss: 11177.3542 | test_fg_iou: 0.7339 | test_fg_dice: 0.8029 (N=100) | epoch_time: 301.9s | total: 26733.8s
+[wanted-grub] 2026-10-11 04:23:43 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_88_wanted-grub.png
+[wanted-grub] 2026-10-11 04:23:43 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_88_wanted-grub.png
+[wanted-grub] 2026-10-11 04:23:43 | INFO | mask_VAE.runner:774 - Epoch 88/2500 | train_loss: 13244.4872 (bce: 12777.4296, kl/dim: 4.865183) | test_loss: 11217.8452 | test_fg_iou: 0.7316 | test_fg_dice: 0.8013 (N=100) | epoch_time: 300.9s | total: 27034.7s
+[wanted-grub] 2026-10-11 04:28:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_89_wanted-grub.png
+[wanted-grub] 2026-10-11 04:28:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_89_wanted-grub.png
+[wanted-grub] 2026-10-11 04:28:38 | INFO | mask_VAE.runner:774 - Epoch 89/2500 | train_loss: 13233.4527 (bce: 12766.1614, kl/dim: 4.867617) | test_loss: 11432.5339 | test_fg_iou: 0.7297 | test_fg_dice: 0.8000 (N=100) | epoch_time: 295.1s | total: 27329.8s
+[wanted-grub] 2026-10-11 04:33:32 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_90_wanted-grub.png
+[wanted-grub] 2026-10-11 04:33:32 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_90_wanted-grub.png
+[wanted-grub] 2026-10-11 04:33:33 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_90.pt
+[wanted-grub] 2026-10-11 04:33:33 | INFO | mask_VAE.runner:774 - Epoch 90/2500 | train_loss: 13186.8467 (bce: 12720.4982, kl/dim: 4.857797) | test_loss: 11187.1380 | test_fg_iou: 0.7303 | test_fg_dice: 0.8004 (N=100) | epoch_time: 294.2s | total: 27624.0s
+[wanted-grub] 2026-10-11 04:38:28 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_91_wanted-grub.png
+[wanted-grub] 2026-10-11 04:38:28 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_91_wanted-grub.png
+[wanted-grub] 2026-10-11 04:38:28 | INFO | mask_VAE.runner:774 - Epoch 91/2500 | train_loss: 13169.7930 (bce: 12701.7962, kl/dim: 4.874966) | test_loss: 11142.4321 | test_fg_iou: 0.7352 | test_fg_dice: 0.8034 (N=100) | epoch_time: 295.5s | total: 27919.5s
+[wanted-grub] 2026-10-11 04:43:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_92_wanted-grub.png
+[wanted-grub] 2026-10-11 04:43:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_92_wanted-grub.png
+[wanted-grub] 2026-10-11 04:43:25 | INFO | mask_VAE.runner:774 - Epoch 92/2500 | train_loss: 13171.8822 (bce: 12703.8622, kl/dim: 4.875208) | test_loss: 11174.7321 | test_fg_iou: 0.7331 | test_fg_dice: 0.8022 (N=100) | epoch_time: 297.2s | total: 28216.7s
+[wanted-grub] 2026-10-11 04:48:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_93_wanted-grub.png
+[wanted-grub] 2026-10-11 04:48:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_93_wanted-grub.png
+[wanted-grub] 2026-10-11 04:48:22 | INFO | mask_VAE.runner:774 - Epoch 93/2500 | train_loss: 13155.8070 (bce: 12686.8973, kl/dim: 4.884476) | test_loss: 11214.5541 | test_fg_iou: 0.7350 | test_fg_dice: 0.8034 (N=100) | epoch_time: 296.3s | total: 28513.0s
+[wanted-grub] 2026-10-11 04:53:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_94_wanted-grub.png
+[wanted-grub] 2026-10-11 04:53:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_94_wanted-grub.png
+[wanted-grub] 2026-10-11 04:53:26 | INFO | mask_VAE.runner:774 - Epoch 94/2500 | train_loss: 13116.4698 (bce: 12647.8668, kl/dim: 4.881281) | test_loss: 11299.5427 | test_fg_iou: 0.7366 | test_fg_dice: 0.8045 (N=100) | epoch_time: 304.3s | total: 28817.3s
+[wanted-grub] 2026-10-11 04:58:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_95_wanted-grub.png
+[wanted-grub] 2026-10-11 04:58:23 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_95_wanted-grub.png
+[wanted-grub] 2026-10-11 04:58:23 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_95.pt
+[wanted-grub] 2026-10-11 04:58:23 | INFO | mask_VAE.runner:774 - Epoch 95/2500 | train_loss: 13113.9653 (bce: 12644.6323, kl/dim: 4.888885) | test_loss: 11610.4743 | test_fg_iou: 0.7305 | test_fg_dice: 0.8006 (N=100) | epoch_time: 297.1s | total: 29114.4s
+[wanted-grub] 2026-10-11 05:03:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_96_wanted-grub.png
+[wanted-grub] 2026-10-11 05:03:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_96_wanted-grub.png
+[wanted-grub] 2026-10-11 05:03:21 | INFO | mask_VAE.runner:774 - Epoch 96/2500 | train_loss: 13104.3793 (bce: 12635.8671, kl/dim: 4.880337) | test_loss: 11314.0237 | test_fg_iou: 0.7354 | test_fg_dice: 0.8037 (N=100) | epoch_time: 298.3s | total: 29412.7s
+[wanted-grub] 2026-10-11 05:08:19 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_97_wanted-grub.png
+[wanted-grub] 2026-10-11 05:08:20 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_97_wanted-grub.png
+[wanted-grub] 2026-10-11 05:08:20 | INFO | mask_VAE.runner:774 - Epoch 97/2500 | train_loss: 13086.7530 (bce: 12618.0122, kl/dim: 4.882716) | test_loss: 11156.0850 | test_fg_iou: 0.7358 | test_fg_dice: 0.8039 (N=100) | epoch_time: 298.6s | total: 29711.3s
+[wanted-grub] 2026-10-11 05:13:24 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_98_wanted-grub.png
+[wanted-grub] 2026-10-11 05:13:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_98_wanted-grub.png
+[wanted-grub] 2026-10-11 05:13:25 | INFO | mask_VAE.runner:774 - Epoch 98/2500 | train_loss: 13077.0862 (bce: 12608.6379, kl/dim: 4.879669) | test_loss: 11252.1995 | test_fg_iou: 0.7332 | test_fg_dice: 0.8023 (N=100) | epoch_time: 305.0s | total: 30016.3s
+[wanted-grub] 2026-10-11 05:18:28 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_99_wanted-grub.png
+[wanted-grub] 2026-10-11 05:18:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_99_wanted-grub.png
+[wanted-grub] 2026-10-11 05:18:29 | INFO | mask_VAE.runner:774 - Epoch 99/2500 | train_loss: 13069.2874 (bce: 12599.9563, kl/dim: 4.888866) | test_loss: 11330.9505 | test_fg_iou: 0.7312 | test_fg_dice: 0.8011 (N=100) | epoch_time: 304.0s | total: 30320.3s
+[wanted-grub] 2026-10-11 05:23:34 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_100_wanted-grub.png
+[wanted-grub] 2026-10-11 05:23:35 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_100_wanted-grub.png
+[wanted-grub] 2026-10-11 05:23:35 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_100.pt
+[wanted-grub] 2026-10-11 05:23:35 | INFO | mask_VAE.runner:774 - Epoch 100/2500 | train_loss: 13074.9639 (bce: 12603.6991, kl/dim: 4.909007) | test_loss: 11384.5052 | test_fg_iou: 0.7281 | test_fg_dice: 0.7990 (N=100) | epoch_time: 305.8s | total: 30626.1s
+[wanted-grub] 2026-10-11 05:28:36 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_101_wanted-grub.png
+[wanted-grub] 2026-10-11 05:28:37 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_101_wanted-grub.png
+[wanted-grub] 2026-10-11 05:28:37 | INFO | mask_VAE.runner:774 - Epoch 101/2500 | train_loss: 13022.0163 (bce: 12552.0391, kl/dim: 4.895596) | test_loss: 11362.9267 | test_fg_iou: 0.7318 | test_fg_dice: 0.8015 (N=100) | epoch_time: 302.0s | total: 30928.1s
+[wanted-grub] 2026-10-11 05:33:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_102_wanted-grub.png
+[wanted-grub] 2026-10-11 05:33:39 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_102_wanted-grub.png
+[wanted-grub] 2026-10-11 05:33:39 | INFO | mask_VAE.runner:774 - Epoch 102/2500 | train_loss: 12980.1888 (bce: 12510.4785, kl/dim: 4.892815) | test_loss: 11125.2033 | test_fg_iou: 0.7322 | test_fg_dice: 0.8017 (N=100) | epoch_time: 301.9s | total: 31230.0s
+[wanted-grub] 2026-10-11 05:38:41 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_103_wanted-grub.png
+[wanted-grub] 2026-10-11 05:38:41 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_103_wanted-grub.png
+[wanted-grub] 2026-10-11 05:38:41 | INFO | mask_VAE.runner:774 - Epoch 103/2500 | train_loss: 13008.6927 (bce: 12538.1502, kl/dim: 4.901484) | test_loss: 10963.6302 | test_fg_iou: 0.7348 | test_fg_dice: 0.8033 (N=100) | epoch_time: 302.9s | total: 31532.8s
+[wanted-grub] 2026-10-11 05:43:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_104_wanted-grub.png
+[wanted-grub] 2026-10-11 05:43:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_104_wanted-grub.png
+[wanted-grub] 2026-10-11 05:43:45 | INFO | mask_VAE.runner:774 - Epoch 104/2500 | train_loss: 12971.2084 (bce: 12500.8269, kl/dim: 4.899807) | test_loss: 11373.8801 | test_fg_iou: 0.7305 | test_fg_dice: 0.8008 (N=100) | epoch_time: 303.9s | total: 31836.8s
+[wanted-grub] 2026-10-11 05:48:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_105_wanted-grub.png
+[wanted-grub] 2026-10-11 05:48:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_105_wanted-grub.png
+[wanted-grub] 2026-10-11 05:48:54 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_105.pt
+[wanted-grub] 2026-10-11 05:48:54 | INFO | mask_VAE.runner:774 - Epoch 105/2500 | train_loss: 13005.6563 (bce: 12534.5712, kl/dim: 4.907136) | test_loss: 11348.7028 | test_fg_iou: 0.7278 | test_fg_dice: 0.7990 (N=100) | epoch_time: 309.1s | total: 32145.9s
+[wanted-grub] 2026-10-11 05:54:02 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_106_wanted-grub.png
+[wanted-grub] 2026-10-11 05:54:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_106_wanted-grub.png
+[wanted-grub] 2026-10-11 05:54:03 | INFO | mask_VAE.runner:774 - Epoch 106/2500 | train_loss: 12983.5448 (bce: 12513.3989, kl/dim: 4.897353) | test_loss: 11226.0871 | test_fg_iou: 0.7309 | test_fg_dice: 0.8008 (N=100) | epoch_time: 308.4s | total: 32454.3s
+[wanted-grub] 2026-10-11 05:59:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_107_wanted-grub.png
+[wanted-grub] 2026-10-11 05:59:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_107_wanted-grub.png
+[wanted-grub] 2026-10-11 05:59:07 | INFO | mask_VAE.runner:774 - Epoch 107/2500 | train_loss: 12950.7780 (bce: 12479.6379, kl/dim: 4.907710) | test_loss: 11473.0393 | test_fg_iou: 0.7312 | test_fg_dice: 0.8012 (N=100) | epoch_time: 304.2s | total: 32758.5s
+[wanted-grub] 2026-10-11 06:04:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_108_wanted-grub.png
+[wanted-grub] 2026-10-11 06:04:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_108_wanted-grub.png
+[wanted-grub] 2026-10-11 06:04:11 | INFO | mask_VAE.runner:774 - Epoch 108/2500 | train_loss: 12940.4514 (bce: 12468.5646, kl/dim: 4.915487) | test_loss: 11236.6180 | test_fg_iou: 0.7320 | test_fg_dice: 0.8016 (N=100) | epoch_time: 303.5s | total: 33062.0s
+[wanted-grub] 2026-10-11 06:09:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_109_wanted-grub.png
+[wanted-grub] 2026-10-11 06:09:13 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_109_wanted-grub.png
+[wanted-grub] 2026-10-11 06:09:13 | INFO | mask_VAE.runner:774 - Epoch 109/2500 | train_loss: 12941.1346 (bce: 12469.5341, kl/dim: 4.912505) | test_loss: 10906.2821 | test_fg_iou: 0.7391 | test_fg_dice: 0.8060 (N=100) | epoch_time: 302.3s | total: 33364.3s
+[wanted-grub] 2026-10-11 06:14:14 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_110_wanted-grub.png
+[wanted-grub] 2026-10-11 06:14:15 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_110_wanted-grub.png
+[wanted-grub] 2026-10-11 06:14:15 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_110.pt
+[wanted-grub] 2026-10-11 06:14:15 | INFO | mask_VAE.runner:774 - Epoch 110/2500 | train_loss: 12960.8397 (bce: 12489.3511, kl/dim: 4.911339) | test_loss: 10995.6862 | test_fg_iou: 0.7363 | test_fg_dice: 0.8042 (N=100) | epoch_time: 302.1s | total: 33666.4s
+[wanted-grub] 2026-10-11 06:19:16 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_111_wanted-grub.png
+[wanted-grub] 2026-10-11 06:19:16 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_111_wanted-grub.png
+[wanted-grub] 2026-10-11 06:19:16 | INFO | mask_VAE.runner:774 - Epoch 111/2500 | train_loss: 12931.9670 (bce: 12459.3368, kl/dim: 4.923231) | test_loss: 10922.2842 | test_fg_iou: 0.7373 | test_fg_dice: 0.8046 (N=100) | epoch_time: 301.5s | total: 33967.9s
+[wanted-grub] 2026-10-11 06:24:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_112_wanted-grub.png
+[wanted-grub] 2026-10-11 06:24:22 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_112_wanted-grub.png
+[wanted-grub] 2026-10-11 06:24:22 | INFO | mask_VAE.runner:774 - Epoch 112/2500 | train_loss: 12892.0453 (bce: 12420.3690, kl/dim: 4.913295) | test_loss: 11195.9566 | test_fg_iou: 0.7356 | test_fg_dice: 0.8037 (N=100) | epoch_time: 305.4s | total: 34273.3s
+[wanted-grub] 2026-10-11 06:29:28 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_113_wanted-grub.png
+[wanted-grub] 2026-10-11 06:29:29 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_113_wanted-grub.png
+[wanted-grub] 2026-10-11 06:29:29 | INFO | mask_VAE.runner:774 - Epoch 113/2500 | train_loss: 12916.4584 (bce: 12444.6062, kl/dim: 4.915127) | test_loss: 11109.5182 | test_fg_iou: 0.7356 | test_fg_dice: 0.8037 (N=100) | epoch_time: 306.7s | total: 34580.0s
+[wanted-grub] 2026-10-11 06:34:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_114_wanted-grub.png
+[wanted-grub] 2026-10-11 06:34:39 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_114_wanted-grub.png
+[wanted-grub] 2026-10-11 06:34:39 | INFO | mask_VAE.runner:774 - Epoch 114/2500 | train_loss: 12871.0519 (bce: 12399.2934, kl/dim: 4.914151) | test_loss: 11108.6339 | test_fg_iou: 0.7357 | test_fg_dice: 0.8037 (N=100) | epoch_time: 310.2s | total: 34890.2s
+[wanted-grub] 2026-10-11 06:39:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_115_wanted-grub.png
+[wanted-grub] 2026-10-11 06:39:52 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_115_wanted-grub.png
+[wanted-grub] 2026-10-11 06:39:53 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_115.pt
+[wanted-grub] 2026-10-11 06:39:53 | INFO | mask_VAE.runner:774 - Epoch 115/2500 | train_loss: 12883.3576 (bce: 12410.7362, kl/dim: 4.923139) | test_loss: 11015.0957 | test_fg_iou: 0.7354 | test_fg_dice: 0.8036 (N=100) | epoch_time: 313.8s | total: 35204.0s
+[wanted-grub] 2026-10-11 06:45:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_116_wanted-grub.png
+[wanted-grub] 2026-10-11 06:45:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_116_wanted-grub.png
+[wanted-grub] 2026-10-11 06:45:07 | INFO | mask_VAE.runner:774 - Epoch 116/2500 | train_loss: 12836.5197 (bce: 12364.2841, kl/dim: 4.919120) | test_loss: 11322.4561 | test_fg_iou: 0.7346 | test_fg_dice: 0.8033 (N=100) | epoch_time: 314.4s | total: 35518.4s
+[wanted-grub] 2026-10-11 06:50:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_117_wanted-grub.png
+[wanted-grub] 2026-10-11 06:50:21 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_117_wanted-grub.png
+[wanted-grub] 2026-10-11 06:50:21 | INFO | mask_VAE.runner:774 - Epoch 117/2500 | train_loss: 12856.2544 (bce: 12383.0917, kl/dim: 4.928778) | test_loss: 10945.7964 | test_fg_iou: 0.7378 | test_fg_dice: 0.8052 (N=100) | epoch_time: 314.2s | total: 35832.6s
+[wanted-grub] 2026-10-11 06:55:33 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_118_wanted-grub.png
+[wanted-grub] 2026-10-11 06:55:34 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_118_wanted-grub.png
+[wanted-grub] 2026-10-11 06:55:34 | INFO | mask_VAE.runner:774 - Epoch 118/2500 | train_loss: 12839.3354 (bce: 12366.1408, kl/dim: 4.929110) | test_loss: 11495.7632 | test_fg_iou: 0.7311 | test_fg_dice: 0.8008 (N=100) | epoch_time: 312.5s | total: 36145.1s
+[wanted-grub] 2026-10-11 07:00:34 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_119_wanted-grub.png
+[wanted-grub] 2026-10-11 07:00:35 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_119_wanted-grub.png
+[wanted-grub] 2026-10-11 07:00:35 | INFO | mask_VAE.runner:774 - Epoch 119/2500 | train_loss: 12821.2924 (bce: 12348.1750, kl/dim: 4.928305) | test_loss: 10940.8766 | test_fg_iou: 0.7374 | test_fg_dice: 0.8049 (N=100) | epoch_time: 301.2s | total: 36446.3s
+[wanted-grub] 2026-10-11 07:05:36 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_120_wanted-grub.png
+[wanted-grub] 2026-10-11 07:05:37 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_120_wanted-grub.png
+[wanted-grub] 2026-10-11 07:05:37 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_120.pt
+[wanted-grub] 2026-10-11 07:05:37 | INFO | mask_VAE.runner:774 - Epoch 120/2500 | train_loss: 12838.7905 (bce: 12366.9623, kl/dim: 4.914877) | test_loss: 11206.4413 | test_fg_iou: 0.7371 | test_fg_dice: 0.8049 (N=100) | epoch_time: 302.0s | total: 36748.3s
+[wanted-grub] 2026-10-11 07:10:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_121_wanted-grub.png
+[wanted-grub] 2026-10-11 07:10:38 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_121_wanted-grub.png
+[wanted-grub] 2026-10-11 07:10:38 | INFO | mask_VAE.runner:774 - Epoch 121/2500 | train_loss: 12828.0338 (bce: 12355.7199, kl/dim: 4.919935) | test_loss: 11046.4414 | test_fg_iou: 0.7372 | test_fg_dice: 0.8047 (N=100) | epoch_time: 301.5s | total: 37049.8s
+[wanted-grub] 2026-10-11 07:15:43 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_122_wanted-grub.png
+[wanted-grub] 2026-10-11 07:15:43 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_122_wanted-grub.png
+[wanted-grub] 2026-10-11 07:15:43 | INFO | mask_VAE.runner:774 - Epoch 122/2500 | train_loss: 12819.3689 (bce: 12345.9667, kl/dim: 4.931273) | test_loss: 10936.6215 | test_fg_iou: 0.7368 | test_fg_dice: 0.8048 (N=100) | epoch_time: 305.0s | total: 37354.8s
+[wanted-grub] 2026-10-11 07:20:48 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_123_wanted-grub.png
+[wanted-grub] 2026-10-11 07:20:49 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_123_wanted-grub.png
+[wanted-grub] 2026-10-11 07:20:49 | INFO | mask_VAE.runner:774 - Epoch 123/2500 | train_loss: 12800.0503 (bce: 12327.7438, kl/dim: 4.919859) | test_loss: 11236.4787 | test_fg_iou: 0.7314 | test_fg_dice: 0.8015 (N=100) | epoch_time: 305.5s | total: 37660.3s
+[wanted-grub] 2026-10-11 07:25:53 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_124_wanted-grub.png
+[wanted-grub] 2026-10-11 07:25:54 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_124_wanted-grub.png
+[wanted-grub] 2026-10-11 07:25:54 | INFO | mask_VAE.runner:774 - Epoch 124/2500 | train_loss: 12796.7804 (bce: 12323.4003, kl/dim: 4.931042) | test_loss: 11157.0307 | test_fg_iou: 0.7334 | test_fg_dice: 0.8024 (N=100) | epoch_time: 304.9s | total: 37965.2s
+[wanted-grub] 2026-10-11 07:30:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_125_wanted-grub.png
+[wanted-grub] 2026-10-11 07:30:59 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_125_wanted-grub.png
+[wanted-grub] 2026-10-11 07:30:59 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_125.pt
+[wanted-grub] 2026-10-11 07:30:59 | INFO | mask_VAE.runner:774 - Epoch 125/2500 | train_loss: 12786.7344 (bce: 12312.8113, kl/dim: 4.936699) | test_loss: 11159.3404 | test_fg_iou: 0.7380 | test_fg_dice: 0.8054 (N=100) | epoch_time: 305.3s | total: 38270.5s
+[wanted-grub] 2026-10-11 07:36:02 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_126_wanted-grub.png
+[wanted-grub] 2026-10-11 07:36:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_126_wanted-grub.png
+[wanted-grub] 2026-10-11 07:36:03 | INFO | mask_VAE.runner:774 - Epoch 126/2500 | train_loss: 12753.8241 (bce: 12280.1070, kl/dim: 4.934553) | test_loss: 11436.6787 | test_fg_iou: 0.7356 | test_fg_dice: 0.8041 (N=100) | epoch_time: 303.9s | total: 38574.4s
+[wanted-grub] 2026-10-11 07:41:05 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_127_wanted-grub.png
+[wanted-grub] 2026-10-11 07:41:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_127_wanted-grub.png
+[wanted-grub] 2026-10-11 07:41:06 | INFO | mask_VAE.runner:774 - Epoch 127/2500 | train_loss: 12763.1161 (bce: 12289.9343, kl/dim: 4.928977) | test_loss: 11347.0115 | test_fg_iou: 0.7311 | test_fg_dice: 0.8010 (N=100) | epoch_time: 302.9s | total: 38877.3s
+[wanted-grub] 2026-10-11 07:46:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_128_wanted-grub.png
+[wanted-grub] 2026-10-11 07:46:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_128_wanted-grub.png
+[wanted-grub] 2026-10-11 07:46:08 | INFO | mask_VAE.runner:774 - Epoch 128/2500 | train_loss: 12754.9409 (bce: 12281.0453, kl/dim: 4.936413) | test_loss: 10970.6414 | test_fg_iou: 0.7395 | test_fg_dice: 0.8063 (N=100) | epoch_time: 302.1s | total: 39179.3s
+[wanted-grub] 2026-10-11 07:51:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_129_wanted-grub.png
+[wanted-grub] 2026-10-11 07:51:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_129_wanted-grub.png
+[wanted-grub] 2026-10-11 07:51:11 | INFO | mask_VAE.runner:774 - Epoch 129/2500 | train_loss: 12711.3944 (bce: 12237.6177, kl/dim: 4.935175) | test_loss: 11061.5607 | test_fg_iou: 0.7405 | test_fg_dice: 0.8068 (N=100) | epoch_time: 303.6s | total: 39482.9s
+[wanted-grub] 2026-10-11 07:56:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_130_wanted-grub.png
+[wanted-grub] 2026-10-11 07:56:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_130_wanted-grub.png
+[wanted-grub] 2026-10-11 07:56:12 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_130.pt
+[wanted-grub] 2026-10-11 07:56:12 | INFO | mask_VAE.runner:774 - Epoch 130/2500 | train_loss: 12742.6288 (bce: 12269.0645, kl/dim: 4.932961) | test_loss: 10915.5223 | test_fg_iou: 0.7405 | test_fg_dice: 0.8069 (N=100) | epoch_time: 300.6s | total: 39783.5s
+[wanted-grub] 2026-10-11 08:01:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_131_wanted-grub.png
+[wanted-grub] 2026-10-11 08:01:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_131_wanted-grub.png
+[wanted-grub] 2026-10-11 08:01:09 | INFO | mask_VAE.runner:774 - Epoch 131/2500 | train_loss: 12717.0781 (bce: 12242.7649, kl/dim: 4.940763) | test_loss: 11075.8853 | test_fg_iou: 0.7360 | test_fg_dice: 0.8041 (N=100) | epoch_time: 297.2s | total: 40080.7s
+[wanted-grub] 2026-10-11 08:06:07 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_132_wanted-grub.png
+[wanted-grub] 2026-10-11 08:06:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_132_wanted-grub.png
+[wanted-grub] 2026-10-11 08:06:08 | INFO | mask_VAE.runner:774 - Epoch 132/2500 | train_loss: 12702.8818 (bce: 12228.9123, kl/dim: 4.937182) | test_loss: 10848.5720 | test_fg_iou: 0.7373 | test_fg_dice: 0.8050 (N=100) | epoch_time: 298.6s | total: 40379.3s
+[wanted-grub] 2026-10-11 08:11:05 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_133_wanted-grub.png
+[wanted-grub] 2026-10-11 08:11:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_133_wanted-grub.png
+[wanted-grub] 2026-10-11 08:11:06 | INFO | mask_VAE.runner:774 - Epoch 133/2500 | train_loss: 12710.7574 (bce: 12236.0778, kl/dim: 4.944578) | test_loss: 10967.6640 | test_fg_iou: 0.7423 | test_fg_dice: 0.8080 (N=100) | epoch_time: 297.7s | total: 40677.1s
+[wanted-grub] 2026-10-11 08:16:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_134_wanted-grub.png
+[wanted-grub] 2026-10-11 08:16:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_134_wanted-grub.png
+[wanted-grub] 2026-10-11 08:16:04 | INFO | mask_VAE.runner:774 - Epoch 134/2500 | train_loss: 12711.7536 (bce: 12236.7604, kl/dim: 4.947845) | test_loss: 11098.5152 | test_fg_iou: 0.7389 | test_fg_dice: 0.8059 (N=100) | epoch_time: 298.5s | total: 40975.5s
+[wanted-grub] 2026-10-11 08:21:02 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_135_wanted-grub.png
+[wanted-grub] 2026-10-11 08:21:02 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_135_wanted-grub.png
+[wanted-grub] 2026-10-11 08:21:02 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_135.pt
+[wanted-grub] 2026-10-11 08:21:02 | INFO | mask_VAE.runner:774 - Epoch 135/2500 | train_loss: 12723.1748 (bce: 12247.7504, kl/dim: 4.952338) | test_loss: 10922.9999 | test_fg_iou: 0.7421 | test_fg_dice: 0.8079 (N=100) | epoch_time: 298.0s | total: 41273.5s
+[wanted-grub] 2026-10-11 08:25:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_136_wanted-grub.png
+[wanted-grub] 2026-10-11 08:25:58 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_136_wanted-grub.png
+[wanted-grub] 2026-10-11 08:25:58 | INFO | mask_VAE.runner:774 - Epoch 136/2500 | train_loss: 12682.2022 (bce: 12207.8548, kl/dim: 4.941119) | test_loss: 10897.8153 | test_fg_iou: 0.7380 | test_fg_dice: 0.8051 (N=100) | epoch_time: 295.9s | total: 41569.5s
+[wanted-grub] 2026-10-11 08:30:50 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_137_wanted-grub.png
+[wanted-grub] 2026-10-11 08:30:51 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_137_wanted-grub.png
+[wanted-grub] 2026-10-11 08:30:51 | INFO | mask_VAE.runner:774 - Epoch 137/2500 | train_loss: 12681.4594 (bce: 12205.5439, kl/dim: 4.957453) | test_loss: 11297.2512 | test_fg_iou: 0.7391 | test_fg_dice: 0.8059 (N=100) | epoch_time: 292.8s | total: 41862.3s
+[wanted-grub] 2026-10-11 08:35:44 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_138_wanted-grub.png
+[wanted-grub] 2026-10-11 08:35:45 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_138_wanted-grub.png
+[wanted-grub] 2026-10-11 08:35:45 | INFO | mask_VAE.runner:774 - Epoch 138/2500 | train_loss: 12698.5944 (bce: 12224.0877, kl/dim: 4.942778) | test_loss: 11040.1776 | test_fg_iou: 0.7361 | test_fg_dice: 0.8042 (N=100) | epoch_time: 293.9s | total: 42156.2s
+[wanted-grub] 2026-10-11 08:40:36 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_139_wanted-grub.png
+[wanted-grub] 2026-10-11 08:40:36 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_139_wanted-grub.png
+[wanted-grub] 2026-10-11 08:40:36 | INFO | mask_VAE.runner:774 - Epoch 139/2500 | train_loss: 12662.4437 (bce: 12187.1128, kl/dim: 4.951363) | test_loss: 10924.7193 | test_fg_iou: 0.7411 | test_fg_dice: 0.8073 (N=100) | epoch_time: 291.7s | total: 42447.9s
+[wanted-grub] 2026-10-11 08:45:25 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_140_wanted-grub.png
+[wanted-grub] 2026-10-11 08:45:26 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_140_wanted-grub.png
+[wanted-grub] 2026-10-11 08:45:26 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_140.pt
+[wanted-grub] 2026-10-11 08:45:26 | INFO | mask_VAE.runner:774 - Epoch 140/2500 | train_loss: 12634.9167 (bce: 12159.8841, kl/dim: 4.948256) | test_loss: 11038.3199 | test_fg_iou: 0.7374 | test_fg_dice: 0.8049 (N=100) | epoch_time: 289.3s | total: 42737.2s
+[wanted-grub] 2026-10-11 08:50:17 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_141_wanted-grub.png
+[wanted-grub] 2026-10-11 08:50:17 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_141_wanted-grub.png
+[wanted-grub] 2026-10-11 08:50:17 | INFO | mask_VAE.runner:774 - Epoch 141/2500 | train_loss: 12654.9980 (bce: 12179.4035, kl/dim: 4.954109) | test_loss: 10961.7490 | test_fg_iou: 0.7393 | test_fg_dice: 0.8062 (N=100) | epoch_time: 291.4s | total: 43028.6s
+[wanted-grub] 2026-10-11 08:55:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_142_wanted-grub.png
+[wanted-grub] 2026-10-11 08:55:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_142_wanted-grub.png
+[wanted-grub] 2026-10-11 08:55:11 | INFO | mask_VAE.runner:774 - Epoch 142/2500 | train_loss: 12642.4829 (bce: 12167.2372, kl/dim: 4.950476) | test_loss: 11037.5335 | test_fg_iou: 0.7381 | test_fg_dice: 0.8054 (N=100) | epoch_time: 293.4s | total: 43322.0s
+[wanted-grub] 2026-10-11 09:00:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_143_wanted-grub.png
+[wanted-grub] 2026-10-11 09:00:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_143_wanted-grub.png
+[wanted-grub] 2026-10-11 09:00:12 | INFO | mask_VAE.runner:774 - Epoch 143/2500 | train_loss: 12628.7634 (bce: 12153.3726, kl/dim: 4.951988) | test_loss: 10871.9896 | test_fg_iou: 0.7401 | test_fg_dice: 0.8066 (N=100) | epoch_time: 301.8s | total: 43623.8s
+[wanted-grub] 2026-10-11 09:05:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_144_wanted-grub.png
+[wanted-grub] 2026-10-11 09:05:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_144_wanted-grub.png
+[wanted-grub] 2026-10-11 09:05:11 | INFO | mask_VAE.runner:774 - Epoch 144/2500 | train_loss: 12641.0840 (bce: 12166.0554, kl/dim: 4.948215) | test_loss: 11060.4614 | test_fg_iou: 0.7371 | test_fg_dice: 0.8046 (N=100) | epoch_time: 299.0s | total: 43922.8s
+[wanted-grub] 2026-10-11 09:10:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_145_wanted-grub.png
+[wanted-grub] 2026-10-11 09:10:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_145_wanted-grub.png
+[wanted-grub] 2026-10-11 09:10:12 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_145.pt
+[wanted-grub] 2026-10-11 09:10:12 | INFO | mask_VAE.runner:774 - Epoch 145/2500 | train_loss: 12613.8090 (bce: 12139.2253, kl/dim: 4.943580) | test_loss: 11297.0039 | test_fg_iou: 0.7375 | test_fg_dice: 0.8049 (N=100) | epoch_time: 301.0s | total: 44223.8s
+[wanted-grub] 2026-10-11 09:15:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_146_wanted-grub.png
+[wanted-grub] 2026-10-11 09:15:13 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_146_wanted-grub.png
+[wanted-grub] 2026-10-11 09:15:13 | INFO | mask_VAE.runner:774 - Epoch 146/2500 | train_loss: 12598.7610 (bce: 12123.4918, kl/dim: 4.950721) | test_loss: 11061.1961 | test_fg_iou: 0.7392 | test_fg_dice: 0.8059 (N=100) | epoch_time: 300.6s | total: 44524.4s
+[wanted-grub] 2026-10-11 09:20:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_147_wanted-grub.png
+[wanted-grub] 2026-10-11 09:20:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_147_wanted-grub.png
+[wanted-grub] 2026-10-11 09:20:11 | INFO | mask_VAE.runner:774 - Epoch 147/2500 | train_loss: 12580.0306 (bce: 12104.9946, kl/dim: 4.948291) | test_loss: 10991.4482 | test_fg_iou: 0.7417 | test_fg_dice: 0.8076 (N=100) | epoch_time: 297.6s | total: 44822.0s
+[wanted-grub] 2026-10-11 09:25:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_148_wanted-grub.png
+[wanted-grub] 2026-10-11 09:25:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_148_wanted-grub.png
+[wanted-grub] 2026-10-11 09:25:10 | INFO | mask_VAE.runner:774 - Epoch 148/2500 | train_loss: 12541.7147 (bce: 12066.2647, kl/dim: 4.952604) | test_loss: 10841.4318 | test_fg_iou: 0.7429 | test_fg_dice: 0.8084 (N=100) | epoch_time: 299.2s | total: 45121.2s
+[wanted-grub] 2026-10-11 09:30:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_149_wanted-grub.png
+[wanted-grub] 2026-10-11 09:30:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_149_wanted-grub.png
+[wanted-grub] 2026-10-11 09:30:08 | INFO | mask_VAE.runner:774 - Epoch 149/2500 | train_loss: 12549.8737 (bce: 12074.1130, kl/dim: 4.955840) | test_loss: 11175.9024 | test_fg_iou: 0.7412 | test_fg_dice: 0.8072 (N=100) | epoch_time: 298.3s | total: 45419.6s
+[wanted-grub] 2026-10-11 09:35:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_150_wanted-grub.png
+[wanted-grub] 2026-10-11 09:35:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_150_wanted-grub.png
+[wanted-grub] 2026-10-11 09:35:09 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_150.pt
+[wanted-grub] 2026-10-11 09:35:09 | INFO | mask_VAE.runner:774 - Epoch 150/2500 | train_loss: 12584.9044 (bce: 12109.1333, kl/dim: 4.955948) | test_loss: 10961.3725 | test_fg_iou: 0.7428 | test_fg_dice: 0.8083 (N=100) | epoch_time: 301.3s | total: 45720.9s
+[wanted-grub] 2026-10-11 09:40:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_151_wanted-grub.png
+[wanted-grub] 2026-10-11 09:40:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_151_wanted-grub.png
+[wanted-grub] 2026-10-11 09:40:12 | INFO | mask_VAE.runner:774 - Epoch 151/2500 | train_loss: 12558.7883 (bce: 12082.8357, kl/dim: 4.957840) | test_loss: 11511.2151 | test_fg_iou: 0.7354 | test_fg_dice: 0.8037 (N=100) | epoch_time: 302.1s | total: 46023.0s
+[wanted-grub] 2026-10-11 09:45:10 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_152_wanted-grub.png
+[wanted-grub] 2026-10-11 09:45:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_152_wanted-grub.png
+[wanted-grub] 2026-10-11 09:45:11 | INFO | mask_VAE.runner:774 - Epoch 152/2500 | train_loss: 12581.4462 (bce: 12105.0077, kl/dim: 4.962901) | test_loss: 10922.6734 | test_fg_iou: 0.7386 | test_fg_dice: 0.8057 (N=100) | epoch_time: 299.2s | total: 46322.3s
+[wanted-grub] 2026-10-11 09:50:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_153_wanted-grub.png
+[wanted-grub] 2026-10-11 09:50:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_153_wanted-grub.png
+[wanted-grub] 2026-10-11 09:50:11 | INFO | mask_VAE.runner:774 - Epoch 153/2500 | train_loss: 12531.3468 (bce: 12055.5306, kl/dim: 4.956419) | test_loss: 10925.9138 | test_fg_iou: 0.7443 | test_fg_dice: 0.8093 (N=100) | epoch_time: 300.5s | total: 46622.7s
+[wanted-grub] 2026-10-11 09:55:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_154_wanted-grub.png
+[wanted-grub] 2026-10-11 09:55:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_154_wanted-grub.png
+[wanted-grub] 2026-10-11 09:55:12 | INFO | mask_VAE.runner:774 - Epoch 154/2500 | train_loss: 12515.8697 (bce: 12039.3917, kl/dim: 4.963312) | test_loss: 11076.8788 | test_fg_iou: 0.7419 | test_fg_dice: 0.8078 (N=100) | epoch_time: 300.9s | total: 46923.6s
+[wanted-grub] 2026-10-11 10:00:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_155_wanted-grub.png
+[wanted-grub] 2026-10-11 10:00:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_155_wanted-grub.png
+[wanted-grub] 2026-10-11 10:00:09 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_155.pt
+[wanted-grub] 2026-10-11 10:00:09 | INFO | mask_VAE.runner:774 - Epoch 155/2500 | train_loss: 12563.2436 (bce: 12086.9246, kl/dim: 4.961657) | test_loss: 11032.0767 | test_fg_iou: 0.7424 | test_fg_dice: 0.8080 (N=100) | epoch_time: 296.4s | total: 47220.0s
+[wanted-grub] 2026-10-11 10:05:05 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_156_wanted-grub.png
+[wanted-grub] 2026-10-11 10:05:05 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_156_wanted-grub.png
+[wanted-grub] 2026-10-11 10:05:05 | INFO | mask_VAE.runner:774 - Epoch 156/2500 | train_loss: 12538.3774 (bce: 12062.3273, kl/dim: 4.958855) | test_loss: 11214.3475 | test_fg_iou: 0.7399 | test_fg_dice: 0.8065 (N=100) | epoch_time: 296.5s | total: 47516.5s
+[wanted-grub] 2026-10-11 10:10:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_157_wanted-grub.png
+[wanted-grub] 2026-10-11 10:10:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_157_wanted-grub.png
+[wanted-grub] 2026-10-11 10:10:04 | INFO | mask_VAE.runner:774 - Epoch 157/2500 | train_loss: 12530.4479 (bce: 12054.7493, kl/dim: 4.955194) | test_loss: 11051.8448 | test_fg_iou: 0.7434 | test_fg_dice: 0.8088 (N=100) | epoch_time: 299.4s | total: 47815.9s
+[wanted-grub] 2026-10-11 10:15:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_158_wanted-grub.png
+[wanted-grub] 2026-10-11 10:15:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_158_wanted-grub.png
+[wanted-grub] 2026-10-11 10:15:04 | INFO | mask_VAE.runner:774 - Epoch 158/2500 | train_loss: 12536.9372 (bce: 12060.3574, kl/dim: 4.964372) | test_loss: 10841.5198 | test_fg_iou: 0.7427 | test_fg_dice: 0.8082 (N=100) | epoch_time: 299.8s | total: 48115.7s
+[wanted-grub] 2026-10-11 10:20:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_159_wanted-grub.png
+[wanted-grub] 2026-10-11 10:20:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_159_wanted-grub.png
+[wanted-grub] 2026-10-11 10:20:04 | INFO | mask_VAE.runner:774 - Epoch 159/2500 | train_loss: 12499.2844 (bce: 12023.3656, kl/dim: 4.957487) | test_loss: 11375.8435 | test_fg_iou: 0.7372 | test_fg_dice: 0.8049 (N=100) | epoch_time: 299.6s | total: 48415.3s
+[wanted-grub] 2026-10-11 10:25:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_160_wanted-grub.png
+[wanted-grub] 2026-10-11 10:25:04 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_160_wanted-grub.png
+[wanted-grub] 2026-10-11 10:25:04 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_160.pt
+[wanted-grub] 2026-10-11 10:25:04 | INFO | mask_VAE.runner:774 - Epoch 160/2500 | train_loss: 12494.3070 (bce: 12019.2178, kl/dim: 4.948845) | test_loss: 11173.1488 | test_fg_iou: 0.7394 | test_fg_dice: 0.8063 (N=100) | epoch_time: 300.0s | total: 48715.3s
+[wanted-grub] 2026-10-11 10:30:01 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_161_wanted-grub.png
+[wanted-grub] 2026-10-11 10:30:02 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_161_wanted-grub.png
+[wanted-grub] 2026-10-11 10:30:02 | INFO | mask_VAE.runner:774 - Epoch 161/2500 | train_loss: 12492.7632 (bce: 12016.1169, kl/dim: 4.965065) | test_loss: 10865.7179 | test_fg_iou: 0.7421 | test_fg_dice: 0.8078 (N=100) | epoch_time: 297.8s | total: 49013.1s
+[wanted-grub] 2026-10-11 10:35:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_162_wanted-grub.png
+[wanted-grub] 2026-10-11 10:35:03 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_162_wanted-grub.png
+[wanted-grub] 2026-10-11 10:35:03 | INFO | mask_VAE.runner:774 - Epoch 162/2500 | train_loss: 12489.5792 (bce: 12012.9894, kl/dim: 4.964477) | test_loss: 10765.3957 | test_fg_iou: 0.7476 | test_fg_dice: 0.8113 (N=100) | epoch_time: 301.8s | total: 49315.0s
+[wanted-grub] 2026-10-11 10:40:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_163_wanted-grub.png
+[wanted-grub] 2026-10-11 10:40:06 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_163_wanted-grub.png
+[wanted-grub] 2026-10-11 10:40:06 | INFO | mask_VAE.runner:774 - Epoch 163/2500 | train_loss: 12498.6719 (bce: 12021.5416, kl/dim: 4.970107) | test_loss: 10999.3574 | test_fg_iou: 0.7403 | test_fg_dice: 0.8067 (N=100) | epoch_time: 302.5s | total: 49617.5s
+[wanted-grub] 2026-10-11 10:45:08 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_164_wanted-grub.png
+[wanted-grub] 2026-10-11 10:45:09 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_164_wanted-grub.png
+[wanted-grub] 2026-10-11 10:45:09 | INFO | mask_VAE.runner:774 - Epoch 164/2500 | train_loss: 12476.7424 (bce: 12000.1604, kl/dim: 4.964396) | test_loss: 11134.4059 | test_fg_iou: 0.7379 | test_fg_dice: 0.8055 (N=100) | epoch_time: 302.6s | total: 49920.1s
+[wanted-grub] 2026-10-11 10:50:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_165_wanted-grub.png
+[wanted-grub] 2026-10-11 10:50:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_165_wanted-grub.png
+[wanted-grub] 2026-10-11 10:50:12 | INFO | mask_VAE.runner:662 - Saved checkpoint to ./mask_VAE/models/mask_vae_wanted-grub_epoch_165.pt
+[wanted-grub] 2026-10-11 10:50:12 | INFO | mask_VAE.runner:774 - Epoch 165/2500 | train_loss: 12485.6143 (bce: 12008.6775, kl/dim: 4.968092) | test_loss: 11027.6444 | test_fg_iou: 0.7418 | test_fg_dice: 0.8076 (N=100) | epoch_time: 303.4s | total: 50223.5s
+[wanted-grub] 2026-10-11 10:55:11 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/reconstruction_epoch_166_wanted-grub.png
+[wanted-grub] 2026-10-11 10:55:12 | INFO | mask_VAE.runner:222 - Saved colorized grid to mask_VAE/outputs/generation_epoch_166_wanted-grub.png
+[wanted-grub] 2026-10-11 10:55:12 | INFO | mask_VAE.runner:774 - Epoch 166/2500 | train_loss: 12465.1253 (bce: 11989.3618, kl/dim: 4.955869) | test_loss: 10785.6170 | test_fg_iou: 0.7468 | test_fg_dice: 0.8107 (N=100) | epoch_time: 299.6s | total: 50523.1s

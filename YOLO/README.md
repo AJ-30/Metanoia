@@ -1,13 +1,13 @@
 # YOLO — Detection on Live Conditional-Diffusion Overlays
 
 Finetunes the latest Mac-compatible Ultralytics YOLO (**YOLO26n**, Jan 2026,
-Roboflow-supported, MPS/CPU friendly) to predict the dataset's ground-truth
-furniture boxes on images drawn **live from the frozen floorplan→arrangement
-diffusion model** (`conditional_diffusion_strong-fawn_epoch_2480`, TV-inclusive).
+Roboflow-supported, MPS/CPU friendly) to detect furniture on images drawn
+**live from the frozen floorplan→arrangement diffusion model**
+(`conditional_diffusion_strong-fawn_epoch_2480`, TV-inclusive).
 
 There is NO fixed train dataset. Per run, `LIVE_TRAIN_SAMPLES` train stems are
 selected once from the live mask dataset; before epoch 1 and at the end of
-every epoch (Ultralytics `on_train_epoch_end` callback) every train PNG is
+every epoch (Ultralytics `on_train_epoch_end` callback) every train image is
 redrawn from a fresh diffusion draw conditioned on the GT floorplan mask:
 
 1. GT `floorplan_segmentation.png` → frozen floorplan VAE encoder → condition
@@ -17,21 +17,60 @@ redrawn from a fresh diffusion draw conditioned on the GT floorplan mask:
 3. Latent → frozen TV-inclusive arrangement decoder → furniture render blended
    over the GT floorplan base with `LIVE_OVERLAY_ALPHA` (the same
    `overlay_furniture_on_floorplan` helper the conditional-diffusion grids use).
-4. GT `labels.txt` boxes are copied **verbatim** as the target, even though the
-   sampled furniture will generally not coincide with them spatially. This is
-   an intentional noisy-label regime: YOLO learns a floorplan-conditioned
-   layout prior. Expect lower mAP than the reconstruction baseline.
+4. **Boxes are derived from the arrangement that was just drawn** — connected
+   components per furniture class (`connected_component_boxes`), mapped through
+   `mask→YOLO id` and written as normalized `cls cx cy w h`. Image and label
+   therefore always agree, which is what makes this an actual detection task
+   rather than label noise. `LIVE_REGENERATE_LABELS = false` restores the old
+   verbatim-GT-label behaviour for ablations; measured on this dataset only
+   ~27% of those boxes overlap the drawn furniture at IoU > 0.5 (vs ~94% for
+   boxes derived from the pixels they label).
 
 Val/test are **deterministic GT overlays** (GT floorplan + GT arrangement, no
-diffusion) in the same color domain, so early stopping and the final unbiased
-report stay stable. The single Ultralytics `model.train()` call keeps its
-scheduler, patience and `results.csv` untouched; `cache=False` is load-bearing
-(a snapshot cache would freeze the first epoch's pixels forever). Per-epoch
-provenance (`epoch, output, source, seed`) lands in `live_manifest.csv`.
+diffusion) with labels derived by the same routine, so all three splits share
+one labelling convention and early stopping plus the final unbiased report stay
+stable. Mirrors carry a `.mirror_signature` sidecar (ontology, aliases, alpha,
+image size); changing any of those re-renders instead of silently reusing labels
+written under the old class ids.
 
-Implementation: `YOLO/live_diffusion.py` (frozen stack + rendering, reusing the
-conditional-diffusion/mask_VAE helpers) + `YOLO/runner.py` (indexing, epoch
-callback, finetune, telemetry). Knobs: `LIVE_*` in `YOLO/config.toml` /
+## Ontology: 10 classes, and why not 12
+
+The arrangement mask vocabulary is 10 classes (`sofa`, `tv`, `dining_set`,
+`side_table`, `showcase`, `couch`, `chair`, `center_table`, `vase_table`,
+`sofa_cum_bed`). The source `labels.txt` names 12 furniture types, but the three
+`Dining_table_*` sizes are indistinguishable in both the mask and the render, so
+they are folded into a single `Dining_table` class via `CLASS_ALIASES`.
+`build_mask_to_yolo_id_map` fails fast if the two ontologies cannot be matched
+one-to-one, rather than silently training on a shifted class space. Note also
+that `sofa`, `couch` and `chair` are three mask ids that render in the *same*
+colour, so they are separable by shape/context but not by colour alone.
+
+## Training budget (read this before changing `LIVE_TRAIN_SAMPLES`)
+
+Ultralytics accumulates gradients over `round(nbs / batch)` batches and steps
+the optimizer only once per accumulation group, so an epoch performs
+`batches_per_epoch // accumulate` real weight updates. Two settings must stay
+consistent or training silently does nothing:
+
+- `NOMINAL_BATCH_SIZE` (= `nbs`) is pinned to `BATCH_SIZE` so accumulation is 1.
+  The Ultralytics default `nbs=64` with `batch=16` gives `accumulate=4`.
+- `LIVE_TRAIN_SAMPLES` must be a multiple of `BATCH_SIZE` and large enough for
+  many batches per epoch. Every stem costs one 1000-step reverse chain per
+  epoch (~0.3–0.6 s/image measured on MPS).
+
+`validate_training_budget` computes the resulting step count and **raises before
+training** if an epoch would take no optimizer step, or if the whole run would
+take fewer than two — the configuration that produced a 30-epoch / 3.3-hour run
+with 10 optimizer steps and mAP50 ≈ 0.05. Smoke tests:
+
+```bash
+./venv/bin/python YOLO/test_yolo_pipeline.py   # pure-logic unit tests
+# then temporarily lower LIVE_TRAIN_SAMPLES / NUM_EPOCHS and run ./train_YOLO.sh
+```
+
+Implementation: `YOLO/live_diffusion.py` (frozen stack, rendering, label
+derivation, ontology bridge) + `YOLO/runner.py` (indexing, epoch callback,
+budget guard, finetune, telemetry). Knobs: `LIVE_*` in
 `YOLO/hyperparameters.toml`. The older frozen image-VAE 2x pipeline
 (`YOLO/augment*.py`, `./run_augmentation.sh`) is kept standalone for ablations;
 the trainer never reads it.
@@ -124,22 +163,25 @@ I/O is vectorized throughout: `torchvision` C-speed tensor↔PIL conversion
 (~3x faster PNG encoding than the default 6, pixels identical).
 
 **Step B — finetune (`runner.py`):** `YOLO("yolo26n.pt")` → `.train()` on the
-augmented set (`nc=12`: Center_table, Chair, Couch, Dining_table_big,
-Dining_table_round, Showcase, Side_table, Sofa, Sofa_cum_bed, TV, Vase_table,
-Dining_table_medium).
+live set (`nc=10`: Center_table, Chair, Couch, Dining_table, Showcase,
+Side_table, Sofa, Sofa_cum_bed, TV, Vase_table — see *Ontology* above).
 Device `mps` (fallback CPU), `workers=0` for macOS, `imgsz=416` (train images
-are VAE-native 256px), 30 epochs with early-stopping patience 10. Ultralytics'
-internal mosaic/mixup/flips are disabled (the VAE pipeline already applies
-VAE-latent + blur); hsv jitter kept. Val split (clean resize) drives
-early stopping; the untouched test split is evaluated once at the end for the
-unbiased report. Note the train/val domain gap by design: train is
-VAE-decoded + blurred (the deployment domain for the diffusion stage), val is
-clean — val scores measure generalization to real floor plans.
+are 256px), 30 epochs with early-stopping patience 10. Ultralytics' internal
+mosaic/mixup/flips are disabled (the live draws already supply the variation);
+hsv jitter kept. `nbs = BATCH_SIZE` keeps accumulation at 1 so every batch
+updates the weights. Val (deterministic GT overlays) drives early stopping; the
+untouched test split is evaluated once at the end for the unbiased report. Note
+the train/val domain gap by design: train pixels are fresh diffusion draws,
+val is clean — val scores measure generalization to real floor plans.
 
 Class notes: the class order in `CLASS_NAMES` **is** the id order, and it is
-duplicated in `YOLO/hyperparameters.toml` — keep both copies in sync. Rare
-classes (`Chair`, `Dining_table_big`, `Sofa_cum_bed`) have few boxes, so expect
-weak minority-class AP without further sampling/focal tuning.
+duplicated in `YOLO/augment_hyperparameters.toml` — keep both copies in sync.
+`CLASS_ALIASES` (also duplicated) maps the dataset's source names onto that
+vocabulary; an unmapped source name aborts the run rather than silently
+training on a shifted ontology. Rare classes (`Chair`, `Sofa_cum_bed`) have
+few boxes, so expect weak minority-class AP without further sampling/focal
+tuning. `sofa`/`couch`/`chair` render in the same colour, so they are
+distinguishable only by shape and context.
 
 ## Telemetry & graphs
 
@@ -176,17 +218,21 @@ sidecar: it polls `live_manifest.csv` for new epochs, snapshots the fixed
 latest `best.pt` so the trainer is never disturbed), and writes
 `live_epoch_<E>_<stem>.png` for the dashboard's Live panel. Only the current
 epoch is ever published — past epochs' pixels are already overwritten, so
-backfilling would mislabel them. Boxes use `LIVE_WATCH_CONF` (far below the
-trainer's `CONF_THRESHOLD` so emerging predictions stay visible; raise it as
-mAP improves). Each tick also appends new Ultralytics rows to
-`<run>_live.csv`, so curves plot live even though the trainer mirrors only at
-the end. Only `LIVE_WATCH_*` knobs affect it; it is safe to start/stop anytime
-mid-training.
+backfilling would mislabel them. Boxes use `LIVE_WATCH_CONF` (defaults to the
+trainer's `CONF_THRESHOLD`, so the panel shows what evaluation counts) and are
+capped at `LIVE_WATCH_MAX_BOXES` highest-confidence-first; a near-zero
+confidence is deliberately avoided, because an undertrained model then emits its
+full NMS output and the snapshot becomes unreadable red spaghetti. Each tick
+also appends new Ultralytics rows to `<run>_live.csv`, so curves plot live even
+though the trainer mirrors only at the end. Only `LIVE_WATCH_*` knobs affect it;
+it is safe to start/stop anytime mid-training.
 
-Smoke test: set `LIVE_MAX_SOURCES=4` in `YOLO/hyperparameters.toml`, then
-`./train_YOLO.sh` (2 epochs exercise the redraw callback; restore afterwards).
-The frozen-VAE ablation path is unchanged: `./run_augmentation.sh` builds the
-2x dataset (once; reruns regenerate); the live trainer never reads it.
+Smoke test: temporarily set `LIVE_TRAIN_SAMPLES` and `NUM_EPOCHS` low in
+`YOLO/hyperparameters.toml`, then `./train_YOLO.sh` (2+ epochs exercise the
+redraw callback; restore afterwards). `validate_training_budget` will reject a
+combination too small to update the weights. The frozen-VAE ablation path is
+unchanged: `./run_augmentation.sh` builds the 2x dataset (once; reruns
+regenerate); the live trainer never reads it.
 
 > **Mac note:** `train_YOLO.sh` exports `PYTORCH_ENABLE_MPS_FALLBACK=1`.
 > Ultralytics runs NMS (`torchvision::nms`) during validation, which has no
@@ -205,14 +251,18 @@ standalone frozen-VAE augmentation below.
 `YOLO/augment_hyperparameters.toml`: augmentation knobs (seeds, `AUG_FACTOR`,
 noise std, blur ranges, save workers, class names).
 `YOLO/hyperparameters.toml`: training knobs (YOLO model/imgsz/batch/epochs/lr,
-Ultralytics augmentation overrides, class names). `CLASS_NAMES` is duplicated in
-both hyperparameter files — keep in sync.
+`NOMINAL_BATCH_SIZE`, Ultralytics augmentation overrides, class names +
+`CLASS_ALIASES`, all `LIVE_*` knobs). `CLASS_NAMES` and `CLASS_ALIASES` are
+duplicated in both hyperparameter files — keep in sync.
 
 ## Outputs
 
 - Live images/labels: `/Users/aatmaj/Downloads/datasets/yolo_live/{images,labels}/{train,val,test}/`
-  (train redrawn every epoch; val/test deterministic GT overlays)
-- Manifest + data config: `live_manifest.csv`, `data.yaml` (train/val/test) in the same root
+  (train redrawn every epoch; val/test deterministic GT overlays). Boxes on all
+  three splits are derived from the pixels they label.
+- Manifest + data config: `live_manifest.csv` (`epoch, output, source, seed,
+  boxes, label_source`), `data.yaml` (train/val/test) in the same root
+- Mirror content sidecars: `.mirror_signature` in each mirrored image dir
 - Telemetry: `YOLO/telemetry_logs/<run>.csv`
 - Overlays + curves: `YOLO/outputs/`
 - Weights: `YOLO/models/yolo_<run>_best.pt`
