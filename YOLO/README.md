@@ -57,6 +57,9 @@ consistent or training silently does nothing:
 - `LIVE_TRAIN_SAMPLES` must be a multiple of `BATCH_SIZE` and large enough for
   many batches per epoch. Every stem costs one 1000-step reverse chain per
   epoch (~0.3–0.6 s/image measured on MPS).
+- `LIVE_VAL_SAMPLES` caps the deterministic GT validation overlays (default: 128)
+  so Ultralytics' end-of-epoch validation does not evaluate the entire ~20k pool
+  every epoch (~13.5 min/epoch on MPS vs ~3s for 128 samples).
 
 `validate_training_budget` computes the resulting step count and **raises before
 training** if an epoch would take no optimizer step, or if the whole run would
@@ -207,8 +210,40 @@ distinguishable only by shape and context.
 ./venv/bin/pip install "ultralytics>=8.3.0"  # one-time (pulls opencv, torch deps)
 ./train_YOLO.sh             # debug train (tiny live subset; see LIVE_* knobs)
 ./train_YOLO.sh prod        # prod train
+./run_scripts/predict_YOLO.sh   # offline inference viewer (see below)
 ./run_scripts/start_yolo_server.sh   # dashboard: loss/mAP curves + overlays + figures
 ```
+
+## Looking at the output (`predict.py`)
+
+`./run_scripts/predict_YOLO.sh` runs the saved best weights over the live
+dataset and writes GT-vs-prediction overlays plus a single contact sheet to
+`YOLO/outputs/predict/`. It is read-only with respect to training state: it
+never rewrites the dataset, never touches telemetry, and never loads the frozen
+diffusion stack. It reuses the trainer's own drawing and device helpers, so the
+images match what training produced.
+
+```bash
+./run_scripts/predict_YOLO.sh                                  # newest best.pt, val split
+./run_scripts/predict_YOLO.sh prod                             # prod-mode config
+./run_scripts/predict_YOLO.sh debug --split test --limit 20    # different split/size
+./run_scripts/predict_YOLO.sh debug --image /path/plan.png     # one explicit image
+./run_scripts/predict_YOLO.sh debug --weights path/best.pt     # a specific run
+./run_scripts/predict_YOLO.sh debug --conf 0.25                # evaluation threshold
+```
+
+Green boxes are ground truth, red boxes are predictions with `class + confidence`
+(caps at `PREDICT_MAX_BOXES`, highest-confidence first).
+
+**Reading the confidence.** `PREDICT_CONF` defaults to `0.001`, far below the
+evaluation `CONF_THRESHOLD = 0.25`, because a lightly-trained model peaks near
+`1e-3`. At the evaluation threshold the viewer would report zero detections and
+look broken rather than merely untrained. The tool always logs the highest
+confidence it actually saw, so "no boxes" is distinguishable from "model is
+broken" — if it prints a peak, the model is running and just under-trained.
+
+The wrapper exports `PYTORCH_ENABLE_MPS_FALLBACK=1`; Ultralytics runs
+`torchvision::nms` during prediction, which has no MPS kernel.
 
 ## Live snapshots while training runs
 

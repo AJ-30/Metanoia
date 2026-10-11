@@ -86,10 +86,13 @@ LIVE_MAX_SOURCES = -1
 # too-small set starves training outright. The previous value of 8 with
 # BATCH_SIZE=16 produced 1 batch/epoch and 10 optimizer steps across 30 epochs.
 #
-# Rule of thumb: keep LIVE_TRAIN_SAMPLES a multiple of BATCH_SIZE and >= a few
-# hundred so each epoch has many batches. 256 gives 16 batches/epoch at
-# batch 16 (~77 s/epoch of redraw). Smoke-test temporarily, then restore.
-LIVE_TRAIN_SAMPLES = 256
+# Train stems per run (seeded subset of the pool); negative (-1) keeps the entire pool.
+LIVE_TRAIN_SAMPLES = -1
+# Validation stems mirrored for per-epoch Ultralytics evaluation.
+# Set to -1 to evaluate against the entire pool.
+LIVE_VAL_SAMPLES = -1
+# Held-out test stems evaluated once at end of training; -1 keeps the entire pool.
+LIVE_TEST_SAMPLES = -1
 LIVE_OVERLAY_ALPHA = 0.6
 # Batch size for the frozen-encoder + diffusion + decoder passes.
 LIVE_DIFFUSION_BATCH_SIZE = 16
@@ -134,6 +137,19 @@ LIVE_WATCH_CONF = 0.25
 # model cannot bury the image under hundreds of boxes. Keeps the panel readable
 # while still showing a model that has not converged.
 LIVE_WATCH_MAX_BOXES = 25
+# ---- Offline inference viewer (YOLO/predict.py) ----
+# Confidence for the standalone "look at the predictions" tool. Deliberately
+# far below CONF_THRESHOLD: a lightly-trained model peaks around 1e-3, so at
+# the evaluation threshold the viewer would report zero detections and look
+# broken rather than merely untrained. Raise toward CONF_THRESHOLD as mAP
+# improves. The tool prints the peak confidence it actually saw, so "no boxes"
+# is always distinguishable from "model is broken".
+PREDICT_CONF = 0.001
+# Hard cap on boxes drawn per image, highest-confidence first, so the viewer
+# stays readable before the model converges.
+PREDICT_MAX_BOXES = 20
+# Default images to show when --limit is not given (0 = all).
+PREDICT_LIMIT = 12
 # ---- Ultralytics internal augmentation overrides ----
 # NOTE on live training: Ultralytics' image cache (`cache=True/ram/disk`,
 # which snapshots train pixels once) must stay OFF — train PNGs are rewritten

@@ -48,6 +48,10 @@ from types import SimpleNamespace
 import torch
 from PIL import Image, ImageDraw
 
+# Ensure PyTorch falls back to CPU for ops unsupported on MPS (e.g. torchvision::nms)
+# so validation and prediction do not fail on macOS Apple Silicon.
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+
 # Project root so ``helpers/`` and ``YOLO.augment`` import from any cwd.
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
 ROOT_DIR: Path = SCRIPT_DIR.parent
@@ -221,6 +225,7 @@ def draw_boxes_on_image(
     gt_lines: list[str],
     pred_boxes: list[tuple[float, float, float, float, int, float]],
     class_names: list[str],
+    pred_class_names: list[str] | None = None,
 ) -> Image.Image:
     """Draw ground-truth (green) and predicted (red) boxes with annotations.
 
@@ -229,11 +234,15 @@ def draw_boxes_on_image(
         gt_lines (list[str]): Ground-truth YOLO label lines (normalized).
         pred_boxes (list[tuple]): Predicted (x1, y1, x2, y2, cls, conf) in
             absolute pixels.
-        class_names (list[str]): Class index -> display name mapping.
+        class_names (list[str]): Class index -> display name mapping for GT.
+        pred_class_names (list[str] | None): Class index -> display name mapping
+            for predictions; defaults to ``class_names`` when omitted.
 
     Returns:
         Image.Image: Annotated copy of the input image.
     """
+    if pred_class_names is None:
+        pred_class_names = class_names
     img = img.copy()
     draw: ImageDraw.ImageDraw = ImageDraw.Draw(img)
     w_px: int
@@ -253,11 +262,17 @@ def draw_boxes_on_image(
         x2: float = (cx + bw / 2.0) * w_px
         y2: float = (cy + bh / 2.0) * h_px
         draw.rectangle([x1, y1, x2, y2], outline=(0, 255, 0), width=1)
-        draw.text((x1 + 2, y1 + 2), f"GT:{class_names[cls_id]}", fill=(0, 255, 0))
+        name: str = class_names[cls_id] if 0 <= cls_id < len(class_names) else f"cls_{cls_id}"
+        draw.text((x1 + 2, y1 + 2), f"GT:{name}", fill=(0, 255, 0))
     # Predictions in red with confidence scores.
     for x1, y1, x2, y2, cls_id, conf in pred_boxes:
         draw.rectangle([x1, y1, x2, y2], outline=(255, 0, 0), width=1)
-        draw.text((x1 + 2, y2 + 2), f"{class_names[cls_id]} {conf:.2f}", fill=(255, 0, 0))
+        pred_name: str = (
+            pred_class_names[cls_id]
+            if 0 <= cls_id < len(pred_class_names)
+            else f"cls_{cls_id}"
+        )
+        draw.text((x1 + 2, y2 + 2), f"{pred_name} {conf:.2f}", fill=(255, 0, 0))
     return img
 
 
@@ -419,12 +434,28 @@ class YOLORunner:
             class_name_to_id,
             max_sources,
         )
+        val_samples: int = int(getattr(self.hyperparams, "LIVE_VAL_SAMPLES", -1))
+        if 0 < val_samples < len(val_sources):
+            val_sources = select_train_subset(
+                val_sources, val_samples, int(self.hyperparams.BASE_SEED)
+            )
+            self.log.info(
+                f"Subsampled val set to {len(val_sources)} stems for fast per-epoch evaluation."
+            )
         pipeline.mirror_deterministic_split(val_sources, val_img_dir, val_lbl_dir)
         test_split_src: str = str(getattr(self.config, "LIVE_SOURCE_TEST_SPLIT_DIR", ""))
         if test_split_src and Path(test_split_src).is_dir():
             test_sources: list[LiveSource] = self.index_live_split(
                 test_split_src, class_name_to_id, max_sources
             )
+            test_samples: int = int(getattr(self.hyperparams, "LIVE_TEST_SAMPLES", -1))
+            if 0 < test_samples < len(test_sources):
+                test_sources = select_train_subset(
+                    test_sources, test_samples, int(self.hyperparams.BASE_SEED)
+                )
+                self.log.info(
+                    f"Subsampled test set to {len(test_sources)} stems for final report."
+                )
             pipeline.mirror_deterministic_split(test_sources, test_img_dir, test_lbl_dir)
         else:
             self.log.warning("Live test source dir missing; skipping test mirroring.")

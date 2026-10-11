@@ -14,3 +14,20 @@ the diffusion run, reading the isolated telemetry in
 ```bash
 ./run_scripts/start_diffusion_server.sh [port]   # default port 8081
 ```
+`predict_YOLO.sh` is an offline inference viewer for a finished YOLO run. It runs
+the saved best weights over images from the live dataset and writes GT-vs-prediction
+overlays plus a contact sheet to `YOLO/outputs/predict/`. Read-only with respect
+to training state — it never rewrites the dataset or telemetry. The first argument
+selects the run mode (`debug`|`prod`); the rest is forwarded to `YOLO/predict.py`:
+
+```bash
+./run_scripts/predict_YOLO.sh                                  # newest best.pt, val split
+./run_scripts/predict_YOLO.sh prod
+./run_scripts/predict_YOLO.sh debug --split test --limit 20
+./run_scripts/predict_YOLO.sh debug --image /path/to/plan.png
+./run_scripts/predict_YOLO.sh debug --weights path/best.pt --conf 0.25
+```
+
+It exports `PYTORCH_ENABLE_MPS_FALLBACK=1` because Ultralytics runs
+`torchvision::nms` during prediction, which has no MPS kernel. See
+`YOLO/README.md` for how to read the confidence values.

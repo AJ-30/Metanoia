@@ -16,6 +16,7 @@ Run with: ``./venv/bin/python -m pytest YOLO/test_yolo_pipeline.py``
 """
 
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -31,9 +32,20 @@ from YOLO.live_diffusion import (
     build_mask_to_yolo_id_map,
     connected_component_boxes,
     format_yolo_label_lines,
+    mirror_signature,
     normalize_class_name,
 )
-from YOLO.runner import optimizer_steps_per_epoch, validate_training_budget
+from YOLO.predict import (
+    build_contact_sheet,
+    labels_dir_for,
+    read_gt_lines,
+    resolve_weights_path,
+)
+from YOLO.runner import (
+    draw_boxes_on_image,
+    optimizer_steps_per_epoch,
+    validate_training_budget,
+)
 
 
 class FakeLog:
@@ -318,7 +330,97 @@ def test_mask_to_yolo_map_rejects_alias_to_unknown_class() -> None:
 
 
 # --------------------------------------------------------------------------
-# 4. Label-name aliasing (source labels.txt -> class ids)
+# 4. Mirror staleness (stale val labels reused under an old ontology)
+# --------------------------------------------------------------------------
+
+def test_mirror_signature_is_stable_for_same_inputs() -> None:
+    """Identical inputs must produce the same signature (cache hits)."""
+    # Arrange / Act
+    first = mirror_signature([], TEN_CLASS_ONTOLOGY, DINING_ALIASES, 0.6, 256)
+    second = mirror_signature([], TEN_CLASS_ONTOLOGY, DINING_ALIASES, 0.6, 256)
+    # Assert
+    assert first == second
+
+
+def test_mirror_signature_changes_with_ontology() -> None:
+    """A class-list change must invalidate the mirror (stale label guard)."""
+    # Arrange
+    renamed = list(TEN_CLASS_ONTOLOGY)
+    renamed[3] = "Dining_table_round"
+    # Act
+    signature = mirror_signature([], TEN_CLASS_ONTOLOGY, DINING_ALIASES, 0.6, 256)
+    changed = mirror_signature([], renamed, DINING_ALIASES, 0.6, 256)
+    # Assert
+    assert signature != changed
+
+
+def test_mirror_signature_changes_with_render_settings() -> None:
+    """Alpha/size/stem changes must also invalidate the mirror."""
+    # Arrange / Act / Assert
+    base = mirror_signature([], TEN_CLASS_ONTOLOGY, DINING_ALIASES, 0.6, 256)
+    assert base != mirror_signature([], TEN_CLASS_ONTOLOGY, DINING_ALIASES, 0.7, 256)
+    assert base != mirror_signature([], TEN_CLASS_ONTOLOGY, DINING_ALIASES, 0.6, 512)
+
+
+# --------------------------------------------------------------------------
+# 5. Offline inference viewer helpers
+# --------------------------------------------------------------------------
+
+def test_labels_dir_for_maps_split_images() -> None:
+    """A split image resolves to its mirrored label directory."""
+    # Arrange
+    live_root = Path("/data/yolo_live")
+    image = live_root / "images" / "val" / "abc.png"
+    # Act / Assert
+    assert labels_dir_for(image, live_root) == live_root / "labels" / "val"
+
+
+def test_labels_dir_for_ignores_external_image() -> None:
+    """An image outside the live root has no GT directory."""
+    # Arrange / Act / Assert
+    assert labels_dir_for(Path("/tmp/custom.png"), Path("/data/yolo_live")) == Path("")
+
+
+def test_read_gt_lines_skips_blank_lines() -> None:
+    """Blank lines in a label file are dropped, not parsed as boxes."""
+    # Arrange
+    label_file = Path(tempfile.mkdtemp()) / "a.txt"
+    label_file.write_text("3 0.5 0.5 0.2 0.2\n\n4 0.1 0.1 0.1 0.1\n", encoding="utf-8")
+    # Act / Assert
+    assert read_gt_lines(label_file) == ["3 0.5 0.5 0.2 0.2", "4 0.1 0.1 0.1 0.1"]
+
+
+def test_read_gt_lines_missing_file_is_empty() -> None:
+    """A missing label file yields no GT (e.g. --image without ground truth)."""
+    # Arrange / Act / Assert
+    assert read_gt_lines(Path(tempfile.mkdtemp()) / "missing.txt") == []
+
+
+def test_build_contact_sheet_raises_on_no_tiles() -> None:
+    """An empty contact sheet is a programming error, not a blank image."""
+    # Arrange / Act / Assert
+    try:
+        build_contact_sheet([], 4)
+    except ValueError as exc:
+        assert "no tiles" in str(exc)
+    else:
+        raise AssertionError("expected ValueError for an empty contact sheet")
+
+
+def test_build_contact_sheet_layout_is_grid_shaped() -> None:
+    """N tiles in C columns produce ceil(N/C) rows of the right size."""
+    # Arrange
+    from PIL import Image as PILImage
+
+    tiles = [(f"caption {i}", PILImage.new("RGB", (64, 64))) for i in range(5)]
+    # Act
+    sheet = build_contact_sheet(tiles, columns=3)
+    # Assert: 3 columns, 2 rows, each row adds a caption strip.
+    assert sheet.size == (64 * 3, (64 + 18) * 2)
+
+
+# --------------------------------------------------------------------------
+# 6. Label-name aliasing (source labels.txt -> class ids)
 # --------------------------------------------------------------------------
 
 def test_resolve_class_name_to_id_applies_aliases() -> None:
@@ -357,6 +459,67 @@ def test_resolve_class_name_to_id_rejects_duplicate_class() -> None:
         assert "duplicate" in str(exc)
     else:
         raise AssertionError("expected ValueError for a duplicate class name")
+
+
+# --------------------------------------------------------------------------
+# 7. Safe prediction visualization & path resolution
+# --------------------------------------------------------------------------
+
+def test_draw_boxes_on_image_handles_out_of_range_classes() -> None:
+    """Out-of-range class ids fall back to 'cls_<id>' rather than raising IndexError."""
+    # Arrange
+    from PIL import Image as PILImage
+    from types import SimpleNamespace
+
+    img = PILImage.new("RGB", (100, 100), (255, 255, 255))
+    gt_lines = ["15 0.5 0.5 0.2 0.2"]  # class id 15 is out of bounds
+    pred_boxes = [(10.0, 10.0, 30.0, 30.0, 20, 0.95)]  # class id 20 is out of bounds
+    class_names = ["Center_table", "Chair"]
+
+    # Act
+    annotated = draw_boxes_on_image(img, gt_lines, pred_boxes, class_names)
+
+    # Assert
+    assert annotated.size == (100, 100)
+
+
+def test_draw_boxes_on_image_supports_pred_class_names() -> None:
+    """Prediction boxes can use separate model class names from GT."""
+    # Arrange
+    from PIL import Image as PILImage
+
+    img = PILImage.new("RGB", (100, 100), (255, 255, 255))
+    gt_lines = ["0 0.5 0.5 0.2 0.2"]
+    pred_boxes = [(10.0, 10.0, 30.0, 30.0, 1, 0.88)]
+    gt_classes = ["Center_table"]
+    pred_classes = ["Center_table", "Sofa_12_class_special"]
+
+    # Act
+    annotated = draw_boxes_on_image(
+        img, gt_lines, pred_boxes, gt_classes, pred_class_names=pred_classes
+    )
+
+    # Assert
+    assert annotated.size == (100, 100)
+
+
+def test_resolve_weights_path_prefers_override_and_falls_back() -> None:
+    """resolve_weights_path prefers explicit path and handles directory fallbacks."""
+    # Arrange
+    from types import SimpleNamespace
+    temp_dir = Path(tempfile.mkdtemp())
+    dummy_weight = temp_dir / "yolo_test_best.pt"
+    dummy_weight.write_text("weights", encoding="utf-8")
+    cfg = SimpleNamespace(MODEL_SAVE_PATH=str(temp_dir))
+    hyp = SimpleNamespace()
+
+    # Act / Assert
+    resolved = resolve_weights_path(cfg, hyp, override=str(dummy_weight))
+    assert resolved == dummy_weight
+
+    # Default fallback to newest checkpoint in directory
+    resolved_default = resolve_weights_path(cfg, hyp, override=None)
+    assert resolved_default == dummy_weight
 
 
 def main() -> int:
