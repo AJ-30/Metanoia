@@ -1,42 +1,45 @@
-"""YOLO26 finetune runner on live conditional-diffusion overlay floor plans.
+"""YOLO26 finetune runner on live diffusion-drawn floor plans.
 
-Flow (no fixed dataset is ever built):
-  1. Index the live mask dataset (GT floorplan + GT arrangement + GT labels),
-     pick the run's train stems once, and encode their GT floorplans once
-     with the frozen floorplan VAE (see ``YOLO/live_diffusion.py``).
-  2. Validate the training budget: Ultralytics only steps the optimizer once
-     per gradient-accumulation group, so a small train set with the default
-     ``nbs`` updates the weights a handful of times per run. The run aborts
-     before training if the resulting step count cannot train
-     (:func:`validate_training_budget`).
-  3. Redraw every train PNG from a FRESH diffusion draw before epoch 1 and at
-     the end of every epoch (Ultralytics ``on_train_epoch_end`` callback), and
-     rewrite the labels from the arrangement that was just drawn so image and
-     target always agree.
-  4. Finetune ``YOLO(<YOLO_MODEL>)`` (default ``yolo26n.pt``) with Ultralytics
-     on MPS (fallback CPU), ``workers=0`` for macOS, ``cache=False`` so the
-     per-epoch pixel rewrites are actually seen (a cache would freeze the
-     first epoch's pixels forever), and ``nbs = batch`` so gradient
-     accumulation does not swallow the updates.
-  5. Mirror Ultralytics ``results.csv`` rows into the shared
-     ``TelemetryWriter`` CSV incrementally at every epoch end (plus a final
-     sweep), so the existing Flask dashboard plots loss, mAP, precision and
-     recall live while training runs.
-  6. Save validation overlays (ground-truth green + predicted red boxes with
-     class names and confidence) plus Ultralytics curves (PR, F1, confusion
-     matrix) into the outputs directory for qualitative inspection.
+Flow (no fixed dataset is ever built; every available sample is used):
 
-Val/test are deterministic GT overlays (no diffusion), labelled by the same
-box-derivation routine as train, so early stopping and the final unbiased
-report stay stable while train pixels vary every epoch. Mirrors carry a
-signature so an ontology change re-renders instead of reusing stale labels.
+1. Index the whole folder-per-sample mask dataset (train/val/test splits,
+   ``SOURCE_SAMPLE_CAP``/``VAL_SAMPLE_CAP``/``TEST_SAMPLE_CAP`` keep every
+   sample by default) and load the frozen rendering stack
+   (:mod:`YOLO.dataset`).
+2. Render the deterministic val/test GT overlays once (skipped when a content
+   signature says they are already current), then encode the train floorplan
+   conditions once with the frozen floorplan VAE.
+3. Draw the epoch-0 train pixels, then launch Ultralytics. At the end of EVERY
+   epoch (``on_fit_epoch_end`` callback, which fires after validation and
+   metrics are on disk) the runner:
+     a. mirrors the fresh ``results.csv`` row into the project telemetry CSV
+        so the dashboard plots live,
+     b. re-predicts a FIXED subset of val images with the epoch's own (EMA)
+        weights and saves green-GT + red-prediction overlays plus a montage
+        under ``YOLO/outputs/epoch_XX/``,
+     c. redraws every train image from a FRESH diffusion draw for the next
+        epoch and pushes the freshly drawn boxes into the trainer's in-memory
+        dataset labels (Ultralytics snapshots labels once at dataloader
+        construction and only re-reads images, so the push is what keeps each
+        epoch's targets attached to that epoch's pixels; requires
+        ``WORKERS = 0``). Skipped on the final/early-stopped epoch.
+4. After training: mirror any remaining telemetry rows, copy Ultralytics
+   curves, persist the best weights next to the run's artifacts, and report
+   the final val plus the unbiased held-out test metrics.
 
-The ``ultralytics`` import is lazy (inside the training method) so that unit
-tests run without the YOLO dependency installed. Torch/diffusion imports stay
-inside ``YOLO.live_diffusion`` for the same reason.
+Budget guard: Ultralytics only steps the optimizer once per
+gradient-accumulation group, so a train set too small for the configured
+``nbs`` would silently do nothing. :func:`validate_training_budget` fails fast
+before the (expensive) first draw in that case.
+
+The ``ultralytics`` import is lazy (inside :meth:`YOLORunner.train`) so unit
+tests run without the YOLO dependency installed.
 """
 
+from __future__ import annotations
+
 import argparse
+import copy
 import csv
 import math
 import os
@@ -46,13 +49,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import torch
-from PIL import Image, ImageDraw
 
-# Ensure PyTorch falls back to CPU for ops unsupported on MPS (e.g. torchvision::nms)
-# so validation and prediction do not fail on macOS Apple Silicon.
+# Ensure PyTorch falls back to CPU for ops unsupported on MPS (e.g.
+# torchvision::nms) so validation and prediction do not fail on macOS Apple
+# Silicon.
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
-# Project root so ``helpers/`` and ``YOLO.augment`` import from any cwd.
+# Project root so ``helpers/`` and ``YOLO.*`` import from any cwd.
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
 ROOT_DIR: Path = SCRIPT_DIR.parent
 if str(ROOT_DIR) not in sys.path:
@@ -62,14 +65,17 @@ from helpers.config import load_config
 from helpers.hyperparams import load_hyperparams
 from helpers.logger import setup_logger
 from helpers.telemetry_writer import TelemetryWriter
-from YOLO.augment import clear_generated_split, resolve_class_name_to_id
-from YOLO.live_diffusion import (
-    LiveDiffusionPipeline,
-    LiveSource,
-    list_live_sources,
-    select_train_subset,
-    write_live_data_yaml,
+from YOLO.dataset import (
+    DeterministicSplitRenderer,
+    FrozenRenderStack,
+    LiveEpochRedrawer,
+    SampleFolder,
+    apply_label_lines_to_dataset,
+    clear_generated_split,
+    list_sample_folders,
+    write_data_yaml,
 )
+from YOLO.overlay import choose_fixed_stems, save_epoch_overlays
 
 # Telemetry columns mirror Ultralytics results.csv (B = box branch).
 TELEMETRY_FIELDS: list[str] = [
@@ -78,6 +84,44 @@ TELEMETRY_FIELDS: list[str] = [
     "val_box", "val_cls", "val_dfl",
     "precision", "recall", "mAP50", "mAP50_95", "lr",
 ]
+
+# Config keys that are filesystem paths. Relative ones are anchored to the
+# repository root (not the current working directory) so the trainer behaves
+# identically no matter where it is launched from: ``train_YOLO.sh`` cds to
+# the root, but a bare ``python YOLO/run.py`` from elsewhere must not scatter
+# logs, telemetry, checkpoints and dataset manifests across the filesystem.
+# Absolute paths (e.g. the live dataset root on another disk) pass through.
+_PATH_CONFIG_KEYS: tuple[str, ...] = (
+    "DEBUG_LOG_FILE_PATH",
+    "MODEL_SAVE_PATH",
+    "TELEMETRY_LOG_DIRECTORY",
+    "OUTPUT_SAMPLES_DIRECTORY",
+    "COND_DIFFUSION_CHECKPOINT_PATH",
+    "COND_VAE_CHECKPOINT_PATH",
+    "TARGET_VAE_CHECKPOINT_PATH",
+    "LIVE_DATASET_ROOT",
+    "LIVE_DATA_YAML_PATH",
+    "LIVE_MANIFEST_PATH",
+)
+
+
+def anchor_config_paths(config: SimpleNamespace) -> None:
+    """Resolve relative config paths against the repository root in place.
+
+    Args:
+        config (SimpleNamespace): Parsed config whose path keys are rewritten
+            to absolute paths anchored at the repo root. Missing keys are
+            left untouched (the run fails later with a clear KeyError naming
+            the key).
+    """
+    for key in _PATH_CONFIG_KEYS:
+        if not hasattr(config, key):
+            continue
+        path: Path = Path(str(getattr(config, key)))
+        setattr(config, key, str(path if path.is_absolute() else ROOT_DIR / path))
+    # The project logger writes to this file on setup, so its directory must
+    # exist even on a fresh clone.
+    Path(str(config.DEBUG_LOG_FILE_PATH)).parent.mkdir(parents=True, exist_ok=True)
 
 # Ultralytics results.csv column names mapped onto TELEMETRY_FIELDS order.
 # Each entry lists fallback columns: YOLO26 writes the distribution-focal term
@@ -97,6 +141,16 @@ RESULTS_CSV_MAP: list[tuple[str, list[str]]] = [
     ("mAP50_95", ["metrics/mAP50-95(B)"]),
     ("lr", ["lr/pg0"]),
 ]
+
+# Ultralytics artifacts copied into the outputs directory for the dashboard.
+_ULTRALYTICS_ARTIFACTS: tuple[str, ...] = (
+    "results.png",
+    "PR_curve.png",
+    "F1_curve.png",
+    "confusion_matrix.png",
+    "labels.jpg",
+    "results.csv",
+)
 
 
 def resolve_train_device(requested: str, log: SimpleNamespace) -> str:
@@ -157,7 +211,8 @@ def validate_training_budget(
     Guards the silent failure mode where a tiny train set combined with
     gradient accumulation yields a full-looking epoch loop in which the weights
     are barely updated (observed: 8 images, 30 epochs, 10 optimizer steps,
-    mAP50 ~0.05). This raises instead, so the mistake cannot reach a 3-hour run.
+    mAP50 ~0.05). This raises instead, so the mistake cannot reach a multi-hour
+    run.
 
     Args:
         num_train_images (int): Number of train images for the run.
@@ -183,13 +238,13 @@ def validate_training_budget(
             f"{nominal_batch_size} yields {steps_per_epoch} optimizer steps per "
             "epoch, so the weights would never be updated. Set "
             "NOMINAL_BATCH_SIZE = BATCH_SIZE (accumulation 1) in "
-            "YOLO/hyperparameters.toml, and/or raise LIVE_TRAIN_SAMPLES."
+            "YOLO/hyperparameters.toml, and/or raise the sample caps."
         )
     if steps_per_epoch * num_epochs < 2:
         raise ValueError(
             f"Training budget too small: {num_train_images} images over "
             f"{num_epochs} epochs yields only {steps_per_epoch * num_epochs} "
-            "optimizer steps in total. Raise LIVE_TRAIN_SAMPLES or NUM_EPOCHS."
+            "optimizer steps in total. Raise the sample caps or NUM_EPOCHS."
         )
     log.info(
         f"Optimizer budget: {num_train_images} images, batch {batch_size}, "
@@ -199,7 +254,7 @@ def validate_training_budget(
     if steps_per_epoch < 4:
         log.warning(
             f"Only {steps_per_epoch} optimizer step(s) per epoch; convergence "
-            "will be slow and noisy. Raise LIVE_TRAIN_SAMPLES for real runs."
+            "will be slow and noisy. Raise the sample caps for real runs."
         )
     return steps_per_epoch
 
@@ -220,60 +275,69 @@ def read_results_csv(results_path: str) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
-def draw_boxes_on_image(
-    img: Image.Image,
-    gt_lines: list[str],
-    pred_boxes: list[tuple[float, float, float, float, int, float]],
-    class_names: list[str],
-    pred_class_names: list[str] | None = None,
-) -> Image.Image:
-    """Draw ground-truth (green) and predicted (red) boxes with annotations.
+def _map_results_row(
+    row: dict[str, str], log: SimpleNamespace
+) -> dict[str, float] | None:
+    """Map one results.csv row onto the telemetry field names.
 
     Args:
-        img (Image.Image): RGB image to annotate (copied before drawing).
-        gt_lines (list[str]): Ground-truth YOLO label lines (normalized).
-        pred_boxes (list[tuple]): Predicted (x1, y1, x2, y2, cls, conf) in
-            absolute pixels.
-        class_names (list[str]): Class index -> display name mapping for GT.
-        pred_class_names (list[str] | None): Class index -> display name mapping
-            for predictions; defaults to ``class_names`` when omitted.
+        row (dict[str, str]): Raw results.csv row.
+        log (SimpleNamespace): Configured logger for malformed-row warnings.
 
     Returns:
-        Image.Image: Annotated copy of the input image.
+        dict[str, float] | None: Mapped metrics, or None when the row is
+            malformed (missing columns or unparseable numbers).
     """
-    if pred_class_names is None:
-        pred_class_names = class_names
-    img = img.copy()
-    draw: ImageDraw.ImageDraw = ImageDraw.Draw(img)
-    w_px: int
-    h_px: int
-    w_px, h_px = img.size
-    # Fine 1px lines: overlays are small (256px), so width=1 keeps adjacent
-    # furniture boxes distinguishable instead of merging into thick bars.
-    # Ground truth in green: normalized cxcywh -> pixel corners.
-    for raw in gt_lines:
-        if not raw.strip():
-            continue
-        parts: list[str] = raw.split()
-        cls_id: int = int(parts[0])
-        cx, cy, bw, bh = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
-        x1: float = (cx - bw / 2.0) * w_px
-        y1: float = (cy - bh / 2.0) * h_px
-        x2: float = (cx + bw / 2.0) * w_px
-        y2: float = (cy + bh / 2.0) * h_px
-        draw.rectangle([x1, y1, x2, y2], outline=(0, 255, 0), width=1)
-        name: str = class_names[cls_id] if 0 <= cls_id < len(class_names) else f"cls_{cls_id}"
-        draw.text((x1 + 2, y1 + 2), f"GT:{name}", fill=(0, 255, 0))
-    # Predictions in red with confidence scores.
-    for x1, y1, x2, y2, cls_id, conf in pred_boxes:
-        draw.rectangle([x1, y1, x2, y2], outline=(255, 0, 0), width=1)
-        pred_name: str = (
-            pred_class_names[cls_id]
-            if 0 <= cls_id < len(pred_class_names)
-            else f"cls_{cls_id}"
-        )
-        draw.text((x1 + 2, y2 + 2), f"{pred_name} {conf:.2f}", fill=(255, 0, 0))
-    return img
+    metrics: dict[str, float] = {}
+    try:
+        for ours, candidates in RESULTS_CSV_MAP:
+            for candidate in candidates:
+                if candidate in row and row[candidate] not in ("", None):
+                    metrics[ours] = float(row[candidate])
+                    break
+            else:
+                raise KeyError(f"none of {candidates} present in results.csv row")
+    except (KeyError, ValueError) as exc:
+        log.warning(f"Skipping malformed results.csv row {row}: {exc}")
+        return None
+    return metrics
+
+
+def _resolve_overlay_model(
+    trainer: object,
+    live_model: object,
+    overlay_model: object,
+    overlay_ready: list[bool],
+) -> object:
+    """Pick the weights the epoch-end overlays should be drawn with.
+
+    Ultralytics validates (and saves as ``best.pt``) the EMA weights, so the
+    overlays should show those: the trainer's EMA module is a raw ``nn.Module``
+    without a ``predict`` API, so its state dict is loaded into the dedicated
+    ``overlay_model`` wrapper. The architecture swap is lazy because the
+    trainer rebuilds the model for ``data.yaml``'s class count only when
+    ``train()`` starts (a fresh ``yolo26n.pt`` wrapper still has its 80 COCO
+    classes, which would not accept the EMA state dict). Without an EMA the
+    live training model itself is used.
+
+    Args:
+        trainer (object): Ultralytics trainer (for its ``ema`` attribute).
+        live_model (object): The training YOLO wrapper (fallback weights).
+        overlay_model (object): Dedicated YOLO wrapper receiving EMA weights.
+        overlay_ready (list[bool]): One-element mutable flag tracking whether
+            the architecture swap already happened.
+
+    Returns:
+        object: The YOLO wrapper to predict with.
+    """
+    ema_module: object | None = getattr(getattr(trainer, "ema", None), "ema", None)
+    if ema_module is None:
+        return live_model
+    if not overlay_ready[0]:
+        overlay_model.model = copy.deepcopy(trainer.model)  # type: ignore[attr-defined]
+        overlay_ready[0] = True
+    overlay_model.model.load_state_dict(ema_module.state_dict())  # type: ignore[attr-defined]
+    return overlay_model
 
 
 class YOLORunner:
@@ -286,25 +350,162 @@ class YOLORunner:
             mode (str): Run mode ("debug" or "prod") selecting config overrides.
         """
         self.config: SimpleNamespace = load_config(mode, str(SCRIPT_DIR / "config.toml"))
+        anchor_config_paths(self.config)
         self.hyperparams: SimpleNamespace = load_hyperparams(
-            str(SCRIPT_DIR / "hyperparameters.toml"))
-        self.log = setup_logger(self.config)
+            str(SCRIPT_DIR / "hyperparameters.toml")
+        )
+        self.log: SimpleNamespace = setup_logger(self.config)
         self.telemetry_writer: TelemetryWriter = TelemetryWriter(
             fieldnames=TELEMETRY_FIELDS,
             directory=self.config.TELEMETRY_LOG_DIRECTORY,
             config=self.config,
         )
         self.device_str: str = resolve_train_device(self.config.DEVICE, self.log)
+        self.class_names: list[str] = list(self.hyperparams.CLASS_NAMES)
+        self.class_aliases: dict[str, str] = dict(
+            getattr(self.hyperparams, "CLASS_ALIASES", {}) or {}
+        )
         self.log.info(
             f"Starting YOLO training run_id: {self.config.runtime.RUN_ID} "
-            f"on device: {self.device_str}")
+            f"on device: {self.device_str}"
+        )
 
-    def clear_stale_ultralytics_cache(self, live_root: Path) -> int:
+    # -- dataset preparation -------------------------------------------------
+
+    def _index_split(
+        self, split_dir: str, cap: int, stack: FrozenRenderStack, role: str
+    ) -> list[SampleFolder]:
+        """Index one source split, tolerating only a missing test split.
+
+        Args:
+            split_dir (str): Split folder holding one sub-folder per sample.
+            cap (int): Pool cap over samples; negative keeps every sample.
+            stack (FrozenRenderStack): Provides the required mask filenames.
+            role (str): Split role name for log messages ("train"/"val"/"test").
+
+        Returns:
+            list[SampleFolder]: Indexed sample folders of the split.
+        """
+        sources: list[SampleFolder] = list_sample_folders(
+            split_dir,
+            stack.floorplan_mask_file,
+            stack.arrangement_mask_file,
+            cap,
+        )
+        self.log.info(f"Indexed {len(sources)} {role} samples from {split_dir}.")
+        return sources
+
+    def _prepare_live_dataset(
+        self, stack: FrozenRenderStack, redrawer: LiveEpochRedrawer
+    ) -> tuple[str, list[SampleFolder], torch.Tensor, list[str]]:
+        """Build the live dataset: deterministic val/test + epoch-0 train draw.
+
+        Args:
+            stack (FrozenRenderStack): Frozen VAEs + diffusion denoiser.
+            redrawer (LiveEpochRedrawer): Per-epoch train redrawer.
+
+        Returns:
+            tuple[str, list[SampleFolder], torch.Tensor, list[str]]:
+                (data.yaml path, train sources, cached condition latents,
+                fixed overlay stems).
+
+        Raises:
+            FileNotFoundError: If train/val source split dirs are missing.
+            ValueError: If a split has no usable samples.
+        """
+        live_root: Path = Path(self.config.LIVE_DATASET_ROOT)
+        train_img_dir: Path = live_root / "images" / "train"
+        train_lbl_dir: Path = live_root / "labels" / "train"
+        val_img_dir: Path = live_root / "images" / "val"
+        val_lbl_dir: Path = live_root / "labels" / "val"
+        test_img_dir: Path = live_root / "images" / "test"
+        test_lbl_dir: Path = live_root / "labels" / "test"
+        for directory in (
+            train_img_dir, train_lbl_dir, val_img_dir, val_lbl_dir,
+            test_img_dir, test_lbl_dir,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+
+        test_split_src: str = str(self.config.LIVE_SOURCE_TEST_SPLIT_DIR)
+        test_sources: list[SampleFolder] = (
+            self._index_split(
+                test_split_src, int(self.hyperparams.TEST_SAMPLE_CAP), stack, "test"
+            )
+            if Path(test_split_src).is_dir()
+            else []
+        )
+        if not test_sources:
+            self.log.warning("Live test source dir missing; skipping test split.")
+        val_sources: list[SampleFolder] = self._index_split(
+            str(self.config.LIVE_SOURCE_VAL_SPLIT_DIR),
+            int(self.hyperparams.VAL_SAMPLE_CAP),
+            stack,
+            "val",
+        )
+        train_sources: list[SampleFolder] = self._index_split(
+            str(self.config.LIVE_SOURCE_TRAIN_SPLIT_DIR),
+            int(self.hyperparams.SOURCE_SAMPLE_CAP),
+            stack,
+            "train",
+        )
+
+        # Fresh stale-artifact sweep: a train PNG or label left over from a
+        # previous run (different stems) would otherwise leak into
+        # Ultralytics' file list, and a label cache from another stem set
+        # would mislabel this one.
+        clear_generated_split(train_img_dir, train_lbl_dir)
+        self._clear_ultralytics_cache(live_root)
+        manifest_path: Path = Path(self.config.LIVE_MANIFEST_PATH)
+        if manifest_path.is_file():
+            manifest_path.unlink()
+
+        # Deterministic val/test GT overlays, rendered once per configuration.
+        deterministic: DeterministicSplitRenderer = DeterministicSplitRenderer(
+            stack, self.hyperparams, self.log
+        )
+        deterministic.render_split(val_sources, val_img_dir, val_lbl_dir)
+        if test_sources:
+            deterministic.render_split(test_sources, test_img_dir, test_lbl_dir)
+
+        data_yaml: str = write_data_yaml(
+            str(live_root), str(self.config.LIVE_DATA_YAML_PATH), self.class_names
+        )
+
+        # Conditions are cached once: GT floorplans never change, so only the
+        # diffusion noise varies per epoch.
+        cond_norm: torch.Tensor = stack.encode_source_conditions(train_sources)
+        validate_training_budget(
+            len(train_sources),
+            int(self.hyperparams.BATCH_SIZE),
+            int(self.hyperparams.NOMINAL_BATCH_SIZE),
+            int(self.hyperparams.NUM_EPOCHS),
+            self.log,
+        )
+
+        # Epoch-0 draw: epoch 1 trains on fresh pixels; the end-of-epoch
+        # callback then redraws for every later epoch (seed = BASE_SEED + E).
+        redrawer.redraw_epoch(
+            train_sources, cond_norm, 0, train_img_dir, train_lbl_dir, manifest_path
+        )
+
+        overlay_stems: list[str] = choose_fixed_stems(
+            [source.stem for source in val_sources],
+            int(self.hyperparams.EPOCH_OVERLAY_STEMS),
+            int(self.hyperparams.BASE_SEED),
+        )
+        outputs_dir: Path = Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
+        outputs_dir.mkdir(parents=True, exist_ok=True)
+        (outputs_dir / "epoch_overlay_stems.txt").write_text(
+            "\n".join(overlay_stems) + "\n", encoding="utf-8"
+        )
+        return data_yaml, train_sources, cond_norm, overlay_stems
+
+    def _clear_ultralytics_cache(self, live_root: Path) -> int:
         """Delete stale Ultralytics ``*.cache`` files under the live root.
 
-        The label cache records the train stem set; the subset is reselected
-        every run, so a cache from a previous run (different stems) must not
-        survive. Train pixels change every epoch but stems/labels/shapes do
+        The label cache records the train stem set; the stem set can change
+        between runs (different caps), so a cache from a previous run must not
+        survive. Train pixels change every epoch, but stems/labels/shapes do
         not, so no per-epoch clearing is needed.
 
         Args:
@@ -322,182 +523,25 @@ class YOLORunner:
             self.log.info(f"Removed {removed} stale Ultralytics cache files.")
         return removed
 
-    def index_live_split(
-        self,
-        split_dir: str,
-        class_name_to_id: dict[str, int],
-        max_sources: int,
-    ) -> list[LiveSource]:
-        """Index one live split (fail fast when it has no usable samples).
-
-        Args:
-            split_dir (str): Split folder holding one sub-folder per sample.
-            class_name_to_id (dict[str, int]): Class name -> id map used to
-                validate the GT labels once at indexing time.
-            max_sources (int): Pool cap; negative keeps every sample.
-
-        Returns:
-            list[LiveSource]: Sorted live sources with validated GT labels.
-
-        Raises:
-            FileNotFoundError: If the split directory is missing.
-            ValueError: If no sample provides both masks plus GT labels.
-        """
-        sources: list[LiveSource] = list_live_sources(
-            split_dir,
-            str(self.config.COND_MASK_FILE),
-            str(self.config.TARGET_MASK_FILE),
-            str(self.config.SOURCE_LABEL_FILE_NAME),
-            class_name_to_id,
-            max_sources,
-        )
-        if not sources:
-            raise ValueError(
-                f"Live split has no usable samples: {split_dir}. Every sample "
-                f"folder must carry '{self.config.COND_MASK_FILE}', "
-                f"'{self.config.TARGET_MASK_FILE}' and "
-                f"'{self.config.SOURCE_LABEL_FILE_NAME}'."
-            )
-        self.log.info(f"Indexed {len(sources)} live sources from {split_dir}.")
-        return sources
-
-    def prepare_live_dataset(
-        self,
-        pipeline: LiveDiffusionPipeline,
-        class_name_to_id: dict[str, int],
-    ) -> tuple[str, list[LiveSource], torch.Tensor]:
-        """Prepare dirs, deterministic val/test mirrors, data.yaml + train set.
-
-        Train stems are selected once and their GT floorplans encoded once;
-        the initial pixel draw (epoch seed 0) lands before Ultralytics ever
-        indexes the files. Val/test mirrors are deterministic GT overlays,
-        skipped when already complete.
-
-        Args:
-            pipeline (LiveDiffusionPipeline): Frozen diffusion + render stack.
-            class_name_to_id (dict[str, int]): Class name -> id map for GT
-                label validation.
-
-        Returns:
-            tuple[str, list[LiveSource], torch.Tensor]: (data.yaml path, the
-                run's train sources in stem order, their cached normalized
-                condition latents on CPU).
-
-        Raises:
-            FileNotFoundError: If a live source split directory is missing.
-            ValueError: If any split has no usable samples.
-        """
-        max_sources: int = int(self.hyperparams.LIVE_MAX_SOURCES)
-        pool: list[LiveSource] = self.index_live_split(
-            str(self.config.LIVE_SOURCE_TRAIN_SPLIT_DIR),
-            class_name_to_id,
-            max_sources,
-        )
-        train_sources: list[LiveSource] = select_train_subset(
-            pool, int(self.hyperparams.LIVE_TRAIN_SAMPLES), int(self.hyperparams.BASE_SEED)
-        )
-        # Fail fast BEFORE the expensive diffusion setup: a too-small train set
-        # would otherwise produce an epoch loop that never updates the weights.
-        validate_training_budget(
-            len(train_sources),
-            int(self.hyperparams.BATCH_SIZE),
-            int(self.hyperparams.NOMINAL_BATCH_SIZE),
-            int(self.hyperparams.NUM_EPOCHS),
-            self.log,
-        )
-        self.log.info(
-            f"Live train set: {len(train_sources)} stems "
-            f"(pool {len(pool)}, redrawn from fresh diffusion draws every epoch)."
-        )
-
-        live_root: Path = Path(self.config.LIVE_DATASET_ROOT)
-        train_img_dir: Path = live_root / "images" / "train"
-        train_lbl_dir: Path = live_root / "labels" / "train"
-        val_img_dir: Path = live_root / "images" / "val"
-        val_lbl_dir: Path = live_root / "labels" / "val"
-        test_img_dir: Path = live_root / "images" / "test"
-        test_lbl_dir: Path = live_root / "labels" / "test"
-        for directory in (
-            train_img_dir, train_lbl_dir, val_img_dir, val_lbl_dir,
-            test_img_dir, test_lbl_dir,
-        ):
-            directory.mkdir(parents=True, exist_ok=True)
-        # Fresh subset every run: drop last run's pixels and its cache.
-        clear_generated_split(train_img_dir, train_lbl_dir)
-        self.clear_stale_ultralytics_cache(live_root)
-        old_manifest: Path = Path(self.config.LIVE_MANIFEST_PATH)
-        if old_manifest.is_file():
-            old_manifest.unlink()
-
-        val_sources: list[LiveSource] = self.index_live_split(
-            str(self.config.LIVE_SOURCE_VAL_SPLIT_DIR),
-            class_name_to_id,
-            max_sources,
-        )
-        val_samples: int = int(getattr(self.hyperparams, "LIVE_VAL_SAMPLES", -1))
-        if 0 < val_samples < len(val_sources):
-            val_sources = select_train_subset(
-                val_sources, val_samples, int(self.hyperparams.BASE_SEED)
-            )
-            self.log.info(
-                f"Subsampled val set to {len(val_sources)} stems for fast per-epoch evaluation."
-            )
-        pipeline.mirror_deterministic_split(val_sources, val_img_dir, val_lbl_dir)
-        test_split_src: str = str(getattr(self.config, "LIVE_SOURCE_TEST_SPLIT_DIR", ""))
-        if test_split_src and Path(test_split_src).is_dir():
-            test_sources: list[LiveSource] = self.index_live_split(
-                test_split_src, class_name_to_id, max_sources
-            )
-            test_samples: int = int(getattr(self.hyperparams, "LIVE_TEST_SAMPLES", -1))
-            if 0 < test_samples < len(test_sources):
-                test_sources = select_train_subset(
-                    test_sources, test_samples, int(self.hyperparams.BASE_SEED)
-                )
-                self.log.info(
-                    f"Subsampled test set to {len(test_sources)} stems for final report."
-                )
-            pipeline.mirror_deterministic_split(test_sources, test_img_dir, test_lbl_dir)
-        else:
-            self.log.warning("Live test source dir missing; skipping test mirroring.")
-
-        data_yaml: str = write_live_data_yaml(
-            str(live_root),
-            str(self.config.LIVE_DATA_YAML_PATH),
-            list(self.hyperparams.CLASS_NAMES),
-        )
-        train_cond: torch.Tensor = pipeline.encode_source_conditions(train_sources)
-        # Epoch-0 draw: epoch 1 trains on fresh pixels, and the end-of-epoch
-        # callback redraws for every later epoch (seed = BASE_SEED + epoch).
-        pipeline.regenerate_train_epoch(
-            train_sources,
-            train_cond,
-            0,
-            int(self.hyperparams.BASE_SEED),
-            train_img_dir,
-            train_lbl_dir,
-            old_manifest,
-        )
-        return data_yaml, train_sources, train_cond
+    # -- telemetry -----------------------------------------------------------
 
     def mirror_results_to_telemetry(
-        self, results_path: str, after_epoch: int = 0
+        self, results_path: str, after_epoch: int = 0, live: bool = False
     ) -> int:
         """Copy Ultralytics per-epoch rows into the shared telemetry CSV.
 
         Only rows with ``epoch > after_epoch`` are mirrored, so the epoch-end
         callback can mirror incrementally while training runs (the dashboard
-        polls the CSV live) and the final sweep picks up exactly the rest —
+        polls the CSV live) and the final sweep picks up exactly the rest -
         no epoch is ever mirrored twice.
-
-        Note on cadence: a live callback always sees its just-finished epoch
-        as the file's last row, so every epoch lands in telemetry while
-        training runs; ``TELEMETRY_INTERVAL`` thins only rows mirrored by a
-        non-live (single-shot) call.
 
         Args:
             results_path (str): Path to Ultralytics ``results.csv``.
             after_epoch (int): Skip rows at or below this epoch number
                 (already mirrored earlier).
+            live (bool): True from the per-epoch callback: mirror every new row
+                so the dashboard plots while training runs. False applies
+                ``TELEMETRY_INTERVAL`` thinning (used by the final sweep).
 
         Returns:
             int: Number of epochs mirrored by this call.
@@ -505,73 +549,25 @@ class YOLORunner:
         rows: list[dict[str, str]] = read_results_csv(results_path)
         mirrored: int = 0
         for row in rows:
-            metrics: dict[str, float] = {}
-            try:
-                for ours, candidates in RESULTS_CSV_MAP:
-                    for candidate in candidates:
-                        if candidate in row and row[candidate] not in ("", None):
-                            metrics[ours] = float(row[candidate])
-                            break
-                    else:
-                        raise KeyError(
-                            f"none of {candidates} present in results.csv row")
-            except (KeyError, ValueError) as exc:
-                self.log.warning(f"Skipping malformed results.csv row {row}: {exc}")
+            metrics: dict[str, float] | None = _map_results_row(row, self.log)
+            if metrics is None:
                 continue
-            if int(metrics["epoch"]) <= after_epoch:
-                continue
-            # Write every TELEMETRY_INTERVAL-th epoch plus the final row.
             epoch_num: int = int(metrics["epoch"])
+            if epoch_num <= after_epoch:
+                continue
+            # Write every TELEMETRY_INTERVAL-th epoch plus the final row when
+            # thinning; live callbacks always mirror their own fresh row.
             is_last: bool = row is rows[-1]
-            if epoch_num % int(self.hyperparams.TELEMETRY_INTERVAL) == 0 or is_last:
+            if (
+                live
+                or epoch_num % int(self.hyperparams.TELEMETRY_INTERVAL) == 0
+                or is_last
+            ):
                 self.telemetry_writer.log(**metrics)
                 mirrored += 1
         if mirrored:
             self.log.info(f"Mirrored {mirrored} epochs to telemetry.")
         return mirrored
-
-    def save_prediction_overlays(self, model: object, epoch_tag: str) -> int:
-        """Run inference on val samples and save GT-vs-pred overlay grids.
-
-        Args:
-            model (object): Trained Ultralytics YOLO model (``predict`` API).
-            epoch_tag (str): Tag included in output filenames (e.g. "final").
-
-        Returns:
-            int: Number of overlay images saved.
-        """
-        val_img_dir: Path = Path(self.config.LIVE_DATASET_ROOT) / "images" / "val"
-        val_lbl_dir: Path = Path(self.config.LIVE_DATASET_ROOT) / "labels" / "val"
-        out_dir: Path = Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        class_names: list[str] = list(self.hyperparams.CLASS_NAMES)
-        conf: float = float(self.hyperparams.CONF_THRESHOLD)
-        val_images: list[Path] = sorted(val_img_dir.glob("*.png"))
-        num: int = min(int(self.hyperparams.NUM_OVERLAY_SAMPLES), len(val_images))
-        saved: int = 0
-        for img_path in val_images[:num]:
-            img: Image.Image = Image.open(img_path).convert("RGB")
-            lbl_path: Path = val_lbl_dir / f"{img_path.stem}.txt"
-            gt_lines: list[str] = []
-            if lbl_path.is_file():
-                gt_lines = lbl_path.read_text(encoding="utf-8").splitlines()
-            # Ultralytics predict returns pixel-space xyxy boxes.
-            results = model.predict(source=str(img_path), conf=conf, verbose=False)  # type: ignore[attr-defined]
-            pred_boxes: list[tuple[float, float, float, float, int, float]] = []
-            if len(results) > 0 and results[0].boxes is not None:
-                boxes = results[0].boxes
-                xyxy = boxes.xyxy.tolist()
-                cls_list = boxes.cls.tolist()
-                conf_list = boxes.conf.tolist()
-                for (x1, y1, x2, y2), c, cf in zip(xyxy, cls_list, conf_list):
-                    pred_boxes.append((x1, y1, x2, y2, int(c), float(cf)))
-            annotated: Image.Image = draw_boxes_on_image(img, gt_lines, pred_boxes, class_names)
-            out_path: Path = out_dir / (
-                f"val_pred_{epoch_tag}_{img_path.stem}_{self.config.runtime.RUN_ID}.png")
-            annotated.save(str(out_path))
-            saved += 1
-        self.log.info(f"Saved {saved} val prediction overlays (tag={epoch_tag}).")
-        return saved
 
     def copy_training_artifacts(self, save_dir: str) -> None:
         """Copy Ultralytics plots into the outputs dir for dashboard inspection.
@@ -582,12 +578,13 @@ class YOLORunner:
         """
         out_dir: Path = Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
         out_dir.mkdir(parents=True, exist_ok=True)
-        for name in ("results.png", "PR_curve.png", "F1_curve.png",
-                     "confusion_matrix.png", "labels.jpg", "results.csv"):
+        for name in _ULTRALYTICS_ARTIFACTS:
             src: Path = Path(save_dir) / name
             if src.is_file():
                 shutil.copy(str(src), str(out_dir / f"{Path(save_dir).name}_{name}"))
                 self.log.info(f"Copied artifact {name} to outputs.")
+
+    # -- training ------------------------------------------------------------
 
     def train(self) -> None:
         """Finetune YOLO26 on live diffusion overlays with full telemetry."""
@@ -599,60 +596,145 @@ class YOLORunner:
                 "`./venv/bin/pip install ultralytics` (see YOLO/README.md)."
             ) from exc
 
-        pipeline: LiveDiffusionPipeline = LiveDiffusionPipeline(
+        # The per-epoch redraw syncs the trainer's in-memory dataset labels
+        # (see apply_label_lines_to_dataset). With worker processes each
+        # worker holds its own fork of that list, so the sync would silently
+        # not reach training: fail fast instead of training on stale boxes.
+        if int(self.hyperparams.WORKERS) != 0:
+            raise ValueError(
+                f"WORKERS must be 0 for live redraw training (got "
+                f"{self.hyperparams.WORKERS}): worker processes would snapshot "
+                "the train labels at fork time, so per-epoch redrawn boxes "
+                "would never reach the loss. Set WORKERS = 0 in "
+                "YOLO/hyperparameters.toml."
+            )
+
+        stack: FrozenRenderStack = FrozenRenderStack(
             self.config, self.hyperparams, self.log
         )
-        class_name_to_id: dict[str, int] = resolve_class_name_to_id(
-            list(self.hyperparams.CLASS_NAMES),
-            dict(getattr(self.hyperparams, "CLASS_ALIASES", {}) or {}),
+        redrawer: LiveEpochRedrawer = LiveEpochRedrawer(
+            stack, self.hyperparams, self.log
         )
-        data_yaml, train_sources, train_cond = self.prepare_live_dataset(
-            pipeline, class_name_to_id
-        )
+        (
+            data_yaml,
+            train_sources,
+            cond_norm,
+            overlay_stems,
+        ) = self._prepare_live_dataset(stack, redrawer)
         os.makedirs(self.config.MODEL_SAVE_PATH, exist_ok=True)
 
         model = YOLO(str(self.hyperparams.YOLO_MODEL))
         self.log.info(f"Loaded pretrained weights: {self.hyperparams.YOLO_MODEL}")
-        save_dir: str = str(Path(self.config.OUTPUT_SAMPLES_DIRECTORY).resolve()
-                            / f"ultralytics_{self.config.runtime.RUN_ID}")
+        # Separate wrapper for the per-epoch overlay predictions: the trainer's
+        # EMA module is a raw nn.Module without a ``predict`` API, so the EMA
+        # state dict is loaded into this wrapper to visualize exactly the
+        # weights validation scored. Its architecture is swapped in lazily on
+        # the first epoch end (see _resolve_overlay_model).
+        overlay_model = YOLO(str(self.hyperparams.YOLO_MODEL))
+        overlay_ready: list[bool] = [False]
+        save_dir: str = str(
+            Path(self.config.OUTPUT_SAMPLES_DIRECTORY).resolve()
+            / f"ultralytics_{self.config.runtime.RUN_ID}"
+        )
+        run_dir: str = os.path.join(save_dir, "train")
+        # Ultralytics appends results.csv once per epoch under its run dir;
+        # mirroring it at epoch end keeps the dashboard live while training.
+        ultralytics_results: str = os.path.join(run_dir, "results.csv")
 
-        # Per-epoch pixel refresh INSIDE the single Ultralytics run: the
-        # dataloader (workers=0, cache=False) re-reads PNGs from disk every
-        # batch, and stems never change, so rewriting pixels here is safe.
-        # Internal scheduler, patience and results.csv keep working untouched.
         live_root: Path = Path(self.config.LIVE_DATASET_ROOT)
         train_img_dir: Path = live_root / "images" / "train"
         train_lbl_dir: Path = live_root / "labels" / "train"
         manifest_path: Path = Path(self.config.LIVE_MANIFEST_PATH)
+        val_img_dir: Path = live_root / "images" / "val"
+        val_lbl_dir: Path = live_root / "labels" / "val"
+        outputs_dir: Path = Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
         base_seed: int = int(self.hyperparams.BASE_SEED)
-        completed_epochs: list[int] = [0]
-        # Ultralytics appends results.csv once per epoch under its run dir;
-        # mirroring it here keeps the dashboard live while training runs.
-        ultralytics_results: str = os.path.join(save_dir, "train", "results.csv")
+        num_epochs: int = int(self.hyperparams.NUM_EPOCHS)
+        # Idempotency guard for the epoch-end callback: tracked via the
+        # results.csv row count (see the callback), so it also absorbs the
+        # extra on_fit_epoch_end firing from Ultralytics' post-training
+        # final_eval.
+        handled_epochs: list[int] = [0]
 
-        def _redraw_for_next_epoch(_trainer: object) -> None:
-            """Ultralytics epoch-end callback: redraw pixels + mirror telemetry."""
-            completed_epochs[0] += 1
+        def _on_fit_epoch_end(trainer: object) -> None:
+            """Epoch-end callback: telemetry + GT/pred panel + next-epoch draw."""
+            # Dedup key: results.csv gains exactly one row per completed
+            # training epoch (save_metrics runs before this callback), so the
+            # row count is immune to the epoch bump Ultralytics applies inside
+            # its post-training final_eval (which re-fires this callback).
+            completed: int = len(read_results_csv(ultralytics_results))
+            if completed <= handled_epochs[0]:
+                return
+            handled_epochs[0] = completed
+            epoch: int = completed  # 1-based epoch number just finished
+            self.log.info(f"Epoch {epoch} finished (validation metrics on disk).")
+
+            # a) fresh telemetry row -> dashboard CSV (live, no thinning).
+            self.mirror_results_to_telemetry(
+                ultralytics_results, after_epoch=epoch - 1, live=True
+            )
+
+            # b) GT vs predicted boxes on the fixed val subset, using the
+            #    weights this epoch was validated with (EMA when available).
+            predict_model: object = _resolve_overlay_model(
+                trainer, model, overlay_model, overlay_ready
+            )
+            summary: dict[str, float] = save_epoch_overlays(
+                predict_model,
+                overlay_stems,
+                val_img_dir,
+                val_lbl_dir,
+                outputs_dir,
+                epoch,
+                self.class_names,
+                float(self.hyperparams.EPOCH_OVERLAY_CONF),
+                int(self.hyperparams.EPOCH_OVERLAY_MAX_BOXES),
+                int(self.hyperparams.EPOCH_OVERLAY_MONTAGE_COLS),
+                int(self.hyperparams.IMG_SIZE),
+            )
             self.log.info(
-                f"Epoch {completed_epochs[0]} done; redrawing live train pixels...")
-            pipeline.regenerate_train_epoch(
+                f"Epoch {epoch} overlays: {int(summary['images'])} images, "
+                f"{int(summary['gt_boxes'])} GT boxes, "
+                f"{int(summary['pred_boxes'])} predicted boxes "
+                f"(peak conf {summary['peak_conf']:.4f}); montage in "
+                f"{outputs_dir}/montage_epoch_{epoch:02d}.png."
+            )
+
+            # c) fresh diffusion draw for the next epoch's pixels. Skipped on
+            #    the final or early-stopped epoch: nothing will read them.
+            stopping: bool = bool(getattr(trainer, "stop", False))
+            if stopping or epoch >= num_epochs:
+                self.log.info(
+                    f"Epoch {epoch} is the last epoch; skipping next-epoch redraw."
+                )
+                return
+            stats = redrawer.redraw_epoch(
                 train_sources,
-                train_cond,
-                completed_epochs[0],
-                base_seed,
+                cond_norm,
+                epoch,
                 train_img_dir,
                 train_lbl_dir,
                 manifest_path,
             )
-            self.mirror_results_to_telemetry(
-                ultralytics_results, after_epoch=completed_epochs[0] - 1
+            # The pixels are new on disk; the boxes must follow into the
+            # trainer's in-memory dataset, because Ultralytics snapshots
+            # labels once at dataloader construction and only re-reads images.
+            synced: int = apply_label_lines_to_dataset(
+                trainer.train_loader.dataset,  # type: ignore[attr-defined]
+                stats.label_lines_by_stem,
+            )
+            self.log.info(
+                f"Epoch {epoch} redraw for epoch {epoch + 1}: "
+                f"{stats.images} images, {stats.boxes} boxes in "
+                f"{stats.seconds:.1f}s (seed={stats.seed}); "
+                f"synced {synced} in-memory label entries."
             )
 
-        model.add_callback("on_train_epoch_end", _redraw_for_next_epoch)
+        model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
 
         model.train(
             data=data_yaml,
-            epochs=int(self.hyperparams.NUM_EPOCHS),
+            epochs=num_epochs,
             imgsz=int(self.hyperparams.IMG_SIZE),
             batch=int(self.hyperparams.BATCH_SIZE),
             lr0=float(self.hyperparams.LR0),
@@ -660,12 +742,12 @@ class YOLORunner:
             patience=int(self.hyperparams.PATIENCE),
             device=self.device_str,
             workers=int(self.hyperparams.WORKERS),
-            seed=int(self.hyperparams.BASE_SEED),
+            seed=base_seed,
             # Nominal batch size drives gradient accumulation
             # (accumulate = round(nbs / batch)). Pinning it equal to the batch
             # size disables accumulation, so every batch updates the weights;
             # the Ultralytics default nbs=64 would otherwise step only once
-            # every `accumulate` batches and can starve a small live train set
+            # every `accumulate` batches and can starve a small train set
             # (see validate_training_budget).
             nbs=int(self.hyperparams.NOMINAL_BATCH_SIZE),
             # cache=False is load-bearing for live training: the train PNGs
@@ -686,53 +768,59 @@ class YOLORunner:
             name="train",
             verbose=True,
         )
-        run_dir: str = os.path.join(save_dir, "train")
         # Final sweep: mirrors whatever the epoch-end callbacks have not yet
         # covered (e.g. rows flushed after the last callback, or everything
         # when callbacks never fired).
         self.mirror_results_to_telemetry(
-            os.path.join(run_dir, "results.csv"),
-            after_epoch=completed_epochs[0],
+            ultralytics_results, after_epoch=handled_epochs[0]
         )
         self.copy_training_artifacts(run_dir)
-        self.save_prediction_overlays(model, epoch_tag="final")
 
         # Persist the finetuned weights next to the run's other artifacts.
         best_src: str = os.path.join(run_dir, "weights", "best.pt")
         if os.path.isfile(best_src):
             best_dst: str = os.path.join(
-                self.config.MODEL_SAVE_PATH, f"yolo_{self.config.runtime.RUN_ID}_best.pt")
+                self.config.MODEL_SAVE_PATH, f"yolo_{self.config.runtime.RUN_ID}_best.pt"
+            )
             shutil.copy(best_src, best_dst)
             self.log.info(f"Saved best weights to {best_dst}")
 
-        # Final validation summary on the mirrored val split, plus an unbiased
-        # report on the held-out test split (never early-stopped on).
+        # Final validation summary on the deterministic val split, plus an
+        # unbiased report on the held-out test split (never early-stopped on).
         metrics = model.val(data=data_yaml, device=self.device_str, verbose=False)
+        self._log_final_metrics("FINAL VAL", metrics)
+        test_img_dir: Path = live_root / "images" / "test"
+        if test_img_dir.is_dir() and any(test_img_dir.glob("*.png")):
+            test_metrics = model.val(
+                data=data_yaml, split="test", device=self.device_str, verbose=False
+            )
+            self._log_final_metrics("FINAL TEST", test_metrics)
+        else:
+            self.log.warning("No test split; skipping final test report.")
+
+    def _log_final_metrics(self, label: str, metrics: object) -> None:
+        """Log the headline detection metrics of a validation run.
+
+        Args:
+            label (str): Prefix for the log line (e.g. "FINAL VAL").
+            metrics (object): Ultralytics validation metrics object.
+        """
         try:
             self.log.info(
-                f"FINAL VAL: mAP50={metrics.box.map50:.4f} "
-                f"mAP50-95={metrics.box.map:.4f} "
-                f"precision={metrics.box.mp:.4f} recall={metrics.box.mr:.4f}")
+                f"{label}: mAP50={metrics.box.map50:.4f} "  # type: ignore[attr-defined]
+                f"mAP50-95={metrics.box.map:.4f} "  # type: ignore[attr-defined]
+                f"precision={metrics.box.mp:.4f} "  # type: ignore[attr-defined]
+                f"recall={metrics.box.mr:.4f}"  # type: ignore[attr-defined]
+            )
         except AttributeError:
-            self.log.info(f"FINAL VAL metrics: {metrics}")
-        test_img_dir: Path = Path(self.config.LIVE_DATASET_ROOT) / "images" / "test"
-        if test_img_dir.is_dir() and len(list(test_img_dir.glob("*.png"))) > 0:
-            test_metrics = model.val(
-                data=data_yaml, split="test", device=self.device_str, verbose=False)
-            try:
-                self.log.info(
-                    f"FINAL TEST: mAP50={test_metrics.box.map50:.4f} "
-                    f"mAP50-95={test_metrics.box.map:.4f} "
-                    f"precision={test_metrics.box.mp:.4f} recall={test_metrics.box.mr:.4f}")
-            except AttributeError:
-                self.log.info(f"FINAL TEST metrics: {test_metrics}")
-        else:
-            self.log.warning("No mirrored test split; skipping final test report.")
+            self.log.info(f"{label} metrics: {metrics}")
 
 
 def main() -> None:
     """Parse CLI args and launch the live-diffusion YOLO finetune run."""
-    parser = argparse.ArgumentParser(description="Finetune YOLO26 on live diffusion overlays.")
+    parser = argparse.ArgumentParser(
+        description="Finetune YOLO26 on live diffusion overlays."
+    )
     parser.add_argument("--mode", choices=["debug", "prod"], default="debug")
     args: argparse.Namespace = parser.parse_args()
     YOLORunner(mode=args.mode).train()

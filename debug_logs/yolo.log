@@ -531,3 +531,397 @@
 [upward-imp] 2026-10-11 16:29:02 | INFO | __main__:514 - No manifest epochs yet; waiting for the first regen.
 [upward-imp] 2026-10-11 16:30:02 | INFO | __main__:514 - No manifest epochs yet; waiting for the first regen.
 [upward-imp] 2026-10-11 16:31:17 | INFO | __main__:514 - No manifest epochs yet; waiting for the first regen.
+[warm-caiman] 2026-10-12 11:53:24 | INFO | YOLO.runner:312 - Starting YOLO training run_id: warm-caiman on device: mps
+[warm-caiman] 2026-10-12 11:53:25 | INFO | YOLO.dataset:778 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[warm-caiman] 2026-10-12 11:53:27 | INFO | YOLO.runner:339 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[warm-caiman] 2026-10-12 11:53:31 | INFO | YOLO.runner:339 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[warm-caiman] 2026-10-12 11:53:45 | INFO | YOLO.runner:339 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[model-insect] 2026-10-12 11:55:25 | INFO | YOLO.runner:312 - Starting YOLO training run_id: model-insect on device: mps
+[model-insect] 2026-10-12 11:55:25 | INFO | YOLO.dataset:778 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[model-insect] 2026-10-12 11:55:27 | INFO | YOLO.runner:339 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[model-insect] 2026-10-12 11:55:31 | INFO | YOLO.runner:339 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[model-insect] 2026-10-12 11:55:45 | INFO | YOLO.runner:339 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[model-insect] 2026-10-12 11:55:46 | INFO | YOLO.dataset:1235 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[model-insect] 2026-10-12 11:55:46 | INFO | YOLO.dataset:1240 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[model-insect] 2026-10-12 11:55:46 | INFO | YOLO.dataset:1235 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[model-insect] 2026-10-12 11:55:46 | INFO | YOLO.dataset:1240 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[mature-rabbit] 2026-10-12 11:58:16 | INFO | YOLO.runner:312 - Starting YOLO training run_id: mature-rabbit on device: mps
+[mature-rabbit] 2026-10-12 11:58:16 | INFO | YOLO.dataset:779 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[mature-rabbit] 2026-10-12 11:58:18 | INFO | YOLO.runner:339 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[mature-rabbit] 2026-10-12 11:58:22 | INFO | YOLO.runner:339 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[mature-rabbit] 2026-10-12 11:58:36 | INFO | YOLO.runner:339 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:1243 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:1248 - Rendered 32 deterministic GT overlays (304 boxes) in 1.3s.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:1243 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:1248 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:931 - Condition encoding: 8/32 floorplans.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:931 - Condition encoding: 32/32 floorplans.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.dataset:935 - Cached 32 condition latents.
+[mature-rabbit] 2026-10-12 11:58:37 | INFO | YOLO.runner:205 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[mint-amoeba] 2026-10-12 11:59:38 | INFO | YOLO.runner:312 - Starting YOLO training run_id: mint-amoeba on device: mps
+[mint-amoeba] 2026-10-12 11:59:39 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[mint-amoeba] 2026-10-12 11:59:41 | INFO | YOLO.runner:339 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[mint-amoeba] 2026-10-12 11:59:44 | INFO | YOLO.runner:339 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[mint-amoeba] 2026-10-12 11:59:59 | INFO | YOLO.runner:339 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[mint-amoeba] 2026-10-12 12:00:00 | INFO | YOLO.dataset:1246 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[mint-amoeba] 2026-10-12 12:00:00 | INFO | YOLO.dataset:1251 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[mint-amoeba] 2026-10-12 12:00:01 | INFO | YOLO.dataset:1246 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[mint-amoeba] 2026-10-12 12:00:01 | INFO | YOLO.dataset:1251 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[mint-amoeba] 2026-10-12 12:00:01 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[mint-amoeba] 2026-10-12 12:00:01 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[mint-amoeba] 2026-10-12 12:00:01 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[mint-amoeba] 2026-10-12 12:00:01 | INFO | YOLO.runner:205 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[mint-amoeba] 2026-10-12 12:00:03 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[mint-amoeba] 2026-10-12 12:00:05 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[mint-amoeba] 2026-10-12 12:00:05 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[mint-amoeba] 2026-10-12 12:00:05 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[mint-amoeba] 2026-10-12 12:00:05 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[mint-amoeba] 2026-10-12 12:00:06 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[mint-amoeba] 2026-10-12 12:00:06 | INFO | YOLO.dataset:1373 - Redraw epoch 0 done: 32 images, 335 boxes in 4.9s (seed=1234).
+[mint-amoeba] 2026-10-12 12:00:06 | INFO | YOLO.runner:556 - Loaded pretrained weights: yolo26n.pt
+[mint-amoeba] 2026-10-12 12:00:29 | INFO | YOLO.runner:590 - Epoch 1 finished (validation metrics on disk).
+[mint-amoeba] 2026-10-12 12:00:29 | INFO | YOLO.runner:511 - Mirrored 1 epochs to telemetry.
+[vast-mullet] 2026-10-12 12:01:55 | INFO | YOLO.runner:312 - Starting YOLO training run_id: vast-mullet on device: mps
+[vast-mullet] 2026-10-12 12:01:55 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[vast-mullet] 2026-10-12 12:01:57 | INFO | YOLO.runner:339 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[vast-mullet] 2026-10-12 12:02:01 | INFO | YOLO.runner:339 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[vast-mullet] 2026-10-12 12:02:15 | INFO | YOLO.runner:339 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:1246 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:1251 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:1246 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:1251 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[vast-mullet] 2026-10-12 12:02:17 | INFO | YOLO.runner:205 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[vast-mullet] 2026-10-12 12:02:19 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[vast-mullet] 2026-10-12 12:02:21 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[vast-mullet] 2026-10-12 12:02:22 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[vast-mullet] 2026-10-12 12:02:22 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[vast-mullet] 2026-10-12 12:02:22 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[vast-mullet] 2026-10-12 12:02:22 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[vast-mullet] 2026-10-12 12:02:22 | INFO | YOLO.dataset:1373 - Redraw epoch 0 done: 32 images, 335 boxes in 5.1s (seed=1234).
+[vast-mullet] 2026-10-12 12:02:22 | INFO | YOLO.runner:556 - Loaded pretrained weights: yolo26n.pt
+[vast-mullet] 2026-10-12 12:02:33 | INFO | YOLO.runner:590 - Epoch 1 finished (validation metrics on disk).
+[vast-mullet] 2026-10-12 12:02:33 | INFO | YOLO.runner:511 - Mirrored 1 epochs to telemetry.
+[sunny-foal] 2026-10-12 12:09:37 | INFO | YOLO.runner:313 - Starting YOLO training run_id: sunny-foal on device: mps
+[sunny-foal] 2026-10-12 12:09:38 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[sunny-foal] 2026-10-12 12:09:40 | INFO | YOLO.runner:340 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[sunny-foal] 2026-10-12 12:09:44 | INFO | YOLO.runner:340 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[sunny-foal] 2026-10-12 12:09:58 | INFO | YOLO.runner:340 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[sunny-foal] 2026-10-12 12:09:59 | INFO | YOLO.dataset:1246 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[sunny-foal] 2026-10-12 12:09:59 | INFO | YOLO.dataset:1251 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[sunny-foal] 2026-10-12 12:10:00 | INFO | YOLO.dataset:1246 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[sunny-foal] 2026-10-12 12:10:00 | INFO | YOLO.dataset:1251 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[sunny-foal] 2026-10-12 12:10:00 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[sunny-foal] 2026-10-12 12:10:00 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[sunny-foal] 2026-10-12 12:10:00 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[sunny-foal] 2026-10-12 12:10:00 | INFO | YOLO.runner:206 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[sunny-foal] 2026-10-12 12:10:02 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.dataset:1373 - Redraw epoch 0 done: 32 images, 335 boxes in 4.6s (seed=1234).
+[sunny-foal] 2026-10-12 12:10:04 | INFO | YOLO.runner:557 - Loaded pretrained weights: yolo26n.pt
+[sunny-foal] 2026-10-12 12:10:14 | INFO | YOLO.runner:594 - Epoch 1 finished (validation metrics on disk).
+[sunny-foal] 2026-10-12 12:10:14 | INFO | YOLO.runner:512 - Mirrored 1 epochs to telemetry.
+[mature-python] 2026-10-12 12:14:41 | INFO | YOLO.runner:324 - Starting YOLO training run_id: mature-python on device: mps
+[mature-python] 2026-10-12 12:14:41 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[mature-python] 2026-10-12 12:14:44 | INFO | YOLO.runner:351 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[mature-python] 2026-10-12 12:14:47 | INFO | YOLO.runner:351 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[mature-python] 2026-10-12 12:15:01 | INFO | YOLO.runner:351 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:1246 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:1251 - Rendered 32 deterministic GT overlays (304 boxes) in 1.3s.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:1246 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:1251 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[mature-python] 2026-10-12 12:15:03 | INFO | YOLO.runner:206 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[mature-python] 2026-10-12 12:15:05 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.dataset:1373 - Redraw epoch 0 done: 32 images, 335 boxes in 4.5s (seed=1234).
+[mature-python] 2026-10-12 12:15:07 | INFO | YOLO.runner:568 - Loaded pretrained weights: yolo26n.pt
+[mature-python] 2026-10-12 12:15:17 | INFO | YOLO.runner:604 - Epoch 1 finished (validation metrics on disk).
+[mature-python] 2026-10-12 12:15:17 | INFO | YOLO.runner:523 - Mirrored 1 epochs to telemetry.
+[needed-bat] 2026-10-12 12:18:33 | INFO | YOLO.runner:324 - Starting YOLO training run_id: needed-bat on device: mps
+[needed-bat] 2026-10-12 12:18:34 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[needed-bat] 2026-10-12 12:18:36 | INFO | YOLO.runner:351 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[needed-bat] 2026-10-12 12:18:40 | INFO | YOLO.runner:351 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[needed-bat] 2026-10-12 12:18:53 | INFO | YOLO.runner:351 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:1246 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:1251 - Rendered 32 deterministic GT overlays (304 boxes) in 1.3s.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:1246 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:1251 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[needed-bat] 2026-10-12 12:18:55 | INFO | YOLO.runner:206 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[needed-bat] 2026-10-12 12:18:57 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[needed-bat] 2026-10-12 12:18:59 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[needed-bat] 2026-10-12 12:18:59 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[needed-bat] 2026-10-12 12:18:59 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[needed-bat] 2026-10-12 12:19:00 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[needed-bat] 2026-10-12 12:19:00 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[needed-bat] 2026-10-12 12:19:00 | INFO | YOLO.dataset:1373 - Redraw epoch 0 done: 32 images, 335 boxes in 4.7s (seed=1234).
+[needed-bat] 2026-10-12 12:19:00 | INFO | YOLO.runner:568 - Loaded pretrained weights: yolo26n.pt
+[needed-bat] 2026-10-12 12:19:08 | INFO | YOLO.runner:604 - Epoch 1 finished (validation metrics on disk).
+[needed-bat] 2026-10-12 12:19:08 | INFO | YOLO.runner:523 - Mirrored 1 epochs to telemetry.
+[needed-bat] 2026-10-12 12:19:10 | INFO | YOLO.runner:629 - Epoch 1 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_01.png.
+[needed-bat] 2026-10-12 12:19:12 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1235).
+[needed-bat] 2026-10-12 12:19:14 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1235).
+[needed-bat] 2026-10-12 12:19:14 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 8/32 images (94 boxes so far).
+[needed-bat] 2026-10-12 12:19:14 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 16/32 images (183 boxes so far).
+[needed-bat] 2026-10-12 12:19:15 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 24/32 images (272 boxes so far).
+[needed-bat] 2026-10-12 12:19:15 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 32/32 images (336 boxes so far).
+[needed-bat] 2026-10-12 12:19:15 | INFO | YOLO.dataset:1373 - Redraw epoch 1 done: 32 images, 336 boxes in 5.2s (seed=1235).
+[needed-bat] 2026-10-12 12:19:15 | INFO | YOLO.runner:653 - Epoch 1 redraw for epoch 2: 32 images, 336 boxes in 5.2s (seed=1235).
+[needed-bat] 2026-10-12 12:19:19 | INFO | YOLO.runner:604 - Epoch 2 finished (validation metrics on disk).
+[needed-bat] 2026-10-12 12:19:19 | INFO | YOLO.runner:523 - Mirrored 1 epochs to telemetry.
+[needed-bat] 2026-10-12 12:19:20 | INFO | YOLO.runner:629 - Epoch 2 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_02.png.
+[needed-bat] 2026-10-12 12:19:20 | INFO | YOLO.runner:641 - Epoch 2 is the last epoch; skipping next-epoch redraw.
+[needed-bat] 2026-10-12 12:19:24 | INFO | YOLO.runner:604 - Epoch 3 finished (validation metrics on disk).
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:629 - Epoch 3 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_03.png.
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:641 - Epoch 3 is the last epoch; skipping next-epoch redraw.
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:539 - Copied artifact results.png to outputs.
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:539 - Copied artifact confusion_matrix.png to outputs.
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:539 - Copied artifact labels.jpg to outputs.
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:539 - Copied artifact results.csv to outputs.
+[needed-bat] 2026-10-12 12:19:25 | INFO | YOLO.runner:712 - Saved best weights to ./YOLO/models/yolo_needed-bat_best.pt
+[needed-bat] 2026-10-12 12:19:28 | INFO | YOLO.runner:735 - FINAL VAL: mAP50=0.0270 mAP50-95=0.0141 precision=0.0025 recall=0.1786
+[needed-bat] 2026-10-12 12:19:29 | INFO | YOLO.runner:735 - FINAL TEST: mAP50=0.1025 mAP50-95=0.0873 precision=0.0022 recall=0.1250
+[loved-dassie] 2026-10-12 12:27:39 | INFO | YOLO.runner:324 - Starting YOLO training run_id: loved-dassie on device: mps
+[loved-dassie] 2026-10-12 12:27:40 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[loved-dassie] 2026-10-12 12:27:42 | INFO | YOLO.runner:351 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[loved-dassie] 2026-10-12 12:27:46 | INFO | YOLO.runner:351 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[loved-dassie] 2026-10-12 12:27:58 | INFO | YOLO.runner:351 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:1246 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:1251 - Rendered 32 deterministic GT overlays (304 boxes) in 1.3s.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:1246 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:1251 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[loved-dassie] 2026-10-12 12:27:59 | INFO | YOLO.runner:206 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[loved-dassie] 2026-10-12 12:28:02 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[loved-dassie] 2026-10-12 12:28:04 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[loved-dassie] 2026-10-12 12:28:04 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[loved-dassie] 2026-10-12 12:28:04 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[loved-dassie] 2026-10-12 12:28:05 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[loved-dassie] 2026-10-12 12:28:05 | INFO | YOLO.dataset:1355 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[loved-dassie] 2026-10-12 12:28:05 | INFO | YOLO.dataset:1373 - Redraw epoch 0 done: 32 images, 335 boxes in 5.3s (seed=1234).
+[loved-dassie] 2026-10-12 12:28:05 | INFO | YOLO.runner:568 - Loaded pretrained weights: yolo26n.pt
+[loved-dassie] 2026-10-12 12:28:14 | INFO | YOLO.runner:609 - Epoch 1 finished (validation metrics on disk).
+[loved-dassie] 2026-10-12 12:28:14 | INFO | YOLO.runner:523 - Mirrored 1 epochs to telemetry.
+[loved-dassie] 2026-10-12 12:28:15 | INFO | YOLO.runner:634 - Epoch 1 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_01.png.
+[loved-dassie] 2026-10-12 12:28:17 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1235).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1235).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 8/32 images (94 boxes so far).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 16/32 images (183 boxes so far).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 24/32 images (272 boxes so far).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.dataset:1355 - Redraw epoch 1: 32/32 images (336 boxes so far).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.dataset:1373 - Redraw epoch 1 done: 32 images, 336 boxes in 5.2s (seed=1235).
+[loved-dassie] 2026-10-12 12:28:20 | INFO | YOLO.runner:658 - Epoch 1 redraw for epoch 2: 32 images, 336 boxes in 5.2s (seed=1235).
+[loved-dassie] 2026-10-12 12:28:27 | INFO | YOLO.runner:609 - Epoch 2 finished (validation metrics on disk).
+[loved-dassie] 2026-10-12 12:28:27 | INFO | YOLO.runner:523 - Mirrored 1 epochs to telemetry.
+[loved-dassie] 2026-10-12 12:28:27 | INFO | YOLO.runner:634 - Epoch 2 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_02.png.
+[loved-dassie] 2026-10-12 12:28:27 | INFO | YOLO.runner:646 - Epoch 2 is the last epoch; skipping next-epoch redraw.
+[loved-dassie] 2026-10-12 12:28:32 | INFO | YOLO.runner:539 - Copied artifact results.png to outputs.
+[loved-dassie] 2026-10-12 12:28:32 | INFO | YOLO.runner:539 - Copied artifact confusion_matrix.png to outputs.
+[loved-dassie] 2026-10-12 12:28:32 | INFO | YOLO.runner:539 - Copied artifact labels.jpg to outputs.
+[loved-dassie] 2026-10-12 12:28:32 | INFO | YOLO.runner:539 - Copied artifact results.csv to outputs.
+[loved-dassie] 2026-10-12 12:28:32 | INFO | YOLO.runner:717 - Saved best weights to ./YOLO/models/yolo_loved-dassie_best.pt
+[loved-dassie] 2026-10-12 12:28:34 | INFO | YOLO.runner:740 - FINAL VAL: mAP50=0.0270 mAP50-95=0.0141 precision=0.0025 recall=0.1786
+[loved-dassie] 2026-10-12 12:28:36 | INFO | YOLO.runner:740 - FINAL TEST: mAP50=0.1025 mAP50-95=0.0873 precision=0.0022 recall=0.1250
+[modest-deer] 2026-10-12 12:29:25 | INFO | __main__:195 - Loading weights: YOLO/models/yolo_loved-dassie_best.pt
+[modest-deer] 2026-10-12 12:29:26 | INFO | __main__:217 - Wrote 4 overlays to YOLO/outputs/predict (peak confidence seen: 0.0013, conf threshold 0.001).
+[real-bison] 2026-10-12 12:36:13 | INFO | YOLO.runner:324 - Starting YOLO training run_id: real-bison on device: mps
+[real-bison] 2026-10-12 12:36:14 | INFO | YOLO.dataset:782 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[real-bison] 2026-10-12 12:36:16 | INFO | YOLO.runner:351 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[real-bison] 2026-10-12 12:36:20 | INFO | YOLO.runner:351 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[real-bison] 2026-10-12 12:36:34 | INFO | YOLO.runner:351 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:1247 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:1252 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:1247 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:1252 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:934 - Condition encoding: 8/32 floorplans.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:934 - Condition encoding: 32/32 floorplans.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.dataset:938 - Cached 32 condition latents.
+[real-bison] 2026-10-12 12:36:36 | INFO | YOLO.runner:206 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[real-bison] 2026-10-12 12:36:38 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[real-bison] 2026-10-12 12:36:40 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[real-bison] 2026-10-12 12:36:40 | INFO | YOLO.dataset:1358 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[real-bison] 2026-10-12 12:36:40 | INFO | YOLO.dataset:1358 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[real-bison] 2026-10-12 12:36:41 | INFO | YOLO.dataset:1358 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[real-bison] 2026-10-12 12:36:41 | INFO | YOLO.dataset:1358 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[real-bison] 2026-10-12 12:36:41 | INFO | YOLO.dataset:1376 - Redraw epoch 0 done: 32 images, 335 boxes in 4.7s (seed=1234).
+[real-bison] 2026-10-12 12:36:41 | INFO | YOLO.runner:570 - Loaded pretrained weights: yolo26n.pt
+[real-bison] 2026-10-12 12:36:51 | INFO | YOLO.runner:611 - Epoch 1 finished (validation metrics on disk).
+[real-bison] 2026-10-12 12:36:51 | INFO | YOLO.runner:525 - Mirrored 1 epochs to telemetry.
+[real-bison] 2026-10-12 12:36:52 | INFO | YOLO.runner:636 - Epoch 1 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_01.png.
+[real-bison] 2026-10-12 12:36:54 | INFO | YOLO.dataset:977 - Diffusion sampling: 16/32 arrangements (seed=1235).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.dataset:977 - Diffusion sampling: 32/32 arrangements (seed=1235).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.dataset:1358 - Redraw epoch 1: 8/32 images (94 boxes so far).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.dataset:1358 - Redraw epoch 1: 16/32 images (183 boxes so far).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.dataset:1358 - Redraw epoch 1: 24/32 images (272 boxes so far).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.dataset:1358 - Redraw epoch 1: 32/32 images (336 boxes so far).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.dataset:1376 - Redraw epoch 1 done: 32 images, 336 boxes in 4.5s (seed=1235).
+[real-bison] 2026-10-12 12:36:56 | INFO | YOLO.runner:660 - Epoch 1 redraw for epoch 2: 32 images, 336 boxes in 4.5s (seed=1235).
+[real-bison] 2026-10-12 12:37:03 | INFO | YOLO.runner:611 - Epoch 2 finished (validation metrics on disk).
+[real-bison] 2026-10-12 12:37:03 | INFO | YOLO.runner:525 - Mirrored 1 epochs to telemetry.
+[real-bison] 2026-10-12 12:37:03 | INFO | YOLO.runner:636 - Epoch 2 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_02.png.
+[real-bison] 2026-10-12 12:37:03 | INFO | YOLO.runner:648 - Epoch 2 is the last epoch; skipping next-epoch redraw.
+[real-bison] 2026-10-12 12:37:08 | INFO | YOLO.runner:541 - Copied artifact results.png to outputs.
+[real-bison] 2026-10-12 12:37:08 | INFO | YOLO.runner:541 - Copied artifact confusion_matrix.png to outputs.
+[real-bison] 2026-10-12 12:37:08 | INFO | YOLO.runner:541 - Copied artifact labels.jpg to outputs.
+[real-bison] 2026-10-12 12:37:08 | INFO | YOLO.runner:541 - Copied artifact results.csv to outputs.
+[real-bison] 2026-10-12 12:37:08 | INFO | YOLO.runner:719 - Saved best weights to ./YOLO/models/yolo_real-bison_best.pt
+[real-bison] 2026-10-12 12:37:11 | INFO | YOLO.runner:742 - FINAL VAL: mAP50=0.0270 mAP50-95=0.0141 precision=0.0025 recall=0.1786
+[real-bison] 2026-10-12 12:37:13 | INFO | YOLO.runner:742 - FINAL TEST: mAP50=0.1025 mAP50-95=0.0873 precision=0.0022 recall=0.1250
+[chief-caiman] 2026-10-12 13:34:29 | INFO | YOLO.runner:329 - Starting YOLO training run_id: chief-caiman on device: mps
+[chief-caiman] 2026-10-12 13:34:30 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[chief-caiman] 2026-10-12 13:34:32 | INFO | YOLO.runner:356 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[chief-caiman] 2026-10-12 13:34:36 | INFO | YOLO.runner:356 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[chief-caiman] 2026-10-12 13:34:50 | INFO | YOLO.runner:356 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1344 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1349 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1344 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1349 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1024 - Condition encoding: 8/32 floorplans.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1024 - Condition encoding: 32/32 floorplans.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.dataset:1028 - Cached 32 condition latents.
+[chief-caiman] 2026-10-12 13:34:51 | INFO | YOLO.runner:211 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[chief-caiman] 2026-10-12 13:34:53 | INFO | YOLO.dataset:1067 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[chief-caiman] 2026-10-12 13:34:55 | INFO | YOLO.dataset:1067 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[chief-caiman] 2026-10-12 13:34:55 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[chief-caiman] 2026-10-12 13:34:55 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[chief-caiman] 2026-10-12 13:34:56 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[chief-caiman] 2026-10-12 13:34:56 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[chief-caiman] 2026-10-12 13:34:56 | INFO | YOLO.dataset:1481 - Redraw epoch 0 done: 32 images, 335 boxes in 4.4s (seed=1234).
+[chief-caiman] 2026-10-12 13:34:56 | INFO | YOLO.runner:588 - Loaded pretrained weights: yolo26n.pt
+[chief-caiman] 2026-10-12 13:35:05 | INFO | YOLO.runner:631 - Epoch 1 finished (validation metrics on disk).
+[chief-caiman] 2026-10-12 13:35:05 | INFO | YOLO.runner:530 - Mirrored 1 epochs to telemetry.
+[chief-caiman] 2026-10-12 13:35:06 | INFO | YOLO.runner:656 - Epoch 1 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_01.png.
+[chief-caiman] 2026-10-12 13:35:08 | INFO | YOLO.dataset:1067 - Diffusion sampling: 16/32 arrangements (seed=1235).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.dataset:1067 - Diffusion sampling: 32/32 arrangements (seed=1235).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 8/32 images (94 boxes so far).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 16/32 images (183 boxes so far).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 24/32 images (272 boxes so far).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 32/32 images (336 boxes so far).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.dataset:1481 - Redraw epoch 1 done: 32 images, 336 boxes in 4.3s (seed=1235).
+[chief-caiman] 2026-10-12 13:35:10 | INFO | YOLO.runner:687 - Epoch 1 redraw for epoch 2: 32 images, 336 boxes in 4.3s (seed=1235); synced 32 in-memory label entries.
+[chief-caiman] 2026-10-12 13:35:16 | INFO | YOLO.runner:631 - Epoch 2 finished (validation metrics on disk).
+[chief-caiman] 2026-10-12 13:35:16 | INFO | YOLO.runner:530 - Mirrored 1 epochs to telemetry.
+[chief-caiman] 2026-10-12 13:35:17 | INFO | YOLO.runner:656 - Epoch 2 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_02.png.
+[chief-caiman] 2026-10-12 13:35:17 | INFO | YOLO.runner:668 - Epoch 2 is the last epoch; skipping next-epoch redraw.
+[chief-caiman] 2026-10-12 13:35:21 | INFO | YOLO.runner:546 - Copied artifact results.png to outputs.
+[chief-caiman] 2026-10-12 13:35:21 | INFO | YOLO.runner:546 - Copied artifact confusion_matrix.png to outputs.
+[chief-caiman] 2026-10-12 13:35:21 | INFO | YOLO.runner:546 - Copied artifact labels.jpg to outputs.
+[chief-caiman] 2026-10-12 13:35:21 | INFO | YOLO.runner:546 - Copied artifact results.csv to outputs.
+[chief-caiman] 2026-10-12 13:35:21 | INFO | YOLO.runner:747 - Saved best weights to ./YOLO/models/yolo_chief-caiman_best.pt
+[chief-caiman] 2026-10-12 13:35:25 | INFO | YOLO.runner:770 - FINAL VAL: mAP50=0.0346 mAP50-95=0.0186 precision=0.0025 recall=0.1786
+[chief-caiman] 2026-10-12 13:35:26 | INFO | YOLO.runner:770 - FINAL TEST: mAP50=0.1048 mAP50-95=0.0862 precision=0.0023 recall=0.1250
+[exact-hare] 2026-10-12 13:39:12 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[exact-hare] 2026-10-12 13:39:16 | INFO | YOLO.dataset:1311 - Deterministic render already current in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val (32 images); skipping.
+[exact-hare] 2026-10-12 13:39:16 | INFO | YOLO.dataset:1311 - Deterministic render already current in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val (32 images); skipping.
+[alert-wasp] 2026-10-12 13:39:57 | INFO | __main__:195 - Loading weights: YOLO/models/yolo_chief-caiman_best.pt
+[alert-wasp] 2026-10-12 13:39:58 | INFO | __main__:217 - Wrote 3 overlays to YOLO/outputs/predict (peak confidence seen: 0.0014, conf threshold 0.001).
+[stable-oryx] 2026-10-12 13:40:00 | INFO | __main__:195 - Loading weights: YOLO/models/yolo_chief-caiman_best.pt
+[stable-oryx] 2026-10-12 13:40:01 | INFO | __main__:217 - Wrote 1 overlays to YOLO/outputs/predict (peak confidence seen: 0.0013, conf threshold 0.001).
+[live-bedbug] 2026-10-12 13:49:43 | INFO | YOLO.runner:329 - Starting YOLO training run_id: live-bedbug on device: mps
+[live-bedbug] 2026-10-12 13:49:44 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: ./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond ./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target ./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[live-bedbug] 2026-10-12 13:49:46 | INFO | YOLO.runner:356 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[live-bedbug] 2026-10-12 13:49:50 | INFO | YOLO.runner:356 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[live-bedbug] 2026-10-12 13:50:05 | INFO | YOLO.runner:356 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[live-bedbug] 2026-10-12 13:50:06 | INFO | YOLO.dataset:1344 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[live-bedbug] 2026-10-12 13:50:06 | INFO | YOLO.dataset:1349 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[live-bedbug] 2026-10-12 13:50:07 | INFO | YOLO.dataset:1344 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[live-bedbug] 2026-10-12 13:50:07 | INFO | YOLO.dataset:1349 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[live-bedbug] 2026-10-12 13:50:07 | INFO | YOLO.dataset:1024 - Condition encoding: 8/32 floorplans.
+[live-bedbug] 2026-10-12 13:50:07 | INFO | YOLO.dataset:1024 - Condition encoding: 32/32 floorplans.
+[live-bedbug] 2026-10-12 13:50:07 | INFO | YOLO.dataset:1028 - Cached 32 condition latents.
+[live-bedbug] 2026-10-12 13:50:07 | INFO | YOLO.runner:211 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[live-bedbug] 2026-10-12 13:50:09 | INFO | YOLO.dataset:1067 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[live-bedbug] 2026-10-12 13:50:11 | INFO | YOLO.dataset:1067 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[live-bedbug] 2026-10-12 13:50:11 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[live-bedbug] 2026-10-12 13:50:12 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[live-bedbug] 2026-10-12 13:50:12 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[live-bedbug] 2026-10-12 13:50:12 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[live-bedbug] 2026-10-12 13:50:12 | INFO | YOLO.dataset:1481 - Redraw epoch 0 done: 32 images, 335 boxes in 5.1s (seed=1234).
+[live-bedbug] 2026-10-12 13:50:12 | INFO | YOLO.runner:588 - Loaded pretrained weights: yolo26n.pt
+[live-bedbug] 2026-10-12 13:50:23 | INFO | YOLO.runner:631 - Epoch 1 finished (validation metrics on disk).
+[live-bedbug] 2026-10-12 13:50:23 | INFO | YOLO.runner:530 - Mirrored 1 epochs to telemetry.
+[live-bedbug] 2026-10-12 13:50:25 | INFO | YOLO.runner:656 - Epoch 1 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_01.png.
+[live-bedbug] 2026-10-12 13:50:27 | INFO | YOLO.dataset:1067 - Diffusion sampling: 16/32 arrangements (seed=1235).
+[live-bedbug] 2026-10-12 13:50:29 | INFO | YOLO.dataset:1067 - Diffusion sampling: 32/32 arrangements (seed=1235).
+[live-bedbug] 2026-10-12 13:50:29 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 8/32 images (94 boxes so far).
+[live-bedbug] 2026-10-12 13:50:29 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 16/32 images (183 boxes so far).
+[live-bedbug] 2026-10-12 13:50:30 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 24/32 images (272 boxes so far).
+[live-bedbug] 2026-10-12 13:50:30 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 32/32 images (336 boxes so far).
+[live-bedbug] 2026-10-12 13:50:30 | INFO | YOLO.dataset:1481 - Redraw epoch 1 done: 32 images, 336 boxes in 5.1s (seed=1235).
+[live-bedbug] 2026-10-12 13:50:30 | INFO | YOLO.runner:687 - Epoch 1 redraw for epoch 2: 32 images, 336 boxes in 5.1s (seed=1235); synced 32 in-memory label entries.
+[live-bedbug] 2026-10-12 13:50:36 | INFO | YOLO.runner:631 - Epoch 2 finished (validation metrics on disk).
+[live-bedbug] 2026-10-12 13:50:36 | INFO | YOLO.runner:530 - Mirrored 1 epochs to telemetry.
+[live-bedbug] 2026-10-12 13:50:37 | INFO | YOLO.runner:656 - Epoch 2 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in YOLO/outputs/montage_epoch_02.png.
+[live-bedbug] 2026-10-12 13:50:37 | INFO | YOLO.runner:668 - Epoch 2 is the last epoch; skipping next-epoch redraw.
+[live-bedbug] 2026-10-12 13:50:41 | INFO | YOLO.runner:546 - Copied artifact results.png to outputs.
+[live-bedbug] 2026-10-12 13:50:41 | INFO | YOLO.runner:546 - Copied artifact confusion_matrix.png to outputs.
+[live-bedbug] 2026-10-12 13:50:41 | INFO | YOLO.runner:546 - Copied artifact labels.jpg to outputs.
+[live-bedbug] 2026-10-12 13:50:41 | INFO | YOLO.runner:546 - Copied artifact results.csv to outputs.
+[live-bedbug] 2026-10-12 13:50:41 | INFO | YOLO.runner:747 - Saved best weights to ./YOLO/models/yolo_live-bedbug_best.pt
+[live-bedbug] 2026-10-12 13:50:44 | INFO | YOLO.runner:770 - FINAL VAL: mAP50=0.0346 mAP50-95=0.0186 precision=0.0025 recall=0.1786
+[live-bedbug] 2026-10-12 13:50:46 | INFO | YOLO.runner:770 - FINAL TEST: mAP50=0.1048 mAP50-95=0.0862 precision=0.0023 recall=0.1250
+[sought-liger] 2026-10-12 14:00:20 | INFO | YOLO.runner:368 - Starting YOLO training run_id: sought-liger on device: mps
+[sought-liger] 2026-10-12 14:00:21 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: /Users/aatmaj/Metanoia/conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[sought-liger] 2026-10-12 14:00:23 | INFO | YOLO.runner:395 - Indexed 8 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[sought-liger] 2026-10-12 14:00:27 | INFO | YOLO.runner:395 - Indexed 32 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[sought-liger] 2026-10-12 14:00:41 | INFO | YOLO.runner:395 - Indexed 32 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.
+[sought-liger] 2026-10-12 14:00:42 | INFO | YOLO.dataset:1344 - Deterministic render: 32/32 images (304 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/val.
+[sought-liger] 2026-10-12 14:00:42 | INFO | YOLO.dataset:1349 - Rendered 32 deterministic GT overlays (304 boxes) in 1.4s.
+[sought-liger] 2026-10-12 14:00:43 | INFO | YOLO.dataset:1344 - Deterministic render: 8/8 images (72 boxes) in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test.
+[sought-liger] 2026-10-12 14:00:43 | INFO | YOLO.dataset:1349 - Rendered 8 deterministic GT overlays (72 boxes) in 0.2s.
+[sought-liger] 2026-10-12 14:00:43 | INFO | YOLO.dataset:1024 - Condition encoding: 8/32 floorplans.
+[sought-liger] 2026-10-12 14:00:43 | INFO | YOLO.dataset:1024 - Condition encoding: 32/32 floorplans.
+[sought-liger] 2026-10-12 14:00:43 | INFO | YOLO.dataset:1028 - Cached 32 condition latents.
+[sought-liger] 2026-10-12 14:00:43 | INFO | YOLO.runner:249 - Optimizer budget: 32 images, batch 8, nbs 8 -> 4 optimizer step(s) per epoch, 8 over 2 epochs.
+[sought-liger] 2026-10-12 14:00:45 | INFO | YOLO.dataset:1067 - Diffusion sampling: 16/32 arrangements (seed=1234).
+[sought-liger] 2026-10-12 14:00:47 | INFO | YOLO.dataset:1067 - Diffusion sampling: 32/32 arrangements (seed=1234).
+[sought-liger] 2026-10-12 14:00:47 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 8/32 images (95 boxes so far).
+[sought-liger] 2026-10-12 14:00:47 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 16/32 images (185 boxes so far).
+[sought-liger] 2026-10-12 14:00:47 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 24/32 images (268 boxes so far).
+[sought-liger] 2026-10-12 14:00:48 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 32/32 images (335 boxes so far).
+[sought-liger] 2026-10-12 14:00:48 | INFO | YOLO.dataset:1481 - Redraw epoch 0 done: 32 images, 335 boxes in 4.9s (seed=1234).
+[sought-liger] 2026-10-12 14:00:55 | INFO | YOLO.runner:627 - Loaded pretrained weights: yolo26n.pt
+[sought-liger] 2026-10-12 14:01:05 | INFO | YOLO.runner:670 - Epoch 1 finished (validation metrics on disk).
+[sought-liger] 2026-10-12 14:01:05 | INFO | YOLO.runner:569 - Mirrored 1 epochs to telemetry.
+[sought-liger] 2026-10-12 14:01:06 | INFO | YOLO.runner:695 - Epoch 1 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in /Users/aatmaj/Metanoia/YOLO/outputs/montage_epoch_01.png.
+[sought-liger] 2026-10-12 14:01:08 | INFO | YOLO.dataset:1067 - Diffusion sampling: 16/32 arrangements (seed=1235).
+[sought-liger] 2026-10-12 14:01:10 | INFO | YOLO.dataset:1067 - Diffusion sampling: 32/32 arrangements (seed=1235).
+[sought-liger] 2026-10-12 14:01:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 8/32 images (94 boxes so far).
+[sought-liger] 2026-10-12 14:01:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 16/32 images (183 boxes so far).
+[sought-liger] 2026-10-12 14:01:10 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 24/32 images (272 boxes so far).
+[sought-liger] 2026-10-12 14:01:11 | INFO | YOLO.dataset:1458 - Redraw epoch 1: 32/32 images (336 boxes so far).
+[sought-liger] 2026-10-12 14:01:11 | INFO | YOLO.dataset:1481 - Redraw epoch 1 done: 32 images, 336 boxes in 5.0s (seed=1235).
+[sought-liger] 2026-10-12 14:01:11 | INFO | YOLO.runner:726 - Epoch 1 redraw for epoch 2: 32 images, 336 boxes in 5.0s (seed=1235); synced 32 in-memory label entries.
+[sought-liger] 2026-10-12 14:01:17 | INFO | YOLO.runner:670 - Epoch 2 finished (validation metrics on disk).
+[sought-liger] 2026-10-12 14:01:17 | INFO | YOLO.runner:569 - Mirrored 1 epochs to telemetry.
+[sought-liger] 2026-10-12 14:01:18 | INFO | YOLO.runner:695 - Epoch 2 overlays: 8 images, 80 GT boxes, 0 predicted boxes (peak conf 0.0000); montage in /Users/aatmaj/Metanoia/YOLO/outputs/montage_epoch_02.png.
+[sought-liger] 2026-10-12 14:01:18 | INFO | YOLO.runner:707 - Epoch 2 is the last epoch; skipping next-epoch redraw.
+[sought-liger] 2026-10-12 14:01:23 | INFO | YOLO.runner:585 - Copied artifact results.png to outputs.
+[sought-liger] 2026-10-12 14:01:23 | INFO | YOLO.runner:585 - Copied artifact confusion_matrix.png to outputs.
+[sought-liger] 2026-10-12 14:01:23 | INFO | YOLO.runner:585 - Copied artifact labels.jpg to outputs.
+[sought-liger] 2026-10-12 14:01:23 | INFO | YOLO.runner:585 - Copied artifact results.csv to outputs.
+[sought-liger] 2026-10-12 14:01:23 | INFO | YOLO.runner:786 - Saved best weights to /Users/aatmaj/Metanoia/YOLO/models/yolo_sought-liger_best.pt
+[sought-liger] 2026-10-12 14:01:25 | INFO | YOLO.runner:809 - FINAL VAL: mAP50=0.0346 mAP50-95=0.0186 precision=0.0025 recall=0.1786
+[sought-liger] 2026-10-12 14:01:27 | INFO | YOLO.runner:809 - FINAL TEST: mAP50=0.1048 mAP50-95=0.0862 precision=0.0023 recall=0.1250
+[key-sheep] 2026-10-12 20:43:10 | INFO | YOLO.runner:368 - Starting YOLO training run_id: key-sheep on device: mps
+[key-sheep] 2026-10-12 20:43:11 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: /Users/aatmaj/Metanoia/conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[key-sheep] 2026-10-12 20:43:13 | INFO | YOLO.runner:395 - Indexed 10043 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test.
+[key-sheep] 2026-10-12 20:43:16 | INFO | YOLO.runner:395 - Indexed 19920 val samples from /Users/aatmaj/FurnitureArranger/datasets/work/validate.
+[key-sheep] 2026-10-12 20:43:31 | INFO | YOLO.runner:395 - Indexed 69776 train samples from /Users/aatmaj/FurnitureArranger/datasets/work/train.

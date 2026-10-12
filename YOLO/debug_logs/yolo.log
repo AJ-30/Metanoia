@@ -1,4 +1,0 @@
-[master-sloth] 2026-10-11 12:24:45 | INFO | __main__:349 - Predicting on 4 image(s) from split 'val' with yolo_tidy-feline_best.pt (conf=0.001, max_boxes=20, device=mps).
-[master-sloth] 2026-10-11 12:24:46 | INFO | __main__:384 - Wrote 4 annotated image(s) to /Users/aatmaj/Metanoia/YOLO/outputs/predict.
-[master-sloth] 2026-10-11 12:24:46 | INFO | __main__:385 - Contact sheet: /Users/aatmaj/Metanoia/YOLO/outputs/predict/contact_sheet_val.png
-[master-sloth] 2026-10-11 12:24:46 | INFO | __main__:392 - Highest detection confidence seen: 0.0013

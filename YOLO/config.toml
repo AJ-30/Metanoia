@@ -1,76 +1,44 @@
+# YOLO stage configuration (YOLO/run.py, via ./train_YOLO.sh).
+# Paths, devices and dataset locations only - training/rendering numbers live
+# in YOLO/hyperparameters.toml.
+
 [default]
 DEBUG_LOG_FILE_PATH = "./debug_logs/yolo.log"
 MODEL_SAVE_PATH = "./YOLO/models/"
 TELEMETRY_LOG_DIRECTORY = "./YOLO/telemetry_logs/"
 OUTPUT_SAMPLES_DIRECTORY = "./YOLO/outputs/"
-# Generated YOLO dataset (2x augmented train + mirrored val/test) and its
-# Ultralytics index files. This root is separate from any earlier build so a
-# stale labels/*.cache or data.yaml from a different AUG_FACTOR is never reused.
-AUGMENTED_DATASET_ROOT = "/Users/aatmaj/Downloads/datasets/yolo_augmented"
-DATA_YAML_PATH = "/Users/aatmaj/Downloads/datasets/yolo_augmented/data.yaml"
-AUGMENT_MANIFEST_PATH = "/Users/aatmaj/Downloads/datasets/yolo_augmented/augment_manifest.csv"
-# Live-diffusion training dataset root (rewritten in place, never prebuilt).
-# Train PNGs are regenerated from fresh diffusion draws before epoch 1 and at
-# the end of every epoch (see YOLO/live_diffusion.py); val/test hold
-# deterministic GT overlays so early stopping and the final report stay stable.
-LIVE_DATASET_ROOT = "/Users/aatmaj/Downloads/datasets/yolo_live"
-LIVE_DATA_YAML_PATH = "/Users/aatmaj/Downloads/datasets/yolo_live/data.yaml"
-LIVE_MANIFEST_PATH = "/Users/aatmaj/Downloads/datasets/yolo_live/live_manifest.csv"
-# Folder-per-sample mask dataset feeding the live pipeline. Each sample folder
-# must carry the floorplan mask (diffusion condition), the arrangement mask
-# (deterministic val/test overlays) and labels.txt (GT boxes, copied verbatim).
-# NOTE: this is the mask dataset (FurnitureArranger), NOT the render-only
-# SOURCE_*_SPLIT_DIR below, which carries no segmentation masks.
+# Live-diffusion YOLO dataset root, regenerated in place every run:
+#   images/{train,val,test}, labels/{train,val,test}, data.yaml,
+#   redraw_manifest.csv, .render_signature sidecars.
+# Train PNGs are rewritten from fresh diffusion draws at the end of every
+# epoch; val/test hold deterministic GT overlays (floorplan + GT furniture
+# arrangement, no diffusion) so early stopping and the final report stay
+# stable. A fresh root (v2) is used so no pixels or labels from an older
+# pipeline can be silently reused.
+LIVE_DATASET_ROOT = "/Users/aatmaj/Downloads/datasets/yolo_live_v2"
+LIVE_DATA_YAML_PATH = "/Users/aatmaj/Downloads/datasets/yolo_live_v2/data.yaml"
+LIVE_MANIFEST_PATH = "/Users/aatmaj/Downloads/datasets/yolo_live_v2/redraw_manifest.csv"
+# Folder-per-sample mask dataset feeding the pipeline. Each sample folder
+# carries the floorplan mask (diffusion condition), the arrangement mask
+# (deterministic val/test overlays) and the color index JSONs sit next to
+# the split folders.
 LIVE_SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
 LIVE_SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/validate"
 LIVE_SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
-# Frozen floorplan->arrangement diffusion checkpoint (TV-inclusive arrangement;
-# matches the 12 YOLO classes including TV and Dining_table_medium).
+# Frozen floorplan->arrangement diffusion checkpoint (TV-inclusive arrangement
+# vocabulary). The two frozen mask VAEs must be the ones that diffusion run
+# trained against.
 COND_DIFFUSION_CHECKPOINT_PATH = "./conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt"
-# Frozen mask VAEs rebuilt from their own checkpoint hyperparams. These must
-# match the VAEs the diffusion run trained against (mint-akita floorplan
-# condition, chief-yeti TV-inclusive arrangement target).
 COND_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt"
 TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt"
-# Mask filenames inside each live source sample folder.
+# Mask filenames inside each source sample folder.
 COND_MASK_FILE = "floorplan_segmentation.png"
 TARGET_MASK_FILE = "furniture_segmentation.png"
-# Color index JSONs rendering the overlay (dataset root, next to split dirs).
+# Color index JSONs rendering the overlays (dataset root, next to split dirs).
 MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
 COND_COLOR_INDEX_FILE = "floorplan_color_index.json"
 TARGET_COLOR_INDEX_FILE = "furniture_color_index.json"
-VAE_MODELS_DIR = "./VAE/models/"
-VAE_RUN_ID = "next-collie"
 DEVICE = "mps"
-# Source split folders of the folder-per-sample dataset. Each holds one
-# sub-folder per sample containing full.png, floorplan_only.png and
-# labels.txt — there is no separate images/ or labels/ directory anymore.
-# Which render is read is set by SOURCE_IMAGE_VARIANT below.
-SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/train"
-SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/validate"
-SOURCE_TEST_SPLIT_DIR = "/Users/aatmaj/Downloads/datasets/work/test"
-
-# Which render of each sample folder the YOLO pipeline reads. The dataset stores
-# every render of a layout side by side, so this key is the only switch needed.
-# YOLO is trained on the full render, because the boxes in labels.txt describe
-# the full furniture set:
-#   "full_png"    -> full.png           (furniture + floorplan)
-#   "floorplan_only" -> floorplan_only.png (rooms only, no furniture)
-# no_tv.png is deliberately absent from the table below: it drops the tv pixels
-# while labels.txt still lists the tv box, so its boxes would mismatch its pixels.
-SOURCE_IMAGE_VARIANT = "full_png"
-
-# Annotation file every source sample folder must carry alongside the render
-# above ("<Class_Name> cx cy w h", one box per line, normalized).
-SOURCE_LABEL_FILE_NAME = "labels.txt"
-
-# Variant name -> render filename inside each sample folder. Kept in TOML so the
-# filenames are never hardcoded in Python. Both stages of the pipeline read this
-# table, so each model keeps its own copy: VAE/config.toml and
-# Diffusion/config.toml carry the same entries. Keep them in sync.
-[default.IMAGE_VARIANTS]
-full_png = "full.png"
-floorplan_only = "floorplan_only.png"
 
 [debug]
 IS_DEBUG = true

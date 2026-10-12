@@ -827,7 +827,11 @@ def encode_masks_to_channels(
     # The loop above wrote each group's own background into global channel 0.
     # Replace it with the shared definition: background in every group.
     any_foreground: torch.Tensor = channels[:, layout.foreground_channels].amax(dim=1)
-    channels[:, 0:1, :, :] = 1.0 - any_foreground
+    # unsqueeze(1) keeps the (B, 1, H, W) target shape explicit: a bare
+    # (B, H, W) right-hand side would broadcast against the wrong axis and
+    # raise for any batch larger than one (the docstring promises batched
+    # (B, H, W) masks, and B == 1 behaves identically either way).
+    channels[:, 0:1, :, :] = (1.0 - any_foreground).unsqueeze(1)
     return channels
 
 

@@ -1,1 +1,0 @@
-timestamp,runtime,epoch,train_box,train_cls,train_dfl,val_box,val_cls,val_dfl,precision,recall,mAP50,mAP50_95,lr

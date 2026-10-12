@@ -3,10 +3,13 @@
 # Finetunes YOLO26 on live conditional-diffusion overlay floor plans.
 # Archives artifacts from any previous run, then launches YOLO/run.py.
 # No prebuilt dataset is needed: the trainer indexes the live mask dataset,
-# redraws every train image from a fresh diffusion draw each epoch, and keeps
-# GT boxes as the target (see YOLO/live_diffusion.py and YOLO/README.md).
-# (The standalone frozen-VAE 2x pipeline via ./run_augmentation.sh is kept for
-# ablations only; this trainer never reads it.)
+# uses every available sample, redraws every train image from a fresh
+# diffusion draw at the end of each epoch, derives each image's boxes from the
+# arrangement that was actually drawn, and publishes GT-vs-prediction overlays
+# per epoch (see YOLO/dataset.py and YOLO/README.md).
+#
+# Per-epoch wall clock on M1 Pro with the full pool (~69.8k train / ~19.9k val
+# / ~10k test): ~15-20 min redraw + ~5-8 min train + ~15-25 min validation.
 #
 # Usage:
 #   ./train_YOLO.sh          # debug mode

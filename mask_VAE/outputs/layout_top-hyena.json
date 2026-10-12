@@ -1,0 +1,78 @@
+{
+  "run_id": "top-hyena",
+  "mask_mode": "arrangement_filtered",
+  "groups": [
+    "furniture"
+  ],
+  "excluded_classes": [
+    "furniture/showcase"
+  ],
+  "channels": [
+    {
+      "channel": 0,
+      "label": "background",
+      "color": "#000000",
+      "excluded": false
+    },
+    {
+      "channel": 1,
+      "label": "furniture/sofa",
+      "color": "#f472b6",
+      "excluded": false
+    },
+    {
+      "channel": 2,
+      "label": "furniture/tv",
+      "color": "#a78bfa",
+      "excluded": false
+    },
+    {
+      "channel": 3,
+      "label": "furniture/dining_set",
+      "color": "#fb923c",
+      "excluded": false
+    },
+    {
+      "channel": 4,
+      "label": "furniture/side_table",
+      "color": "#facc15",
+      "excluded": false
+    },
+    {
+      "channel": 5,
+      "label": "furniture/showcase",
+      "color": "#34d399",
+      "excluded": true
+    },
+    {
+      "channel": 6,
+      "label": "furniture/couch",
+      "color": "#f472b6",
+      "excluded": false
+    },
+    {
+      "channel": 7,
+      "label": "furniture/chair",
+      "color": "#f472b6",
+      "excluded": false
+    },
+    {
+      "channel": 8,
+      "label": "furniture/center_table",
+      "color": "#60a5fa",
+      "excluded": false
+    },
+    {
+      "channel": 9,
+      "label": "furniture/vase_table",
+      "color": "#94a3b8",
+      "excluded": false
+    },
+    {
+      "channel": 10,
+      "label": "furniture/sofa_cum_bed",
+      "color": "#818cf8",
+      "excluded": false
+    }
+  ]
+}
