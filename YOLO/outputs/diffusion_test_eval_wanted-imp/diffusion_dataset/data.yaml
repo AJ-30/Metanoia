@@ -1,0 +1,16 @@
+path: "/Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_wanted-imp/diffusion_dataset"
+train: images/train
+val: images/val
+test: images/test
+nc: 10
+names:
+  0: Center_table
+  1: Chair
+  2: Couch
+  3: Dining_table
+  4: Showcase
+  5: Side_table
+  6: Sofa
+  7: Sofa_cum_bed
+  8: TV
+  9: Vase_table

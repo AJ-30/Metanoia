@@ -114,7 +114,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--montage-samples",
         type=int,
-        default=16,
+        default=64,
         help="Number of test images to include in visual contact sheet montages.",
     )
     parser.add_argument(
@@ -122,6 +122,15 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Skip evaluating on the real ground-truth test set (only evaluate on diffusion).",
+    )
+    parser.add_argument(
+        "--overlays-only",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip model.val() entirely. Run diffusion only on the --montage-samples images "
+            "and generate the visual contact sheet. Much faster than a full evaluation."
+        ),
     )
     return parser.parse_args()
 
@@ -213,19 +222,27 @@ def render_evaluation_montage(
 ) -> None:
     """Render a visual montage comparing ground-truth targets with model predictions.
 
+    Annotated images (green GT boxes, red prediction boxes) are saved
+    individually under ``output_image_path.parent / <stem>_ann/`` before being
+    tiled by :func:`~YOLO.overlay.make_montage`, which requires file paths.
+
     Args:
         model (Any): Loaded YOLO model used for inference.
         image_paths (list[Path]): List of image paths to process and montage.
         labels_dir (Path): Directory containing matching YOLO label files (.txt).
-        output_image_path (Path): Path where the resulting montage will be saved.
+        output_image_path (Path): Path where the resulting montage PNG is saved.
         class_names (list[str]): Class vocabulary mapping class ID to display name.
-        conf_threshold: (float): Confidence score threshold for predicted boxes.
+        conf_threshold (float): Confidence score threshold for predicted boxes.
         max_boxes (int): Maximum predicted boxes to display per image.
         montage_cols (int): Number of columns in the montage grid.
         img_size (int): Inference image dimension.
         log (SimpleNamespace): Logger instance.
     """
-    annotated_images: list[Image.Image] = []
+    # Annotated images are saved individually so make_montage receives file paths
+    ann_dir: Path = output_image_path.parent / f"{output_image_path.stem}_ann"
+    ann_dir.mkdir(parents=True, exist_ok=True)
+
+    annotated_paths: list[Path] = []
     for img_path in image_paths:
         if not img_path.is_file():
             continue
@@ -246,15 +263,16 @@ def render_evaluation_montage(
                 pred_boxes=pred_boxes,
                 class_names=class_names,
             )
-            annotated_images.append(annotated)
+        ann_path: Path = ann_dir / img_path.name
+        annotated.save(str(ann_path))
+        annotated_paths.append(ann_path)
 
-    if not annotated_images:
+    if not annotated_paths:
         log.warning("No images available to create montage; skipping.")
         return
 
-    montage: Image.Image = make_montage(annotated_images, cols=montage_cols)
-    output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    montage.save(str(output_image_path))
+    # make_montage(paths, out_path, cols) writes the sheet directly to out_path
+    make_montage(annotated_paths, output_image_path, montage_cols)
     log.info(f"Saved visual evaluation montage to {output_image_path}")
 
 
@@ -355,7 +373,14 @@ class DiffusionTestValidator:
         )
 
     def run(self) -> None:
-        """Execute the complete validation benchmark pipeline."""
+        """Execute the validation benchmark pipeline.
+
+        In ``--overlays-only`` mode only the ``--montage-samples`` images are
+        passed through the diffusion pipeline and ``model.val()`` is skipped
+        entirely, so the run completes in minutes instead of hours.
+        In full mode the complete test split is evaluated and a benchmark
+        summary table is printed.
+        """
         # Lazy import of ultralytics to allow unit test execution without dependencies
         try:
             from ultralytics import YOLO
@@ -376,24 +401,47 @@ class DiffusionTestValidator:
             self.config, self.hyperparams, self.log
         )
 
-        # 3. Index test split sample folders
+        # 3. Index test split sample folders (cheap directory scan)
         test_split_src: str = str(self.config.LIVE_SOURCE_TEST_SPLIT_DIR)
         if not Path(test_split_src).is_dir():
             raise FileNotFoundError(
                 f"Source test split folder does not exist: {test_split_src}"
             )
 
-        test_sources: list[SampleFolder] = list_sample_folders(
+        all_test_sources: list[SampleFolder] = list_sample_folders(
             split_dir=test_split_src,
             cond_mask_file=stack.floorplan_mask_file,
             target_mask_file=stack.arrangement_mask_file,
             cap=self.sample_cap,
         )
         self.log.info(
-            f"Indexed {len(test_sources)} test samples from {test_split_src} (cap={self.sample_cap})."
+            f"Indexed {len(all_test_sources)} test samples from {test_split_src} "
+            f"(cap={self.sample_cap})."
         )
 
-        # 4. Generate Diffusion-Drawn Test Split (Mirroring Training Pipeline)
+        # In overlays-only mode, restrict the diffusion pipeline to exactly the
+        # N montage stems so we never encode/sample the full 10k pool.
+        overlays_only: bool = bool(self.args.overlays_only)
+        montage_count: int = int(self.args.montage_samples)
+        if overlays_only:
+            chosen_stems: list[str] = choose_fixed_stems(
+                sources=[s.stem for s in all_test_sources],
+                count=montage_count,
+                seed=self.seed,
+            )
+            stem_set: set[str] = set(chosen_stems)
+            test_sources: list[SampleFolder] = [
+                s for s in all_test_sources if s.stem in stem_set
+            ]
+            self.log.info(
+                f"--overlays-only: restricting pipeline to {len(test_sources)} "
+                f"images (montage_samples={montage_count}). "
+                "Skipping model.val()."
+            )
+        else:
+            test_sources = all_test_sources
+
+        # 4. Generate Diffusion-Drawn Test Images
         diff_img_dir, diff_lbl_dir, diff_yaml_path = prepare_eval_directories(
             self.eval_output_dir / "diffusion_dataset"
         )
@@ -403,11 +451,13 @@ class DiffusionTestValidator:
             class_names=self.class_names,
         )
 
-        self.log.info("Encoding floorplan condition latents for test set...")
+        self.log.info(
+            f"Encoding floorplan condition latents for {len(test_sources)} images..."
+        )
         cond_norm: torch.Tensor = stack.encode_source_conditions(test_sources)
 
         self.log.info(
-            f"Sampling diffusion arrangements and rendering test overlays (seed={self.seed})..."
+            f"Sampling diffusion arrangements and rendering overlays (seed={self.seed})..."
         )
         redrawer: LiveEpochRedrawer = LiveEpochRedrawer(
             stack, self.hyperparams, self.log
@@ -421,13 +471,49 @@ class DiffusionTestValidator:
             manifest_path=self.eval_output_dir / "redraw_manifest.csv",
         )
         self.log.info(
-            f"Generated {redraw_stats.images} diffusion test images with "
-            f"{redraw_stats.boxes} derived bounding boxes in {redraw_stats.seconds:.1f}s."
+            f"Generated {redraw_stats.images} diffusion images with "
+            f"{redraw_stats.boxes} derived boxes in {redraw_stats.seconds:.1f}s."
         )
 
-        # 5. Evaluate YOLO on the Diffusion-Generated Test Split
         img_size: int = int(self.hyperparams.IMG_SIZE)
         batch_size: int = int(self.hyperparams.BATCH_SIZE)
+        conf_thresh: float = float(self.hyperparams.EPOCH_OVERLAY_CONF)
+        max_boxes: int = int(self.hyperparams.EPOCH_OVERLAY_MAX_BOXES)
+        cols: int = int(self.hyperparams.EPOCH_OVERLAY_MONTAGE_COLS)
+
+        if overlays_only:
+            # In overlays-only mode the montage stems are already the full set
+            montage_stems: list[str] = [s.stem for s in test_sources]
+        else:
+            montage_stems = choose_fixed_stems(
+                sources=[s.stem for s in test_sources],
+                count=montage_count,
+                seed=self.seed,
+            )
+
+        # 5. Generate Visual Montage on Diffusion Images
+        render_evaluation_montage(
+            model=model,
+            image_paths=[diff_img_dir / f"{stem}.png" for stem in montage_stems],
+            labels_dir=diff_lbl_dir,
+            output_image_path=self.eval_output_dir / "montage_diffusion_test.png",
+            class_names=self.class_names,
+            conf_threshold=conf_thresh,
+            max_boxes=max_boxes,
+            montage_cols=cols,
+            img_size=img_size,
+            log=self.log,
+        )
+
+        # Early exit for overlays-only: no model.val(), no summary table
+        if overlays_only:
+            self.log.info(
+                "Overlays-only run complete. "
+                f"Montage saved to {self.eval_output_dir}/montage_diffusion_test.png"
+            )
+            return
+
+        # 6. Full evaluation: model.val() on the diffusion test split
         diff_metrics: dict[str, float] = evaluate_split(
             model=model,
             yaml_path=data_yaml_str,
@@ -438,7 +524,7 @@ class DiffusionTestValidator:
             label="Diffusion-Generated Test Split",
         )
 
-        # 6. Evaluate YOLO on the Real Ground-Truth Test Split (if not skipped)
+        # 7. Optionally evaluate on the real ground-truth test split
         gt_metrics: dict[str, float] | None = None
         if not self.args.skip_gt:
             live_root: Path = Path(self.config.LIVE_DATASET_ROOT)
@@ -450,7 +536,6 @@ class DiffusionTestValidator:
                 class_names=self.class_names,
             )
 
-            # Ensure the deterministic GT split is rendered and current
             gt_renderer: DeterministicSplitRenderer = DeterministicSplitRenderer(
                 stack, self.hyperparams, self.log
             )
@@ -466,26 +551,14 @@ class DiffusionTestValidator:
                 label="Real Ground-Truth Test Split",
             )
 
-        # 7. Generate Visual Montages for Qualitative Visibility
-        if self.args.save_montage and self.args.montage_samples > 0:
-            sample_stems: list[str] = choose_fixed_stems(
-                sources=[source.stem for source in test_sources],
-                count=self.args.montage_samples,
-                seed=self.seed,
-            )
-            diff_sample_paths: list[Path] = [
-                diff_img_dir / f"{stem}.png" for stem in sample_stems
-            ]
-
-            conf_thresh: float = float(self.hyperparams.EPOCH_OVERLAY_CONF)
-            max_boxes: int = int(self.hyperparams.EPOCH_OVERLAY_MAX_BOXES)
-            cols: int = int(self.hyperparams.EPOCH_OVERLAY_MONTAGE_COLS)
-
             render_evaluation_montage(
                 model=model,
-                image_paths=diff_sample_paths,
-                labels_dir=diff_lbl_dir,
-                output_image_path=self.eval_output_dir / "montage_diffusion_test.png",
+                image_paths=[
+                    live_root / "images" / "test" / f"{stem}.png"
+                    for stem in montage_stems
+                ],
+                labels_dir=live_root / "labels" / "test",
+                output_image_path=self.eval_output_dir / "montage_gt_test.png",
                 class_names=self.class_names,
                 conf_threshold=conf_thresh,
                 max_boxes=max_boxes,
@@ -494,28 +567,7 @@ class DiffusionTestValidator:
                 log=self.log,
             )
 
-            if gt_metrics is not None:
-                gt_sample_paths: list[Path] = [
-                    Path(self.config.LIVE_DATASET_ROOT) / "images" / "test" / f"{stem}.png"
-                    for stem in sample_stems
-                ]
-                gt_labels_dir: Path = (
-                    Path(self.config.LIVE_DATASET_ROOT) / "labels" / "test"
-                )
-                render_evaluation_montage(
-                    model=model,
-                    image_paths=gt_sample_paths,
-                    labels_dir=gt_labels_dir,
-                    output_image_path=self.eval_output_dir / "montage_gt_test.png",
-                    class_names=self.class_names,
-                    conf_threshold=conf_thresh,
-                    max_boxes=max_boxes,
-                    montage_cols=cols,
-                    img_size=img_size,
-                    log=self.log,
-                )
-
-        # 8. Print and Persist Benchmark Summary Report
+        # 8. Print and persist benchmark summary report
         summary_text: str = format_summary_table(
             weights_path=str(weights_path),
             test_sample_count=len(test_sources),

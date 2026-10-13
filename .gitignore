@@ -16,3 +16,4 @@ YOLO/augmented_dataset
 # fingerprint, and multi-GB: never worth versioning.
 *.npy
 latent_cache/
+YOLO/outputs/diffusion_test_eval_glad-dove/diffusion_dataset

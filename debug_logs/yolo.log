@@ -2571,3 +2571,70 @@
 [still-chow] 2026-10-13 09:03:45 | INFO | YOLO.runner:670 - Epoch 10 finished (validation metrics on disk).
 [still-chow] 2026-10-13 09:03:45 | INFO | YOLO.runner:569 - Mirrored 1 epochs to telemetry.
 [still-chow] 2026-10-13 09:03:48 | INFO | YOLO.runner:695 - Epoch 10 overlays: 32 images, 312 GT boxes, 319 predicted boxes (peak conf 0.9776); montage in /Users/aatmaj/Metanoia/YOLO/outputs/montage_epoch_10.png.
+[known-panda] 2026-10-13 09:08:52 | INFO | __main__:352 - Initialized DiffusionTestValidator on mps. Output directory: /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_known-panda
+[glad-dove] 2026-10-13 09:11:28 | INFO | __main__:352 - Initialized DiffusionTestValidator on mps. Output directory: /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_glad-dove
+[glad-dove] 2026-10-13 09:11:28 | INFO | __main__:371 - Loading YOLO detector weights from: YOLO/models/montage_epoch_10_last.pt
+[glad-dove] 2026-10-13 09:11:28 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: /Users/aatmaj/Metanoia/conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[glad-dove] 2026-10-13 09:11:30 | INFO | __main__:392 - Indexed 10043 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test (cap=-1).
+[glad-dove] 2026-10-13 09:11:30 | INFO | __main__:406 - Encoding floorplan condition latents for test set...
+[glad-dove] 2026-10-13 09:11:31 | INFO | YOLO.dataset:1024 - Condition encoding: 512/10043 floorplans.
+[glad-dove] 2026-10-13 09:11:37 | INFO | YOLO.dataset:1024 - Condition encoding: 10043/10043 floorplans.
+[glad-dove] 2026-10-13 09:11:37 | INFO | YOLO.dataset:1028 - Cached 10043 condition latents.
+[glad-dove] 2026-10-13 09:11:37 | INFO | __main__:409 - Sampling diffusion arrangements and rendering test overlays (seed=1234)...
+[glad-dove] 2026-10-13 09:12:34 | INFO | YOLO.dataset:1067 - Diffusion sampling: 10043/10043 arrangements (seed=1234).
+[glad-dove] 2026-10-13 09:12:45 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 512/10043 images (5717 boxes so far).
+[glad-dove] 2026-10-13 09:12:57 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 1024/10043 images (11348 boxes so far).
+[glad-dove] 2026-10-13 09:13:09 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 1536/10043 images (16979 boxes so far).
+[glad-dove] 2026-10-13 09:13:23 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 2048/10043 images (22714 boxes so far).
+[glad-dove] 2026-10-13 09:13:35 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 2560/10043 images (28307 boxes so far).
+[glad-dove] 2026-10-13 09:13:49 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 3072/10043 images (33962 boxes so far).
+[glad-dove] 2026-10-13 09:14:01 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 3584/10043 images (39724 boxes so far).
+[glad-dove] 2026-10-13 09:14:14 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 4096/10043 images (45441 boxes so far).
+[glad-dove] 2026-10-13 09:14:27 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 4608/10043 images (51110 boxes so far).
+[glad-dove] 2026-10-13 09:14:41 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 5120/10043 images (56852 boxes so far).
+[glad-dove] 2026-10-13 09:14:56 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 5632/10043 images (62522 boxes so far).
+[glad-dove] 2026-10-13 09:15:09 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 6144/10043 images (68204 boxes so far).
+[glad-dove] 2026-10-13 09:15:25 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 6656/10043 images (73784 boxes so far).
+[glad-dove] 2026-10-13 09:15:42 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 7168/10043 images (79441 boxes so far).
+[glad-dove] 2026-10-13 09:15:55 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 7680/10043 images (85073 boxes so far).
+[glad-dove] 2026-10-13 09:16:09 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 8192/10043 images (90642 boxes so far).
+[glad-dove] 2026-10-13 09:16:24 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 8704/10043 images (96365 boxes so far).
+[glad-dove] 2026-10-13 09:16:38 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 9216/10043 images (102226 boxes so far).
+[glad-dove] 2026-10-13 09:16:51 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 9728/10043 images (107947 boxes so far).
+[glad-dove] 2026-10-13 09:16:58 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 10043/10043 images (111553 boxes so far).
+[glad-dove] 2026-10-13 09:16:58 | INFO | YOLO.dataset:1481 - Redraw epoch 0 done: 10043 images, 111553 boxes in 321.0s (seed=1234).
+[glad-dove] 2026-10-13 09:16:58 | INFO | __main__:423 - Generated 10043 diffusion test images with 111553 derived bounding boxes in 321.0s.
+[glad-dove] 2026-10-13 09:16:58 | INFO | __main__:175 - Running YOLO validation on Diffusion-Generated Test Split...
+[glad-dove] 2026-10-13 09:19:12 | INFO | __main__:192 - Diffusion-Generated Test Split Metrics: mAP50=0.8835, mAP50-95=0.8250, precision=0.8613, recall=0.8599
+[glad-dove] 2026-10-13 09:19:12 | INFO | YOLO.dataset:1311 - Deterministic render already current in /Users/aatmaj/Downloads/datasets/yolo_live_v2/images/test (10043 images); skipping.
+[glad-dove] 2026-10-13 09:19:12 | INFO | __main__:175 - Running YOLO validation on Real Ground-Truth Test Split...
+[glad-dove] 2026-10-13 09:21:22 | INFO | __main__:192 - Real Ground-Truth Test Split Metrics: mAP50=0.9211, mAP50-95=0.9096, precision=0.8956, recall=0.9211
+[brief-elf] 2026-10-13 09:31:26 | INFO | __main__:361 - Initialized DiffusionTestValidator on mps. Output directory: /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_brief-elf
+[brief-elf] 2026-10-13 09:31:26 | INFO | __main__:380 - Loading YOLO detector weights from: YOLO/models/montage_epoch_10_last.pt
+[brief-elf] 2026-10-13 09:31:26 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: /Users/aatmaj/Metanoia/conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[brief-elf] 2026-10-13 09:31:27 | INFO | __main__:401 - Indexed 10043 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test (cap=-1).
+[brief-elf] 2026-10-13 09:31:27 | INFO | __main__:415 - Encoding floorplan condition latents for test set...
+[brief-elf] 2026-10-13 09:31:27 | INFO | YOLO.dataset:1024 - Condition encoding: 512/10043 floorplans.
+[brief-elf] 2026-10-13 09:31:33 | INFO | YOLO.dataset:1024 - Condition encoding: 10043/10043 floorplans.
+[brief-elf] 2026-10-13 09:31:33 | INFO | YOLO.dataset:1028 - Cached 10043 condition latents.
+[brief-elf] 2026-10-13 09:31:33 | INFO | __main__:418 - Sampling diffusion arrangements and rendering test overlays (seed=1234)...
+[brief-elf] 2026-10-13 09:32:29 | INFO | YOLO.dataset:1067 - Diffusion sampling: 10043/10043 arrangements (seed=1234).
+[brief-elf] 2026-10-13 09:32:40 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 512/10043 images (5717 boxes so far).
+[brief-elf] 2026-10-13 09:32:53 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 1024/10043 images (11348 boxes so far).
+[brief-elf] 2026-10-13 09:33:05 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 1536/10043 images (16979 boxes so far).
+[proud-doe] 2026-10-13 09:35:23 | INFO | __main__:370 - Initialized DiffusionTestValidator on mps. Output directory: /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_proud-doe
+[wanted-imp] 2026-10-13 09:35:42 | INFO | __main__:370 - Initialized DiffusionTestValidator on mps. Output directory: /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_wanted-imp
+[wanted-imp] 2026-10-13 09:35:42 | INFO | __main__:396 - Loading YOLO detector weights from: YOLO/models/montage_epoch_10_last.pt
+[wanted-imp] 2026-10-13 09:35:42 | INFO | YOLO.dataset:872 - Frozen render stack ready on mps: /Users/aatmaj/Metanoia/conditional_diffusion/models/conditional_diffusion_strong-fawn_epoch_2480.pt (cond /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, target /Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt); mask->YOLO ids {1: 6, 2: 8, 3: 3, 4: 5, 5: 4, 6: 2, 7: 1, 8: 0, 9: 9, 10: 7}.
+[wanted-imp] 2026-10-13 09:35:42 | INFO | __main__:417 - Indexed 10043 test samples from /Users/aatmaj/FurnitureArranger/datasets/work/test (cap=-1).
+[wanted-imp] 2026-10-13 09:35:42 | INFO | __main__:436 - --overlays-only: restricting pipeline to 64 images (montage_samples=64). Skipping model.val().
+[wanted-imp] 2026-10-13 09:35:42 | INFO | __main__:454 - Encoding floorplan condition latents for 64 images...
+[wanted-imp] 2026-10-13 09:35:43 | INFO | YOLO.dataset:1024 - Condition encoding: 64/64 floorplans.
+[wanted-imp] 2026-10-13 09:35:43 | INFO | YOLO.dataset:1028 - Cached 64 condition latents.
+[wanted-imp] 2026-10-13 09:35:43 | INFO | __main__:459 - Sampling diffusion arrangements and rendering overlays (seed=1234)...
+[wanted-imp] 2026-10-13 09:35:45 | INFO | YOLO.dataset:1067 - Diffusion sampling: 64/64 arrangements (seed=1234).
+[wanted-imp] 2026-10-13 09:35:46 | INFO | YOLO.dataset:1458 - Redraw epoch 0: 64/64 images (720 boxes so far).
+[wanted-imp] 2026-10-13 09:35:46 | INFO | YOLO.dataset:1481 - Redraw epoch 0 done: 64 images, 720 boxes in 3.6s (seed=1234).
+[wanted-imp] 2026-10-13 09:35:46 | INFO | __main__:473 - Generated 64 diffusion images with 720 derived boxes in 3.6s.
+[wanted-imp] 2026-10-13 09:35:51 | INFO | __main__:276 - Saved visual evaluation montage to /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_wanted-imp/montage_diffusion_test.png
+[wanted-imp] 2026-10-13 09:35:51 | INFO | __main__:510 - Overlays-only run complete. Montage saved to /Users/aatmaj/Metanoia/YOLO/outputs/diffusion_test_eval_wanted-imp/montage_diffusion_test.png
