@@ -44,7 +44,7 @@ FLOORPLAN_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_mint-akita_floorplan
 # fair-burro = arrangement_filtered VAE (11 channels, furniture/tv excluded).
 # Its checkpoint stores the exclusion, which build_frozen_mask_vae turns into
 # excluded_local_ids so encoding the full mask yields a TV-free input.
-PARTIAL_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt"
+PARTIAL_VAE_CHECKPOINT_PATH = "/Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_top-hyena_epoch_100_no_showcase.pt"
 # chief-yeti = arrangement VAE (11 channels, TV included). Diffusion space +
 # decoder.
 TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt"
@@ -53,7 +53,7 @@ TARGET_VAE_CHECKPOINT_PATH = "./mask_VAE/models/mask_vae_chief-yeti_epoch_arrang
 # names to find its channel. NEVER hardcoded as a channel index: the channel is
 # looked up here so pointing this at another missing class is a config edit.
 # The target class names are prefixed with the group, e.g. "furniture/tv".
-MISSING_COMPONENT_CLASS_NAME = "tv"
+MISSING_COMPONENT_CLASS_NAME = "showcase"
 # Group prefix the target checkpoint's class names carry. Used to build the
 # full lookup name; set to "" for an unprefixed color index.
 TARGET_CLASS_GROUP_PREFIX = "furniture"

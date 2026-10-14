@@ -1,0 +1,1 @@
+timestamp,runtime,epoch,train_loss,train_mse,train_tv_bce,train_full_bce,test_mse,test_tv_bce,test_full_bce,test_tv_dice,sample_tv_dice,sample_tv_iou
