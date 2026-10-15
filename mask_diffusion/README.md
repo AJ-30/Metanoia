@@ -333,3 +333,39 @@ sequential passes and is dominated by MPS per-op launch overhead rather than mat
 
 While iterating, lower `MAX_SAMPLES` in `hyperparameters.toml` (e.g. `8000`) and
 raise it for the final run.
+---
+
+## 10. Inference without training: `mask_diffusion/inference.py`
+
+The training runner is not the only consumer of a checkpoint. `evaluator/` (the
+stage that judges a run through YOLO) needs to encode conditions, sample and
+decode, and it needs nothing else - so that lives in a module of its own:
+
+```python
+from mask_diffusion.inference import MaskDiffusionSampler
+
+sampler = MaskDiffusionSampler(
+    checkpoint_path="./mask_diffusion/models/mask_diffusion_<run>_epoch_<N>.pt",
+    missing_component_name="tv",
+    class_group_prefix="furniture",
+    mask_files={...}, color_index_dir=..., color_index_files={...},
+    device=torch.device("mps"), log=log,
+)
+
+conditions = sampler.normalize_conditions(sampler.encode_conditions(sample_dirs))
+masks = sampler.generate_channel_masks(conditions, num_draws=4, seed=1234)
+```
+
+`MaskDiffusionSampler` loads the artifacts the checkpoint itself records - the
+denoiser's architecture and weights, the latent statistics, the resolved
+`missing_channel` and all three frozen VAE paths (anchored at the repository
+root), then verifies every one of them against the checkpoint. A dimension drift
+or a VAE that does not belong to the run is therefore a startup error rather than
+a silently shifted measurement. Nothing in the module writes, and nothing in
+`runner.py` imports it, so training cannot be perturbed by an evaluation.
+
+`MaskComponentDiffusion.sample_conditional` / `reverse_step` accept an optional
+device-resident `torch.Generator` (default `None`, unchanged behaviour) which is
+what makes an evaluation's chains reproducible: the chunk holding absolute chain
+`k` seeds its generator from `seed + CHUNK_SEED_STRIDE * (chain_offset + k //
+chunk)`.

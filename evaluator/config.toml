@@ -1,0 +1,71 @@
+# Evaluator stage configuration: judge YOLO on the missing component that
+# mask_diffusion generates.
+#
+# Paths, devices and dataset locations only - every tunable number lives in
+# evaluator/hyperparameters.toml.
+#
+# The evaluator is a MEASUREMENT, not a training stage: it loads a trained
+# mask_diffusion checkpoint plus trained YOLO weights, rebuilds every test
+# sample as (real layout without the missing component + the generated
+# component), lets YOLO see that image and scores only the missing component.
+# Nothing here is trained and nothing outside evaluator/outputs is written to.
+
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/evaluator.log"
+OUTPUT_SAMPLES_DIRECTORY = "./evaluator/outputs/"
+TELEMETRY_LOG_DIRECTORY = "./evaluator/telemetry_logs/"
+DEVICE = "mps"
+
+# ---------------------------------------------------------------------------
+# Missing-component source: a self-describing mask_diffusion checkpoint.
+# The default is the complete TV run; pointing this at another run (with the
+# component name below) evaluates that run instead.
+# ---------------------------------------------------------------------------
+MASK_DIFFUSION_CHECKPOINT_PATH = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
+
+# Name of the missing component, resolved against the target VAE layout to find
+# its channel. Never a channel index: changing the component is this one key
+# plus the label names in hyperparameters.toml.
+MISSING_COMPONENT_CLASS_NAME = "tv"
+# Group prefix the target layout's class names carry ("furniture/tv"); set to ""
+# for an unprefixed color index.
+TARGET_CLASS_GROUP_PREFIX = "furniture"
+
+# folder-per-sample test split. Every sample is evaluated, including the ones
+# that contain no missing component at all: those measure YOLO's false-positive
+# behaviour on the generated component, which is part of the answer.
+TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
+
+# Mask filenames inside each sample folder (both are read by the frozen VAEs;
+# the missing component is removed by the partial VAE's layout, never by
+# editing pixels here).
+FLOORPLAN_MASK_FILE = "floorplan_segmentation.png"
+FURNITURE_MASK_FILE = "furniture_segmentation.png"
+
+# Directory holding the color index JSONs (dataset root, next to the splits).
+# Falls back to the parent of TEST_IMAGES_DIR when a file is missing there.
+MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
+FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
+
+# The dataset's own label file inside each sample folder: the ground truth the
+# missing component's boxes are read from, never a segmentation mask.
+GROUND_TRUTH_LABEL_FILE = "labels.txt"
+
+# ---------------------------------------------------------------------------
+# Detector under test.
+# ---------------------------------------------------------------------------
+# Trained YOLO weights. The default is the last weights the repo has trained.
+YOLO_WEIGHTS_PATH = "./YOLO/models/montage_epoch_10_last.pt"
+# Ontology the detector was trained against. READ, not copied: the class names
+# must be the detector's own, otherwise class ids would silently mean something
+# else and every filtered metric would be scored against the wrong class.
+YOLO_HYPERPARAMETERS_PATH = "./YOLO/hyperparameters.toml"
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false

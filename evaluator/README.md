@@ -1,0 +1,197 @@
+# evaluator — YOLO on the missing component the diffusion generates
+
+Deliverable 4: **component-level evaluation**. The package answers one question
+about a trained `mask_diffusion` run:
+
+> If the generated component is accepted into the layout, can the detector that
+> has to live with it see it, and where does it say it is?
+
+It does that by rebuilding every test sample as **the real layout with the missing
+component erased, plus the component the diffusion generated**, letting a trained
+YOLO look at that image, and scoring **only the missing component**: the
+detector's class-filtered metrics, the box loss against the dataset's own
+ground-truth box, and the generated channel's mask Dice/IoU.
+
+Nothing here is trained; only `evaluator/outputs`, `evaluator/telemetry_logs`
+and `debug_logs/evaluator.log` are written to.
+
+---
+
+## 1. What it measures
+
+| Layer | Question | Where it comes from |
+|---|---|---|
+| **Detection** | Can the detector see the generated component at all? | Ultralytics `model.val()` restricted to the component's class |
+| **Localization (the box loss)** | If it sees it, where does it think it is? | The dataset's own `labels.txt` box vs the detector's box |
+| **Channel** | How much of the true component did the generation cover? | Dice/IoU of the generated channel vs the ground-truth mask channel |
+
+### The box loss, precisely
+
+For one (sample, draw):
+
+* ground truth = **the dataset's `labels.txt` box**, never a mask region and
+  never the diffusion output;
+* prediction = the detector's box for that class on the composite image, at or
+  above `YOLO_CONF`;
+* pairing = greedy in confidence order, a prediction claims a ground-truth box
+  once it clears `BOX_MATCH_IOU`, and no ground truth is claimed twice.
+
+Reported per matched pair: **`box_iou`**, **`l1_norm_xywh`** (mean absolute
+difference of `cx, cy, w, h`) and **`center_distance_px`**. Whatever is left
+unpaired is counted as a **miss** (a ground-truth box nothing reached) or a
+**false positive** (a box the detector invented where the dataset says there is
+none) — which is what makes the *negative* samples worth evaluating.
+
+---
+
+## 2. What the evaluated image is
+
+For each sample, one 256x256 RGB image per draw:
+
+1. the floorplan, rendered from its class ids;
+2. the **real furniture with the missing component remapped to background** —
+   the same erase rule the partial VAE's layout applies, so no trace of the
+   ground-truth component can leak into the image;
+3. the **generated component** painted on top.
+
+Both layers are blended at `COMPOSITE_OVERLAY_ALPHA` / `GENERATED_OVERLAY_ALPHA`
+(default 0.6, the weight the detector was trained on), so an evaluated image
+looks like the training domain instead of measuring the domain shift. The
+generated component is layered last and wins every overlap, so a misplaced
+component is never hidden behind the furniture it was placed against.
+
+The component itself is the decoder's **argmax** equal to the component's
+channel — the same rule the training grids use, never a tuned threshold.
+
+---
+
+## 3. Running it
+
+```bash
+./run_eval.sh                 # smoke pass, SAMPLE_CAP (250) samples
+./run_eval.sh prod            # same, prod logging level
+python evaluator/run.py --cap -1 --draws 4   # the whole test split
+```
+
+Useful options (each overrides the matching TOML key):
+
+| Flag | Overrides | Meaning |
+|---|---|---|
+| `--checkpoint PATH` | `MASK_DIFFUSION_CHECKPOINT_PATH` | Which diffusion run to judge |
+| `--weights PATH` | `YOLO_WEIGHTS_PATH` | Which detector to judge |
+| `--component NAME` | `MISSING_COMPONENT_CLASS_NAME` | Which component to judge (`tv`, `showcase`, `dining_set`, ...) |
+| `--cap N` | `SAMPLE_CAP` | `-1` keeps every sample |
+| `--draws N` | `DRAWS_PER_SAMPLE` | Independent diffusion draws per sample |
+| `--seed N` | `SEED` | Base seed of the sampling and the visualization |
+| `--skip-yolo` | – | Channel metrics and figures only, no detector call |
+| `--output-dir PATH` | – | Where to put this run's artifacts |
+
+### Cost, measured on this machine (MPS)
+
+A 1000-step reverse chain costs **~140 ms** at `GENERATION_CHUNK = 32`. The
+default smoke pass (250 samples x 4 draws = 1000 chains plus 1000 detector
+calls) finishes in **~10 minutes**. The full test split (10,043 x 4 = ~40k chains)
+is **~3 hours**, dominated by sampling and detector validation.
+
+`BLOCK_SIZE` (512) exists only to bound memory: one block's masks are in memory
+at a time, so the full split runs with the same code path as the smoke pass.
+
+---
+
+## 4. Artifacts
+
+Written under `evaluator/outputs/eval_<run_id>/`:
+
+| Path | Content |
+|---|---|
+| `dataset_draw_<d>/{images,labels}/test` | One dataset per draw, so each draw's detector metrics are computed over that draw's own images only |
+| `eval_composite_draw_<d>.png` | Contact sheet of the evaluated images, green GT box, red prediction |
+| `eval_best_draw_<d>.png` / `eval_worst_draw_<d>.png` | The ranked ends of the box-IoU distribution |
+| `eval_compare.png` | Draw 0's five-panel strip of a fixed seeded subset: true layout, conditioned layout, true component, generated component, annotated composite |
+| `evaluation_summary.json` | The whole report, including everything needed to reproduce the run |
+| `evaluation_report.txt` | The same numbers as a human-readable table |
+
+The same figures are also **published** to `evaluator/outputs/` as
+`<figure_stem>_<run_id>.png`, because the dashboard serves one flat image
+directory: that is how the `eval` panel finds them, and several runs' figures
+coexist there the way the VAE stage's grids do.
+
+Plus `evaluator/telemetry_logs/<run_id>.csv`, one row per (sample, draw), which
+the shared dashboard discovers like any other run.
+
+To watch a run's figures next to the training dashboards:
+
+```bash
+./run_scripts/start_evaluator_server.sh      # http://127.0.0.1:8086
+```
+
+---
+
+## 5. Configuration
+
+`config.toml` holds paths and the component's identity; `hyperparameters.toml`
+holds every number. Two things are deliberately **not** declared here:
+
+* the **frozen VAE paths**, which are read from the diffusion checkpoint itself,
+  so an evaluation cannot sample with a VAE the run never saw;
+* the **detector ontology** (`CLASS_NAMES`, `CLASS_ALIASES`), which is read from
+  `YOLO/hyperparameters.toml`, so a class id can never mean something different
+  from what the weights learned.
+
+`COMPONENT_LABEL_NAMES` maps a mask component name to the names the dataset's own
+`labels.txt` uses for it. This is required because the two vocabularies differ
+(`dining_set` in the mask, `Dining_table_big/medium/round` in the labels), and a
+name that resolves to nothing would silently score zero boxes instead of failing.
+Every mask class is listed, so `--component <name>` needs no edit either: point
+the config at a run trained for that component and the label names come along.
+
+---
+
+## 6. Package layout
+
+| File | Responsibility |
+|---|---|
+| `run.py` | CLI, config/hyperparams loading, path anchoring, `PYTORCH_ENABLE_MPS_FALLBACK` |
+| `settings.py` | Path anchoring + reading the detector ontology from the YOLO stage |
+| `ontology.py` | One component resolved across mask / detector / label vocabularies |
+| `dataset_gt.py` | The dataset's own `labels.txt` boxes |
+| `compositor.py` | The erased ground truth plus the generated component composite |
+| `yolo_eval.py` | Eval dataset, detector validation, per-image predictions |
+| `box_metrics.py` | Box matching, IoU, L1, center distance, distributions |
+| `channel_metrics.py` | Mask Dice/IoU of the generated channel |
+| `results.py` | Per-draw accumulators, per-sample records, across-draw aggregation |
+| `visualize.py` | Contact sheets, comparison strips, ranked panels |
+| `telemetry.py` | Per-sample CSV and the summary JSON |
+| `report.py` | The human-readable table, as a pure function of the summary |
+| `pipeline.py` | The streaming loop that ties it all together |
+| `test_evaluator.py` | Unit tests of the pure logic (`./venv/bin/python evaluator/test_evaluator.py`) |
+
+`mask_diffusion/inference.py` is the shared inference API: it loads a
+self-describing checkpoint and exposes encode / normalize / generate. It has no
+writes and imports nothing from the training runner's state, so using it cannot
+perturb a training run.
+
+---
+
+## 7. Reproducibility
+
+`SEED` seeds every sampler generator; the chunk holding absolute chain `k` of the
+split uses `SEED + CHUNK_SEED_STRIDE * (chain_offset + k // GENERATION_CHUNK)`,
+so `--seed` fully determines the pixels. `GENERATION_CHUNK` and `BLOCK_SIZE` fix
+how the RNG stream is cut up, so keep them fixed when comparing two runs (they
+change the noise stream, not its distribution) — the same policy the YOLO stage's
+live redraw uses.
+
+## 8. Leakage guards
+
+* The composite is built from the class ids with the component's channel folded
+  into the background — the erase rule the conditioning encoder itself applies.
+  A unit test asserts exactly one channel stays active per pixel after the erase.
+* The ground-truth box is read from the dataset's label file, and the test
+  asserts a line naming any other class is ignored.
+* The evaluated dataset is written to `evaluator/outputs/...`, never into the live
+  dataset the detector was trained on.
+* The label files carry only the component's class, so every filtered metric is
+  attributable to exactly one component.
+* The detector's own class vocabulary is checked against the YOLO stage's
+  `CLASS_NAMES` before anything is evaluated, instead of trusting the file name.

@@ -17,3 +17,7 @@ YOLO/augmented_dataset
 *.npy
 latent_cache/
 YOLO/outputs/diffusion_test_eval_glad-dove/diffusion_dataset
+# Evaluator artifacts: every run writes thousands of composite images plus
+# per-sample telemetry. Archived by run_eval.sh into evaluator/old_*.
+evaluator/outputs/*
+evaluator/telemetry_logs/*

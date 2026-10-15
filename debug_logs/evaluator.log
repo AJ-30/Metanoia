@@ -1,0 +1,193 @@
+[rapid-satyr] 2026-10-15 09:59:13 | INFO | __main__:144 - Starting evaluator run_id=rapid-satyr, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[rapid-satyr] 2026-10-15 09:59:14 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[rapid-satyr] 2026-10-15 09:59:14 | INFO | evaluator.pipeline:163 - Load fuse note: the frozen VAE paths recorded inside the checkpoint are ['./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt', './mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt', './mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt']; relative ones are resolved against the repository root by the paths the evaluator was launched from.
+[rapid-satyr] 2026-10-15 09:59:14 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[rapid-satyr] 2026-10-15 09:59:14 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[rapid-satyr] 2026-10-15 09:59:14 | INFO | evaluator.pipeline:291 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[rapid-satyr] 2026-10-15 09:59:15 | INFO | evaluator.pipeline:349 - Evaluating 4 test samples x 2 draws (block 512).
+[rapid-satyr] 2026-10-15 09:59:23 | INFO | evaluator.pipeline:353 - Scored samples 1..4 of 4.
+[rapid-satyr] 2026-10-15 09:59:23 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[guided-lynx] 2026-10-15 10:02:11 | INFO | __main__:152 - Starting evaluator run_id=guided-lynx, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[guided-lynx] 2026-10-15 10:02:12 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[guided-lynx] 2026-10-15 10:02:12 | INFO | evaluator.pipeline:163 - Load fuse note: the frozen VAE paths recorded inside the checkpoint are ['./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt', './mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt', './mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt']; relative ones are resolved against the repository root by the paths the evaluator was launched from.
+[guided-lynx] 2026-10-15 10:02:12 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[guided-lynx] 2026-10-15 10:02:12 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[guided-lynx] 2026-10-15 10:02:12 | INFO | evaluator.pipeline:291 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[guided-lynx] 2026-10-15 10:02:12 | INFO | evaluator.pipeline:349 - Evaluating 4 test samples x 2 draws (block 512).
+[guided-lynx] 2026-10-15 10:02:19 | INFO | evaluator.pipeline:353 - Scored samples 1..4 of 4.
+[guided-lynx] 2026-10-15 10:02:19 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[guided-lynx] 2026-10-15 10:02:22 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9950, mAP@50-95=0.8705, precision=1.0000, recall=1.0000
+[guided-lynx] 2026-10-15 10:02:22 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[guided-lynx] 2026-10-15 10:02:24 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9950, mAP@50-95=0.8705, precision=1.0000, recall=1.0000
+[guided-lynx] 2026-10-15 10:02:24 | INFO | evaluator.pipeline:255 - Evaluation finished in 12.5s; artifacts in /private/tmp/eval_smoke
+[grand-moray] 2026-10-15 10:09:41 | INFO | __main__:153 - Starting evaluator run_id=grand-moray, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[grand-moray] 2026-10-15 10:09:41 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[grand-moray] 2026-10-15 10:09:41 | INFO | evaluator.pipeline:166 - Load fuse note: the frozen VAE paths recorded inside the checkpoint are ['./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt', './mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt', './mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt']; relative ones are resolved against the repository root by the paths the evaluator was launched from.
+[grand-moray] 2026-10-15 10:09:41 | INFO | evaluator.pipeline:172 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[grand-moray] 2026-10-15 10:09:41 | INFO | evaluator.pipeline:188 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[grand-moray] 2026-10-15 10:09:41 | INFO | evaluator.pipeline:294 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[grand-moray] 2026-10-15 10:09:42 | INFO | evaluator.pipeline:352 - Evaluating 4 test samples x 2 draws (block 512).
+[grand-moray] 2026-10-15 10:09:49 | INFO | evaluator.pipeline:356 - Scored samples 1..4 of 4.
+[grand-moray] 2026-10-15 10:09:49 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[grand-moray] 2026-10-15 10:09:51 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9950, mAP@50-95=0.8705, precision=1.0000, recall=1.0000
+[grand-moray] 2026-10-15 10:09:51 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[grand-moray] 2026-10-15 10:09:52 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9950, mAP@50-95=0.8705, precision=1.0000, recall=1.0000
+[grand-moray] 2026-10-15 10:09:52 | INFO | evaluator.pipeline:258 - Evaluation finished in 11.7s; artifacts in /private/tmp/eval_smoke
+[clean-mammal] 2026-10-15 10:32:54 | INFO | __main__:153 - Starting evaluator run_id=clean-mammal, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[clean-mammal] 2026-10-15 10:32:54 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[clean-mammal] 2026-10-15 10:32:54 | INFO | evaluator.pipeline:166 - Load fuse note: the frozen VAE paths recorded inside the checkpoint are ['./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt', './mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt', './mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt']; relative ones are resolved against the repository root by the paths the evaluator was launched from.
+[clean-mammal] 2026-10-15 10:32:54 | INFO | evaluator.pipeline:172 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[clean-mammal] 2026-10-15 10:32:54 | INFO | evaluator.pipeline:188 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[clean-mammal] 2026-10-15 10:32:54 | INFO | evaluator.pipeline:294 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[clean-mammal] 2026-10-15 10:32:55 | INFO | evaluator.pipeline:352 - Evaluating 250 test samples x 4 draws (block 512).
+[clean-mammal] 2026-10-15 10:36:16 | INFO | evaluator.pipeline:356 - Scored samples 1..250 of 250.
+[clean-mammal] 2026-10-15 10:36:16 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[clean-mammal] 2026-10-15 10:36:30 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9254, mAP@50-95=0.5115, precision=0.9164, recall=0.9441
+[clean-mammal] 2026-10-15 10:36:30 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[clean-mammal] 2026-10-15 10:36:44 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9254, mAP@50-95=0.5115, precision=0.9164, recall=0.9441
+[clean-mammal] 2026-10-15 10:36:44 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[clean-mammal] 2026-10-15 10:36:58 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9254, mAP@50-95=0.5115, precision=0.9164, recall=0.9441
+[clean-mammal] 2026-10-15 10:36:58 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[clean-mammal] 2026-10-15 10:37:11 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9254, mAP@50-95=0.5115, precision=0.9164, recall=0.9441
+[clean-mammal] 2026-10-15 10:37:12 | INFO | evaluator.pipeline:258 - Evaluation finished in 258.4s; artifacts in /private/tmp/eval250
+[major-emu] 2026-10-15 10:46:11 | INFO | __main__:153 - Starting evaluator run_id=major-emu, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[major-emu] 2026-10-15 10:46:11 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[major-emu] 2026-10-15 10:46:11 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[major-emu] 2026-10-15 10:46:11 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[major-emu] 2026-10-15 10:46:12 | INFO | evaluator.pipeline:292 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[major-emu] 2026-10-15 10:46:12 | INFO | evaluator.pipeline:380 - Evaluating 60 test samples x 3 draws (block 512).
+[major-emu] 2026-10-15 10:46:50 | INFO | evaluator.pipeline:384 - Scored samples 1..60 of 60.
+[major-emu] 2026-10-15 10:46:50 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[major-emu] 2026-10-15 10:46:53 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.7370, mAP@50-95=0.3536, precision=0.8183, recall=0.7833
+[major-emu] 2026-10-15 10:46:53 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[major-emu] 2026-10-15 10:46:56 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.7633, mAP@50-95=0.3797, precision=0.8363, recall=0.7833
+[major-emu] 2026-10-15 10:46:56 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[major-emu] 2026-10-15 10:46:58 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.7305, mAP@50-95=0.3576, precision=0.8007, recall=0.8000
+[major-emu] 2026-10-15 10:46:59 | INFO | evaluator.pipeline:256 - Evaluation finished in 47.7s; artifacts in /private/tmp/eval250b
+[giving-eft] 2026-10-15 10:48:20 | INFO | __main__:153 - Starting evaluator run_id=giving-eft, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[giving-eft] 2026-10-15 10:48:20 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[giving-eft] 2026-10-15 10:48:20 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[giving-eft] 2026-10-15 10:48:20 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[giving-eft] 2026-10-15 10:48:20 | INFO | evaluator.pipeline:292 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[giving-eft] 2026-10-15 10:48:20 | INFO | evaluator.pipeline:380 - Evaluating 250 test samples x 4 draws (block 512).
+[giving-eft] 2026-10-15 10:51:48 | INFO | evaluator.pipeline:384 - Scored samples 1..250 of 250.
+[giving-eft] 2026-10-15 10:51:48 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[giving-eft] 2026-10-15 10:51:53 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9243, mAP@50-95=0.5172, precision=0.9161, recall=0.9430
+[giving-eft] 2026-10-15 10:51:53 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[giving-eft] 2026-10-15 10:51:58 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9276, mAP@50-95=0.5203, precision=0.9111, recall=0.9386
+[giving-eft] 2026-10-15 10:51:58 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[giving-eft] 2026-10-15 10:52:03 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9228, mAP@50-95=0.5119, precision=0.9150, recall=0.9474
+[giving-eft] 2026-10-15 10:52:03 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[giving-eft] 2026-10-15 10:52:07 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9301, mAP@50-95=0.5121, precision=0.9159, recall=0.9474
+[giving-eft] 2026-10-15 10:52:08 | INFO | evaluator.pipeline:256 - Evaluation finished in 228.1s; artifacts in /private/tmp/eval_final
+[golden-duck] 2026-10-15 11:03:20 | INFO | __main__:153 - Starting evaluator run_id=golden-duck, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[golden-duck] 2026-10-15 11:03:21 | INFO | mask_diffusion.inference:214 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[golden-duck] 2026-10-15 11:03:21 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[golden-duck] 2026-10-15 11:03:21 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[golden-duck] 2026-10-15 11:03:21 | INFO | evaluator.pipeline:291 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[golden-duck] 2026-10-15 11:03:21 | INFO | evaluator.pipeline:379 - Evaluating 250 test samples x 4 draws (block 512).
+[golden-duck] 2026-10-15 11:06:53 | INFO | evaluator.pipeline:383 - Scored samples 1..250 of 250.
+[golden-duck] 2026-10-15 11:06:53 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[golden-duck] 2026-10-15 11:06:59 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9243, mAP@50-95=0.5172, precision=0.9161, recall=0.9430
+[golden-duck] 2026-10-15 11:06:59 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[golden-duck] 2026-10-15 11:07:03 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9276, mAP@50-95=0.5203, precision=0.9111, recall=0.9386
+[golden-duck] 2026-10-15 11:07:03 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[golden-duck] 2026-10-15 11:07:08 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9228, mAP@50-95=0.5119, precision=0.9150, recall=0.9474
+[golden-duck] 2026-10-15 11:07:08 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[golden-duck] 2026-10-15 11:07:12 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9301, mAP@50-95=0.5121, precision=0.9159, recall=0.9474
+[golden-duck] 2026-10-15 11:07:13 | INFO | evaluator.pipeline:255 - Evaluation finished in 232.5s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_golden-duck
+[grown-wasp] 2026-10-15 11:09:20 | INFO | __main__:160 - Starting evaluator run_id=grown-wasp, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[good-minnow] 2026-10-15 11:16:39 | INFO | __main__:160 - Starting evaluator run_id=good-minnow, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[good-minnow] 2026-10-15 11:16:39 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[good-minnow] 2026-10-15 11:16:39 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[good-minnow] 2026-10-15 11:16:39 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[good-minnow] 2026-10-15 11:16:40 | INFO | evaluator.pipeline:291 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[good-minnow] 2026-10-15 11:16:40 | INFO | evaluator.pipeline:379 - Evaluating 2 test samples x 1 draws (block 512).
+[good-minnow] 2026-10-15 11:16:43 | INFO | evaluator.pipeline:383 - Scored samples 1..2 of 2.
+[good-minnow] 2026-10-15 11:16:43 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[good-minnow] 2026-10-15 11:16:45 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9950, mAP@50-95=0.8955, precision=1.0000, recall=1.0000
+[good-minnow] 2026-10-15 11:16:45 | INFO | evaluator.pipeline:255 - Evaluation finished in 5.7s; artifacts in /private/tmp/eval_two
+[square-drake] 2026-10-15 11:17:54 | INFO | __main__:160 - Starting evaluator run_id=square-drake, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[square-drake] 2026-10-15 11:17:54 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[square-drake] 2026-10-15 11:17:54 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[square-drake] 2026-10-15 11:17:54 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[square-drake] 2026-10-15 11:17:54 | INFO | evaluator.pipeline:291 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[square-drake] 2026-10-15 11:17:54 | INFO | evaluator.pipeline:379 - Evaluating 4 test samples x 2 draws (block 512).
+[square-drake] 2026-10-15 11:18:00 | INFO | evaluator.pipeline:383 - Scored samples 1..4 of 4.
+[square-drake] 2026-10-15 11:18:00 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[square-drake] 2026-10-15 11:18:02 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9950, mAP@50-95=0.8705, precision=1.0000, recall=1.0000
+[square-drake] 2026-10-15 11:18:02 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[square-drake] 2026-10-15 11:18:03 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9950, mAP@50-95=0.8705, precision=1.0000, recall=1.0000
+[square-drake] 2026-10-15 11:18:03 | INFO | evaluator.pipeline:255 - Evaluation finished in 9.1s; artifacts in /private/tmp/eval_script
+[apt-lion] 2026-10-15 11:19:33 | INFO | __main__:160 - Starting evaluator run_id=apt-lion, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[apt-lion] 2026-10-15 11:19:34 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[apt-lion] 2026-10-15 11:19:34 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[apt-lion] 2026-10-15 11:19:34 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[apt-lion] 2026-10-15 11:19:34 | INFO | evaluator.pipeline:291 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[apt-lion] 2026-10-15 11:19:34 | INFO | evaluator.pipeline:379 - Evaluating 250 test samples x 4 draws (block 512).
+[apt-lion] 2026-10-15 11:22:35 | INFO | evaluator.pipeline:383 - Scored samples 1..250 of 250.
+[apt-lion] 2026-10-15 11:22:35 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[apt-lion] 2026-10-15 11:22:40 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9243, mAP@50-95=0.5172, precision=0.9161, recall=0.9430
+[apt-lion] 2026-10-15 11:22:40 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[apt-lion] 2026-10-15 11:22:44 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9276, mAP@50-95=0.5203, precision=0.9111, recall=0.9386
+[apt-lion] 2026-10-15 11:22:44 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[apt-lion] 2026-10-15 11:22:48 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9228, mAP@50-95=0.5119, precision=0.9150, recall=0.9474
+[apt-lion] 2026-10-15 11:22:48 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[apt-lion] 2026-10-15 11:22:52 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9301, mAP@50-95=0.5121, precision=0.9159, recall=0.9474
+[apt-lion] 2026-10-15 11:22:52 | INFO | evaluator.pipeline:255 - Evaluation finished in 199.0s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_golden-duck
+[proud-ox] 2026-10-15 11:27:24 | INFO | __main__:160 - Starting evaluator run_id=proud-ox, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[proud-ox] 2026-10-15 11:27:24 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[proud-ox] 2026-10-15 11:27:24 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[proud-ox] 2026-10-15 11:27:24 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[proud-ox] 2026-10-15 11:27:24 | INFO | evaluator.pipeline:302 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[proud-ox] 2026-10-15 11:27:24 | INFO | evaluator.pipeline:390 - Evaluating 8 test samples x 2 draws (block 512).
+[proud-ox] 2026-10-15 11:27:31 | INFO | evaluator.pipeline:394 - Scored samples 1..8 of 8.
+[proud-ox] 2026-10-15 11:27:31 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[proud-ox] 2026-10-15 11:27:33 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9950, mAP@50-95=0.8955, precision=1.0000, recall=1.0000
+[proud-ox] 2026-10-15 11:27:33 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[proud-ox] 2026-10-15 11:27:34 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9950, mAP@50-95=0.8813, precision=1.0000, recall=1.0000
+[proud-ox] 2026-10-15 11:27:35 | INFO | evaluator.pipeline:266 - Evaluation finished in 11.0s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_proud-ox
+[easy-shark] 2026-10-15 11:28:22 | INFO | __main__:160 - Starting evaluator run_id=easy-shark, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[easy-shark] 2026-10-15 11:28:22 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[easy-shark] 2026-10-15 11:28:22 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[easy-shark] 2026-10-15 11:28:22 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[easy-shark] 2026-10-15 11:28:22 | INFO | evaluator.pipeline:302 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[easy-shark] 2026-10-15 11:28:23 | INFO | evaluator.pipeline:390 - Evaluating 250 test samples x 4 draws (block 512).
+[easy-shark] 2026-10-15 11:31:20 | INFO | evaluator.pipeline:394 - Scored samples 1..250 of 250.
+[easy-shark] 2026-10-15 11:31:20 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[easy-shark] 2026-10-15 11:31:25 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9243, mAP@50-95=0.5172, precision=0.9161, recall=0.9430
+[easy-shark] 2026-10-15 11:31:25 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[easy-shark] 2026-10-15 11:31:29 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9276, mAP@50-95=0.5203, precision=0.9111, recall=0.9386
+[easy-shark] 2026-10-15 11:31:29 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[easy-shark] 2026-10-15 11:31:33 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9228, mAP@50-95=0.5119, precision=0.9150, recall=0.9474
+[easy-shark] 2026-10-15 11:31:33 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[easy-shark] 2026-10-15 11:31:37 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9301, mAP@50-95=0.5121, precision=0.9159, recall=0.9474
+[easy-shark] 2026-10-15 11:31:38 | INFO | evaluator.pipeline:266 - Evaluation finished in 195.8s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_easy-shark
+[open-koala] 2026-10-15 12:00:16 | INFO | __main__:160 - Starting evaluator run_id=open-koala, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[open-koala] 2026-10-15 12:00:16 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[open-koala] 2026-10-15 12:00:16 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[open-koala] 2026-10-15 12:00:16 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[open-koala] 2026-10-15 12:00:16 | INFO | evaluator.pipeline:302 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[open-koala] 2026-10-15 12:00:17 | INFO | evaluator.pipeline:390 - Evaluating 6 test samples x 2 draws (block 512).
+[open-koala] 2026-10-15 12:00:23 | INFO | evaluator.pipeline:394 - Scored samples 1..6 of 6.
+[open-koala] 2026-10-15 12:00:23 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[open-koala] 2026-10-15 12:00:25 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9950, mAP@50-95=0.8263, precision=1.0000, recall=1.0000
+[open-koala] 2026-10-15 12:00:25 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[open-koala] 2026-10-15 12:00:26 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9950, mAP@50-95=0.8591, precision=1.0000, recall=1.0000
+[open-koala] 2026-10-15 12:00:27 | INFO | evaluator.pipeline:266 - Evaluation finished in 11.0s; artifacts in /private/tmp/eval_check
+[loved-monkey] 2026-10-15 12:08:55 | INFO | __main__:160 - Starting evaluator run_id=loved-monkey, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[loved-monkey] 2026-10-15 12:08:56 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[loved-monkey] 2026-10-15 12:08:56 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[loved-monkey] 2026-10-15 12:08:56 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[loved-monkey] 2026-10-15 12:08:56 | INFO | evaluator.pipeline:302 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[loved-monkey] 2026-10-15 12:08:56 | INFO | evaluator.pipeline:390 - Evaluating 250 test samples x 4 draws (block 512).
+[loved-monkey] 2026-10-15 12:12:14 | INFO | evaluator.pipeline:394 - Scored samples 1..250 of 250.
+[loved-monkey] 2026-10-15 12:12:14 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[loved-monkey] 2026-10-15 12:12:19 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9243, mAP@50-95=0.5172, precision=0.9161, recall=0.9430
+[loved-monkey] 2026-10-15 12:12:19 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[loved-monkey] 2026-10-15 12:12:23 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9276, mAP@50-95=0.5203, precision=0.9111, recall=0.9386
+[loved-monkey] 2026-10-15 12:12:23 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[loved-monkey] 2026-10-15 12:12:27 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9228, mAP@50-95=0.5119, precision=0.9150, recall=0.9474
+[loved-monkey] 2026-10-15 12:12:27 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[loved-monkey] 2026-10-15 12:12:31 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9301, mAP@50-95=0.5121, precision=0.9159, recall=0.9474
+[loved-monkey] 2026-10-15 12:12:31 | INFO | evaluator.pipeline:266 - Evaluation finished in 216.0s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_loved-monkey

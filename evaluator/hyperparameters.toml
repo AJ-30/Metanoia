@@ -1,0 +1,80 @@
+# Evaluator hyperparameters. Every number used by evaluator/*.py lives here;
+# no constants are hardcoded in the Python.
+#
+# The ontology (CLASS_NAMES, CLASS_ALIASES) is NOT declared here: it is read
+# from YOLO/hyperparameters.toml so the class ids can never drift away from the
+# detector being evaluated. Only the numbers of THIS stage are here.
+
+[default]
+# ---- Reproducibility ----
+# Seeds every sampler generator. Draw d of chunk c uses SEED + DRAW_SEED_STRIDE
+# * d + CHUNK_SEED_STRIDE * c, so a rerun with the same numbers rebuilds
+# identical pixels. Changing GENERATION_CHUNK or BLOCK_SIZE changes which noise
+# lands on which sample (same distribution), so keep both fixed when comparing
+# runs.
+SEED = 1234
+DRAW_SEED_STRIDE = 100_003
+
+# ---- Scope ----
+# Cap on evaluated test samples (first N in sorted order); negative keeps every
+# sample. 250 is the smoke-pass default that proves the pipeline end to end;
+# run with SAMPLE_CAP = -1 (or --cap -1) for the full test-split report.
+SAMPLE_CAP = 250
+# Independent diffusion draws per sample, each with its own noise, so the
+# localization loss is reported per draw and as a spread.
+DRAWS_PER_SAMPLE = 4
+
+# ---- Mask diffusion blocking ----
+# Samples encoded / generated / rendered per block. Blocks exist so the full
+# 10k test split is reachable on a laptop: only one block's masks are in memory
+# at a time (block_size samples x 256 x 256 bool).
+BLOCK_SIZE = 512
+# Samples encoded per frozen-encoder forward pass.
+ENCODE_BATCH_SIZE = 64
+# Reverse chains per diffusion call. Larger is faster per chain until the
+# decoded logits dominate memory.
+GENERATION_CHUNK = 32
+
+# ---- Compositing ----
+# Alpha of furniture over the floorplan base. The YOLO detector was trained on
+# overlays blended at 0.6 (YOLO REDRAW_OVERLAY_ALPHA), so the generated
+# component is painted with the same weight: an evaluated image must look like
+# the training domain, or the measurement would drift away from what the
+# detector was fit for.
+COMPOSITE_OVERLAY_ALPHA = 0.6
+GENERATED_OVERLAY_ALPHA = 0.6
+
+# ---- Detector call ----
+# Confidence the predictions are scored at, the inference size and the batch of
+# Ultralytics validation. Matches the stage's usual thresholds.
+YOLO_CONF = 0.25
+YOLO_MAX_BOXES = 300
+YOLO_IMGSZ = 416
+YOLO_BATCH = 16
+# IoU a prediction must reach with a ground-truth box to count as matched.
+BOX_MATCH_IOU = 0.5
+
+# ---- Visualization ----
+# Columns of every montage, the fixed seeded subset of samples visualized and
+# the number of best/worst cases shown per draw.
+MONTAGE_COLS = 4
+VIZ_SAMPLES = 24
+VIZ_RANKED_COUNT = 8
+PNG_COMPRESS_LEVEL = 1
+
+# Dataset label names per mask component, because the dataset's own labels.txt
+# does not use the mask color index's names (the mask says "dining_set" where
+# the labels say "Dining_table_big"). The missing component's GT boxes are read
+# from these names only; a name absent here fails the run rather than silently
+# matching nothing.
+[default.COMPONENT_LABEL_NAMES]
+tv = ["TV"]
+showcase = ["Showcase"]
+dining_set = ["Dining_table_big", "Dining_table_medium", "Dining_table_round"]
+sofa = ["Sofa"]
+side_table = ["Side_table"]
+couch = ["Couch"]
+chair = ["Chair"]
+center_table = ["Center_table"]
+vase_table = ["Vase_table"]
+sofa_cum_bed = ["Sofa_cum_bed"]

@@ -31,3 +31,16 @@ selects the run mode (`debug`|`prod`); the rest is forwarded to `YOLO/predict.py
 It exports `PYTORCH_ENABLE_MPS_FALLBACK=1` because Ultralytics runs
 `torchvision::nms` during prediction, which has no MPS kernel. See
 `YOLO/README.md` for how to read the confidence values.
+
+`start_evaluator_server.sh` starts a separate Flask dashboard instance for the
+missing-component evaluation, reading the evaluator's per-sample telemetry in
+`evaluator/telemetry_logs` and its figures in `evaluator/outputs` (default port
+8086, so all dashboards can run side by side). The panel it shows is served by
+the `eval` entry in `helpers/server.py`'s `IMAGE_KIND_PREFIXES`; without that
+entry the panel is simply empty and every other dashboard is unaffected.
+
+```bash
+./run_scripts/start_evaluator_server.sh [port]   # default port 8086
+```
+
+Run `./run_eval.sh` first (see `evaluator/README.md`) to produce the figures.

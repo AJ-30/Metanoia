@@ -356,6 +356,7 @@ class MaskComponentDiffusion(nn.Module):
         timesteps: torch.Tensor,
         floorplan_latents: torch.Tensor,
         partial_latents: torch.Tensor,
+        generator: torch.Generator | None = None,
     ) -> torch.Tensor:
         """Take one conditional DDPM reverse step from ``x_t`` to ``x_{t-1}``.
 
@@ -367,6 +368,11 @@ class MaskComponentDiffusion(nn.Module):
             timesteps (torch.Tensor): Integer timesteps ``(batch_size,)``.
             floorplan_latents (torch.Tensor): Floorplan conditions, ``(batch_size, cond_dim)``.
             partial_latents (torch.Tensor): TV-free layout conditions, ``(batch_size, cond_dim)``.
+            generator (torch.Generator | None): Optional device-resident RNG.
+                When given, the fresh noise is drawn from it so an evaluation
+                caller can make a chain reproducible without depending on the
+                global RNG state; ``None`` keeps the default global-generator
+                behaviour used by training.
 
         Returns:
             torch.Tensor: Previous-step latents ``x_{t-1}``, same shape as the input.
@@ -383,7 +389,11 @@ class MaskComponentDiffusion(nn.Module):
         # No fresh noise once the chain has reached its final step.
         is_nonzero_step: torch.Tensor = (timesteps > 0).float().unsqueeze(1)
         variance: torch.Tensor = self.posterior_variance[timesteps].unsqueeze(1)
-        fresh_noise: torch.Tensor = torch.randn_like(noisy_latents)
+        fresh_noise: torch.Tensor = torch.randn(
+            noisy_latents.shape,
+            device=noisy_latents.device,
+            generator=generator,
+        )
         return mean + is_nonzero_step * torch.sqrt(variance.clamp_min(1e-20)) * fresh_noise
 
     @torch.no_grad()
@@ -391,6 +401,7 @@ class MaskComponentDiffusion(nn.Module):
         self,
         floorplan_latents: torch.Tensor,
         partial_latents: torch.Tensor,
+        generator: torch.Generator | None = None,
     ) -> torch.Tensor:
         """Generate TV-inclusive arrangement latents from both conditions.
 
@@ -400,21 +411,27 @@ class MaskComponentDiffusion(nn.Module):
         Args:
             floorplan_latents (torch.Tensor): Floorplan conditions on the model
                 device, shape ``(num_samples, cond_dim)``.
-            partial_latents (torch.Tensor): TV-free layout conditions on the
-                model device, shape ``(num_samples, cond_dim)``.
+            partial_latents (torch.Tensor): TV-free layout conditions, shape
+                ``(num_samples, cond_dim)``.
+            generator (torch.Generator | None): Optional device-resident RNG used
+                for the initial noise and every reverse step, so an evaluation
+                caller can reproduce a chain exactly. ``None`` keeps the default
+                global-generator behaviour used by training.
 
         Returns:
             torch.Tensor: Generated latents, shape ``(num_samples, latent_dim)``.
         """
         device: torch.device = floorplan_latents.device
         num_samples: int = floorplan_latents.shape[0]
-        latents: torch.Tensor = torch.randn(num_samples, self.latent_dim, device=device)
+        latents: torch.Tensor = torch.randn(
+            num_samples, self.latent_dim, device=device, generator=generator
+        )
         # Walking backwards means the last update lands on x_0 exactly.
         for step in reversed(range(self.num_timesteps)):
             timesteps: torch.Tensor = torch.full(
                 (num_samples,), step, device=device, dtype=torch.long
             )
             latents = self.reverse_step(
-                latents, timesteps, floorplan_latents, partial_latents
+                latents, timesteps, floorplan_latents, partial_latents, generator
             )
         return latents
