@@ -19,7 +19,7 @@ DRAW_SEED_STRIDE = 100_003
 # Cap on evaluated test samples (first N in sorted order); negative keeps every
 # sample. 250 is the smoke-pass default that proves the pipeline end to end;
 # run with SAMPLE_CAP = -1 (or --cap -1) for the full test-split report.
-SAMPLE_CAP = 250
+SAMPLE_CAP = -1
 # Independent diffusion draws per sample, each with its own noise, so the
 # localization loss is reported per draw and as a spread.
 DRAWS_PER_SAMPLE = 4

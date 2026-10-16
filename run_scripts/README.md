@@ -44,3 +44,13 @@ entry the panel is simply empty and every other dashboard is unaffected.
 ```
 
 Run `./run_eval.sh` first (see `evaluator/README.md`) to produce the figures.
+
+`run_frontend.sh` (at the repository root) starts the upload interface: a page
+where a floor-plan class-id mask is uploaded, the configured mask_diffusion run
+generates the missing component and the trained detector's bounding boxes are
+drawn on the result (default port 8087). See `frontend/README.md`.
+
+```bash
+./run_frontend.sh                 # http://127.0.0.1:8087
+./run_frontend.sh prod 0.0.0.0 9000
+```

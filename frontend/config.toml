@@ -1,0 +1,55 @@
+# Frontend stage configuration: upload a floor plan, see the generated missing
+# component and what YOLO makes of it.
+#
+# Paths, devices and dataset locations only - every tunable number lives in
+# frontend/hyperparameters.toml.
+#
+# This stage trains nothing and writes nothing outside frontend/uploads and
+# frontend/outputs. It is a thin UI over the machinery the evaluator already
+# uses: mask_diffusion/inference.py (encode, sample, decode) plus
+# evaluator/compositor.py (the image the detector judges) and
+# evaluator/yolo_eval.py (the detector call).
+
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/frontend.log"
+UPLOAD_DIRECTORY = "./frontend/uploads/"
+OUTPUT_DIRECTORY = "./frontend/outputs/"
+DEVICE = "mps"
+
+# ---------------------------------------------------------------------------
+# The missing-component run that answers an upload.
+# ---------------------------------------------------------------------------
+MASK_DIFFUSION_CHECKPOINT_PATH = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
+
+# Name of the missing component to generate (tv, showcase, dining_set, ...) and
+# the group prefix the target VAE layout's class names carry.
+MISSING_COMPONENT_CLASS_NAME = "tv"
+TARGET_CLASS_GROUP_PREFIX = "furniture"
+
+# Mask filenames an upload is renamed to before it reaches the frozen encoders.
+# The pipeline deliberately reads ONE file name per role, so the uploaded pair
+# and the dataset's own samples are encoded identically.
+FLOORPLAN_MASK_FILE = "floorplan_segmentation.png"
+FURNITURE_MASK_FILE = "furniture_segmentation.png"
+
+# Color index JSONs describing each mask's classes (used for rendering and for
+# validating that an upload is a class-id mask of the expected range).
+MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
+FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
+
+# ---------------------------------------------------------------------------
+# The detector whose bounding boxes are drawn.
+# ---------------------------------------------------------------------------
+YOLO_WEIGHTS_PATH = "./YOLO/models/montage_epoch_10_last.pt"
+# Ontology the weights were trained on. READ, not copied, so a class id can
+# never mean something different from what the detector learned.
+YOLO_HYPERPARAMETERS_PATH = "./YOLO/hyperparameters.toml"
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false

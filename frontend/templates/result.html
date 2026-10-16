@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generated {{ component_label }} · YOLO detections</title>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --border:#262b3a; --text:#e6e9ef; --muted:#98a2b3; --accent:#5eead4; --gt:#4ade80; --pred:#f87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  main { max-width: 1280px; margin: 0 auto; padding: 28px 18px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:16px; margin:28px 0 10px; color:var(--accent); }
+  p.sub { margin:0 0 20px; color:var(--muted); }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+  .cell { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px; }
+  .cell img { display:block; width:256px; height:256px; image-rendering:pixelated;
+              border-radius:6px; background:#0b0d13; }
+  .cell .cap { color:var(--muted); font-size:13px; margin-top:8px; max-width:256px; }
+  table { border-collapse:collapse; width:100%; background:var(--panel);
+          border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--border); font-size:14px; }
+  th { color:var(--muted); font-weight:600; }
+  tr:last-child td { border-bottom:0; }
+  .tag { display:inline-block; background:#0b0d13; border:1px solid var(--border);
+         border-radius:999px; padding:2px 10px; font-size:13px; }
+  a, .back { color:var(--accent); text-decoration:none; font-weight:600; }
+  .meta { color:var(--muted); font-size:13px; margin:6px 0 0; }
+  .empty { color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/">&larr; upload another</a></p>
+  <h1>Generated {{ component_label }} &mdash; detector output</h1>
+  <p class="sub">
+    Run <span class="tag">{{ request_id }}</span> · {{ draws }} draw(s) ·
+    generated pixels in draw 0: {{ generated_pixels }} · {{ elapsed_seconds|round(1) }}s ·
+    seed {{ seed }}
+  </p>
+
+  {% for draw in detections %}
+  <h2>Draw {{ draw.draw }}</h2>
+  <div class="row">
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.floorplan }}" alt="Uploaded floorplan">
+      <div class="cap">1 · floorplan you uploaded</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.conditioned }}" alt="Conditioned layout">
+      <div class="cap">2 · layout the generator was conditioned on</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels['component_draw_%d'|format(draw.draw)] }}"
+           alt="Generated {{ component }}">
+      <div class="cap">3 · generated {{ component }} (its own channel)</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels['composite_draw_%d'|format(draw.draw)] }}"
+           alt="Composite">
+      <div class="cap">4 · composite before detection</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels['boxes_draw_%d'|format(draw.draw)] }}"
+           alt="YOLO detections">
+      <div class="cap">5 · what YOLO drew (red boxes, label + confidence)</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Detected</th><th>Confidence</th><th>center (cx, cy)</th><th>size (w, h)</th></tr></thead>
+    <tbody>
+      {% for box in draw.found %}
+      <tr>
+        <td>{{ box.class }}</td>
+        <td>{{ '%.3f'|format(box.confidence) }}</td>
+        <td>{{ '%.4f'|format(box.cx) }}, {{ '%.4f'|format(box.cy) }}</td>
+        <td>{{ '%.4f'|format(box.w) }}, {{ '%.4f'|format(box.h) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">No {{ component_label }} above the confidence threshold
+        ({{ conf }}) &mdash; the detector did not find the generated component in this draw.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+
+  <p class="meta">Diffusion: <code>{{ checkpoint }}</code> · detector: <code>{{ weights }}</code></p>
+  <p class="meta">Green boxes are ground truth (none here: an uploaded floor plan carries no dataset
+  labels), red boxes are this run's predictions.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,48 @@
+# Frontend hyperparameters. Every number frontend/*.py uses lives here; no
+# constant is hardcoded in the Python.
+#
+# The ontology (CLASS_NAMES, CLASS_ALIASES) is NOT declared here: it is read from
+# YOLO/hyperparameters.toml so the class ids can never drift away from the
+# detector being shown. Only the numbers of THIS stage are here.
+
+[default]
+# ---- Reproducibility ----
+# Seed of the diffusion sampler and of the visualization subset (if any).
+SEED = 1234
+DRAW_SEED_STRIDE = 100_003
+
+# ---- Generation ----
+# Default independent diffusion draws per upload, the chunk of reverse chains
+# per sampler call (fixed so the RNG stream is reproducible), the samples encoded
+# per frozen-encoder pass, and the blend weight of furniture over the floorplan.
+# The alpha matches the detector's training overlays, so the image the detector
+# judges looks like the domain it was fit for.
+DEFAULT_DRAWS = 1
+MAX_DRAWS = 4
+GENERATION_CHUNK = 8
+ENCODE_BATCH_SIZE = 64
+OVERLAY_ALPHA = 0.6
+
+# ---- Detector call ----
+# Confidence threshold, inference size and the cap on drawn boxes.
+YOLO_CONF = 0.25
+YOLO_IMGSZ = 416
+YOLO_MAX_BOXES = 300
+
+# ---- Uploads ----
+# Flask's request size cap, and the accepted upload content types.
+MAX_UPLOAD_MB = 16
+# How many past uploads keep their artifacts (oldest first when over the cap).
+MAX_CACHED_RUNS = 20
+
+[default.COMPONENT_LABEL_NAMES]
+tv = ["TV"]
+showcase = ["Showcase"]
+dining_set = ["Dining_table_big", "Dining_table_medium", "Dining_table_round"]
+sofa = ["Sofa"]
+side_table = ["Side_table"]
+couch = ["Couch"]
+chair = ["Chair"]
+center_table = ["Center_table"]
+vase_table = ["Vase_table"]
+sofa_cum_bed = ["Sofa_cum_bed"]

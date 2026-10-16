@@ -191,3 +191,38 @@
 [loved-monkey] 2026-10-15 12:12:27 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
 [loved-monkey] 2026-10-15 12:12:31 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9301, mAP@50-95=0.5121, precision=0.9159, recall=0.9474
 [loved-monkey] 2026-10-15 12:12:31 | INFO | evaluator.pipeline:266 - Evaluation finished in 216.0s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_loved-monkey
+[major-pigeon] 2026-10-15 14:41:50 | INFO | __main__:160 - Starting evaluator run_id=major-pigeon, mode=debug, component=tv, checkpoint=/Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt, weights=/Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt.
+[major-pigeon] 2026-10-15 14:41:50 | INFO | mask_diffusion.inference:232 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[major-pigeon] 2026-10-15 14:41:50 | INFO | evaluator.pipeline:169 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[major-pigeon] 2026-10-15 14:41:50 | INFO | evaluator.pipeline:185 - Missing component 'tv': mask channel 2, detector class 8 ('TV'), dataset label names ['TV'].
+[major-pigeon] 2026-10-15 14:41:51 | INFO | evaluator.pipeline:302 - Loaded detector weights from /Users/aatmaj/Metanoia/YOLO/models/montage_epoch_10_last.pt
+[major-pigeon] 2026-10-15 14:41:52 | INFO | evaluator.pipeline:390 - Evaluating 10043 test samples x 4 draws (block 512).
+[major-pigeon] 2026-10-15 14:48:59 | INFO | evaluator.pipeline:394 - Scored samples 1..512 of 10043.
+[major-pigeon] 2026-10-15 14:56:16 | INFO | evaluator.pipeline:394 - Scored samples 513..1024 of 10043.
+[major-pigeon] 2026-10-15 15:03:43 | INFO | evaluator.pipeline:394 - Scored samples 1025..1536 of 10043.
+[major-pigeon] 2026-10-15 15:11:06 | INFO | evaluator.pipeline:394 - Scored samples 1537..2048 of 10043.
+[major-pigeon] 2026-10-15 15:18:21 | INFO | evaluator.pipeline:394 - Scored samples 2049..2560 of 10043.
+[major-pigeon] 2026-10-15 15:25:37 | INFO | evaluator.pipeline:394 - Scored samples 2561..3072 of 10043.
+[major-pigeon] 2026-10-15 15:32:40 | INFO | evaluator.pipeline:394 - Scored samples 3073..3584 of 10043.
+[major-pigeon] 2026-10-15 15:39:37 | INFO | evaluator.pipeline:394 - Scored samples 3585..4096 of 10043.
+[major-pigeon] 2026-10-15 15:46:44 | INFO | evaluator.pipeline:394 - Scored samples 4097..4608 of 10043.
+[major-pigeon] 2026-10-15 15:53:47 | INFO | evaluator.pipeline:394 - Scored samples 4609..5120 of 10043.
+[major-pigeon] 2026-10-15 16:01:10 | INFO | evaluator.pipeline:394 - Scored samples 5121..5632 of 10043.
+[major-pigeon] 2026-10-15 16:08:07 | INFO | evaluator.pipeline:394 - Scored samples 5633..6144 of 10043.
+[major-pigeon] 2026-10-15 16:15:18 | INFO | evaluator.pipeline:394 - Scored samples 6145..6656 of 10043.
+[major-pigeon] 2026-10-15 16:22:12 | INFO | evaluator.pipeline:394 - Scored samples 6657..7168 of 10043.
+[major-pigeon] 2026-10-15 16:28:15 | INFO | evaluator.pipeline:394 - Scored samples 7169..7680 of 10043.
+[major-pigeon] 2026-10-15 16:34:04 | INFO | evaluator.pipeline:394 - Scored samples 7681..8192 of 10043.
+[major-pigeon] 2026-10-15 16:40:05 | INFO | evaluator.pipeline:394 - Scored samples 8193..8704 of 10043.
+[major-pigeon] 2026-10-15 16:47:34 | INFO | evaluator.pipeline:394 - Scored samples 8705..9216 of 10043.
+[major-pigeon] 2026-10-15 16:55:14 | INFO | evaluator.pipeline:394 - Scored samples 9217..9728 of 10043.
+[major-pigeon] 2026-10-15 16:59:31 | INFO | evaluator.pipeline:394 - Scored samples 9729..10043 of 10043.
+[major-pigeon] 2026-10-15 16:59:31 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 0 (class 8 only)...
+[major-pigeon] 2026-10-15 17:01:33 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 0: mAP@50=0.9136, mAP@50-95=0.5543, precision=0.9252, recall=0.9474
+[major-pigeon] 2026-10-15 17:01:33 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 1 (class 8 only)...
+[major-pigeon] 2026-10-15 17:03:21 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 1: mAP@50=0.9146, mAP@50-95=0.5544, precision=0.9257, recall=0.9477
+[major-pigeon] 2026-10-15 17:03:21 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 2 (class 8 only)...
+[major-pigeon] 2026-10-15 17:05:07 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 2: mAP@50=0.9120, mAP@50-95=0.5526, precision=0.9242, recall=0.9467
+[major-pigeon] 2026-10-15 17:05:07 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
+[major-pigeon] 2026-10-15 17:06:53 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9124, mAP@50-95=0.5566, precision=0.9238, recall=0.9461
+[major-pigeon] 2026-10-15 17:06:54 | INFO | evaluator.pipeline:266 - Evaluation finished in 8704.2s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_major-pigeon
