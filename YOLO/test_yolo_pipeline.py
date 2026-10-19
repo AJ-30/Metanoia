@@ -55,7 +55,7 @@ from YOLO.overlay import (
 )
 from YOLO.predict import labels_dir_for, read_gt_lines, resolve_weights_path
 from YOLO.runner import (
-    _map_results_row,
+    map_results_row,
     anchor_config_paths,
     optimizer_steps_per_epoch,
     read_results_csv,
@@ -504,7 +504,7 @@ def test_map_results_row_maps_all_fields() -> None:
         "metrics/mAP50-95(B)": "0.4",
         "lr/pg0": "0.01",
     }
-    metrics = _map_results_row(row, log)
+    metrics = map_results_row(row, log)
     assert metrics is not None
     assert metrics["epoch"] == 3.0
     assert metrics["train_dfl"] == 3.5
@@ -515,7 +515,7 @@ def test_map_results_row_maps_all_fields() -> None:
 def test_map_results_row_malformed_returns_none() -> None:
     """A row missing metric columns is skipped, not half-logged."""
     log = FakeLog()
-    assert _map_results_row({"epoch": "1"}, log) is None
+    assert map_results_row({"epoch": "1"}, log) is None
     assert log.warnings, "a skipped row must warn"
 
 

@@ -143,7 +143,7 @@ RESULTS_CSV_MAP: list[tuple[str, list[str]]] = [
 ]
 
 # Ultralytics artifacts copied into the outputs directory for the dashboard.
-_ULTRALYTICS_ARTIFACTS: tuple[str, ...] = (
+ULTRALYTICS_ARTIFACTS: tuple[str, ...] = (
     "results.png",
     "PR_curve.png",
     "F1_curve.png",
@@ -238,7 +238,7 @@ def validate_training_budget(
             f"{nominal_batch_size} yields {steps_per_epoch} optimizer steps per "
             "epoch, so the weights would never be updated. Set "
             "NOMINAL_BATCH_SIZE = BATCH_SIZE (accumulation 1) in "
-            "YOLO/hyperparameters.toml, and/or raise the sample caps."
+            "the stage's hyperparameters.toml, and/or raise the sample caps."
         )
     if steps_per_epoch * num_epochs < 2:
         raise ValueError(
@@ -275,7 +275,7 @@ def read_results_csv(results_path: str) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
-def _map_results_row(
+def map_results_row(
     row: dict[str, str], log: SimpleNamespace
 ) -> dict[str, float] | None:
     """Map one results.csv row onto the telemetry field names.
@@ -303,7 +303,7 @@ def _map_results_row(
     return metrics
 
 
-def _resolve_overlay_model(
+def resolve_overlay_model(
     trainer: object,
     live_model: object,
     overlay_model: object,
@@ -549,7 +549,7 @@ class YOLORunner:
         rows: list[dict[str, str]] = read_results_csv(results_path)
         mirrored: int = 0
         for row in rows:
-            metrics: dict[str, float] | None = _map_results_row(row, self.log)
+            metrics: dict[str, float] | None = map_results_row(row, self.log)
             if metrics is None:
                 continue
             epoch_num: int = int(metrics["epoch"])
@@ -578,7 +578,7 @@ class YOLORunner:
         """
         out_dir: Path = Path(self.config.OUTPUT_SAMPLES_DIRECTORY)
         out_dir.mkdir(parents=True, exist_ok=True)
-        for name in _ULTRALYTICS_ARTIFACTS:
+        for name in ULTRALYTICS_ARTIFACTS:
             src: Path = Path(save_dir) / name
             if src.is_file():
                 shutil.copy(str(src), str(out_dir / f"{Path(save_dir).name}_{name}"))
@@ -629,7 +629,7 @@ class YOLORunner:
         # EMA module is a raw nn.Module without a ``predict`` API, so the EMA
         # state dict is loaded into this wrapper to visualize exactly the
         # weights validation scored. Its architecture is swapped in lazily on
-        # the first epoch end (see _resolve_overlay_model).
+        # the first epoch end (see resolve_overlay_model).
         overlay_model = YOLO(str(self.hyperparams.YOLO_MODEL))
         overlay_ready: list[bool] = [False]
         save_dir: str = str(
@@ -676,7 +676,7 @@ class YOLORunner:
 
             # b) GT vs predicted boxes on the fixed val subset, using the
             #    weights this epoch was validated with (EMA when available).
-            predict_model: object = _resolve_overlay_model(
+            predict_model: object = resolve_overlay_model(
                 trainer, model, overlay_model, overlay_ready
             )
             summary: dict[str, float] = save_epoch_overlays(

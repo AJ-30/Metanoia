@@ -1,0 +1,95 @@
+# missing_yolo stage configuration (missing_yolo/run.py, via
+# ./train_missing_yolo.sh). Paths, dataset locations and the per-component
+# generator table only - every training/rendering number lives in
+# missing_yolo/hyperparameters.toml.
+#
+# WHAT THIS STAGE IS: a detector for ONE missing furniture component, trained on
+# images the FROZEN mask_diffusion generator produces. One run targets one
+# component, named by MISSING_COMPONENT in hyperparameters.toml (overridable
+# with --component on the command line). All three components are declared here
+# as rows of [default.COMPONENT_VARIANTS], so retargeting a run is a one-line
+# edit and nothing else in the pipeline changes.
+#
+# WHAT IS NOT HERE ON PURPOSE: the three mask VAE checkpoints, the missing
+# component's channel and every architecture/standardization constant. They are
+# read from the generator checkpoint itself, so this stage cannot drift away
+# from the exact VAEs the generator was trained against.
+
+[default]
+DEBUG_LOG_FILE_PATH = "./debug_logs/missing_yolo.log"
+MODEL_SAVE_PATH = "./missing_yolo/models/"
+TELEMETRY_LOG_DIRECTORY = "./missing_yolo/telemetry_logs/"
+OUTPUT_SAMPLES_DIRECTORY = "./missing_yolo/outputs/"
+DEVICE = "mps"
+
+# Base of the generated Ultralytics dataset tree. The run's actual root is
+# "<base>/<component>" (see ComponentPaths in missing_yolo/dataset.py), so the
+# three component runs never clobber each other's images, labels or manifests.
+#   <root>/images/{train,val,test}   PNG renders (train rewritten every epoch)
+#   <root>/labels/{train,val,test}   "<cls> cx cy w h" from the dataset labels.txt
+#   <root>/data.yaml                 train/val/test paths + the single class
+#   <root>/redraw_manifest.csv        one row per generation pass
+LIVE_DATASET_BASE_ROOT = "/Users/aatmaj/Downloads/datasets/missing_yolo_live"
+
+# ---------------------------------------------------------------------------
+# Source dataset: one folder per sample, each holding
+#   floorplan_segmentation.png  (18 floorplan classes)  -> generator condition 1
+#   furniture_segmentation.png  (11 furniture classes)  -> generator condition 2
+#                                                       (the component is erased
+#                                                        by the partial VAE layout)
+#   labels.txt                  ("<Name> cx cy w h")    -> DETECTION TARGET
+# ---------------------------------------------------------------------------
+# Detector train split. The frozen generator was trained on this same split, so
+# train numbers are generation numbers; that is expected and documented.
+SOURCE_TRAIN_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/train"
+# Val AND test are both carved out of this split, by layout family, so neither
+# is generator-seen. work/test is deliberately NOT used: the generator trained
+# on it, so it cannot give an honest held-out number.
+SOURCE_VAL_SPLIT_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/validate"
+
+# The dataset's own ground-truth boxes. Only lines naming the run's component
+# (see label_names below) become targets; every other line is ignored, and a
+# sample with no such line is kept as a background image.
+GROUND_TRUTH_LABEL_FILE = "labels.txt"
+# Mask filenames inside each sample folder.
+FLOORPLAN_MASK_FILE = "floorplan_segmentation.png"
+FURNITURE_MASK_FILE = "furniture_segmentation.png"
+# Color index JSONs rendering the overlays (dataset root, next to the splits).
+MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
+FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
+
+# ---------------------------------------------------------------------------
+# One row per missing component. `mask_diffusion_checkpoint` must be a
+# self-describing mask_diffusion checkpoint: it carries its own three VAE
+# paths, the missing channel, the architecture and the latent statistics.
+#   detector_class_name: the single class the detector learns for this run.
+#   label_names:         the names labels.txt uses for this component. The mask
+#                        vocabulary ("dining_set") and the dataset vocabulary
+#                        ("Dining_table_big" / "_medium" / "_round") differ,
+#                        hence the list.
+# Tables live last, after every bare key: a bare key written below a table
+# header silently becomes part of that table.
+# ---------------------------------------------------------------------------
+[default.COMPONENT_VARIANTS.tv]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
+detector_class_name = "TV"
+label_names = ["TV"]
+
+[default.COMPONENT_VARIANTS.showcase]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_kind-worm_epoch_no_showcase_1010.pt"
+detector_class_name = "Showcase"
+label_names = ["Showcase"]
+
+[default.COMPONENT_VARIANTS.dining_set]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_brief-shark_epoch_710_no_dining.pt"
+detector_class_name = "Dining_table"
+label_names = ["Dining_table_big", "Dining_table_medium", "Dining_table_round"]
+
+[debug]
+IS_DEBUG = true
+IS_DEBUG_TORCH = false
+
+[prod]
+IS_DEBUG = false
+IS_DEBUG_TORCH = false

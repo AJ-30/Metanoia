@@ -24,3 +24,7 @@ evaluator/telemetry_logs/*
 # Upload interface artifacts: one folder per upload, staged masks plus panels.
 frontend/uploads/*
 frontend/outputs/*
+# missing_yolo artifacts: per-epoch overlays/montages plus telemetry CSVs
+# (one per run id). Archived by train_missing_yolo.sh into missing_yolo/old_*.
+missing_yolo/outputs/*
+missing_yolo/telemetry_logs/*
