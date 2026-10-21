@@ -29,6 +29,48 @@ from YOLO.dataset import clear_generated_split, write_data_yaml, write_label_fil
 PixelBox = tuple[float, float, float, float, int, float]
 
 
+def detector_class_names(model: Any) -> list[str]:
+    """Read the selected detector's own class vocabulary, ordered by class id.
+
+    The evaluator now judges per-component ``missing_yolo`` detectors as well as
+    the multi-class YOLO detector, and those two do not share a vocabulary: a
+    missing_yolo model has exactly one class (id 0), while the multi-class model
+    has ten. The weights are the only authority on what an id means, so their
+    names are read here instead of being assumed from a stage's TOML.
+
+    Args:
+        model (Any): Loaded Ultralytics detector exposing ``names`` as either a
+            mapping of id -> name or an ordered list.
+
+    Returns:
+        list[str]: Class names indexed by class id.
+
+    Raises:
+        ValueError: If the model exposes no class names, because every filtered
+            metric would then be attributed to an unknown class.
+    """
+    raw_names: Any = getattr(model, "names", None)
+    if isinstance(raw_names, dict):
+        if not raw_names:
+            raise ValueError("The detector exposes an empty class vocabulary.")
+        indices: list[int] = sorted(int(index) for index in raw_names)
+        if indices != list(range(len(indices))):
+            raise ValueError(
+                f"The detector's class ids are not contiguous from 0: {indices}."
+            )
+        class_names = [str(raw_names[index]) for index in indices]
+    elif isinstance(raw_names, (list, tuple)):
+        class_names = [str(name) for name in raw_names]
+    else:
+        raise ValueError(
+            "The detector exposes no class names; its predictions could not be "
+            "attributed to the missing component."
+        )
+    if not class_names:
+        raise ValueError("The detector exposes an empty class vocabulary.")
+    return class_names
+
+
 def validate_detector_names(model: Any, class_names: list[str]) -> None:
     """Check that the loaded weights share the evaluator's class vocabulary.
 

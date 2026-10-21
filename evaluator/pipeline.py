@@ -63,10 +63,10 @@ from evaluator.visualize import (
 )
 from evaluator.yolo_eval import (
     PixelBox,
+    detector_class_names,
     prepare_eval_dataset,
     predict_component_boxes,
     run_detector_validation,
-    validate_detector_names,
     write_eval_image,
     write_eval_labels,
 )
@@ -143,9 +143,15 @@ def run_evaluation(
     started: float = time.time()
     device = default_device(str(config.DEVICE), log)
     set_reproducibility_seed(int(hyperparams.SEED))
-    class_names, aliases = load_detector_ontology(
-        str(config.YOLO_HYPERPARAMETERS_PATH)
-    )
+
+    # The selected variant decides WHICH detector is loaded, so the detector's
+    # own class names are the authority on what a class id means. Aliases still
+    # come from the YOLO stage's ontology because the mask vocabulary spells
+    # some components differently (dining_set vs Dining_table).
+    model: Any
+    class_names: list[str]
+    model, class_names = _load_detector(config, log)
+    _, aliases = load_detector_ontology(str(config.YOLO_HYPERPARAMETERS_PATH))
 
     sampler: MaskDiffusionSampler = MaskDiffusionSampler(
         checkpoint_path=str(config.MASK_DIFFUSION_CHECKPOINT_PATH),
@@ -189,7 +195,6 @@ def run_evaluation(
         f"{list(ontology.label_names)}."
     )
 
-    model: Any = _load_detector(config, class_names, log)
     samples: list[SampleFolder] = _index_samples(config, hyperparams)
     output_root: Path = _output_root(config, args)
     draws: int = int(hyperparams.DRAWS_PER_SAMPLE)
@@ -273,34 +278,37 @@ def run_evaluation(
 # Setup helpers
 # ---------------------------------------------------------------------------
 def _load_detector(
-    config: SimpleNamespace, class_names: list[str], log: SimpleNamespace
-) -> Any:
-    """Load the detector weights and check its ontology.
+    config: SimpleNamespace, log: SimpleNamespace
+) -> tuple[Any, list[str]]:
+    """Load the selected detector and read the vocabulary it was trained with.
 
     Args:
-        config (SimpleNamespace): Config with ``YOLO_WEIGHTS_PATH``.
-        class_names (list[str]): Expected class vocabulary.
+        config (SimpleNamespace): Config whose ``YOLO_WEIGHTS_PATH`` was set by
+            the component selection (or by ``--weights``).
         log (SimpleNamespace): Configured project logger.
 
     Returns:
-        Any: The loaded Ultralytics detector.
+        tuple[Any, list[str]]: The loaded Ultralytics detector and its ordered
+            class names, index == class id.
 
     Raises:
         FileNotFoundError: If the weights file is absent.
-        ValueError: If the weights' ontology differs from the vocabulary.
+        ValueError: If the detector exposes no class vocabulary.
     """
     from ultralytics import YOLO  # lazy import so unit tests run without it
 
     weights_path: Path = Path(str(config.YOLO_WEIGHTS_PATH))
     if not weights_path.is_file():
         raise FileNotFoundError(
-            f"Detector weights not found: {weights_path}. Pass --weights or fix "
-            "YOLO_WEIGHTS_PATH in evaluator/config.toml."
+            f"Detector weights not found: {weights_path}. Select a component "
+            "declared in components.toml, or pass --weights explicitly."
         )
     model: Any = YOLO(str(weights_path))
-    validate_detector_names(model, class_names)
-    log.info(f"Loaded detector weights from {weights_path}")
-    return model
+    class_names: list[str] = detector_class_names(model)
+    log.info(
+        f"Loaded detector weights from {weights_path} with classes {class_names}"
+    )
+    return model, class_names
 
 
 def _index_samples(

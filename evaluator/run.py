@@ -2,7 +2,8 @@
 
 Usage::
 
-    python evaluator/run.py                     # smoke pass (SAMPLE_CAP samples)
+    python evaluator/run.py                     # default component, smoke pass
+    python evaluator/run.py --component showcase
     python evaluator/run.py --cap -1            # the whole test split
     python evaluator/run.py --weights path.pt   # judge a different detector
     python evaluator/run.py --skip-yolo         # channel metrics only
@@ -36,6 +37,7 @@ if str(ROOT_DIR) not in sys.path:
 from evaluator.pipeline import run_evaluation  # noqa: E402
 from evaluator.report import format_report  # noqa: E402
 from evaluator.settings import PATH_CONFIG_KEYS, anchor_path_keys  # noqa: E402
+from evaluator.variants import anchor_path, select_component  # noqa: E402
 from helpers.config import load_config  # noqa: E402
 from helpers.hyperparams import load_hyperparams  # noqa: E402
 from helpers.logger import setup_logger  # noqa: E402
@@ -68,13 +70,13 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         "--checkpoint",
         type=str,
         default=None,
-        help="mask_diffusion checkpoint to evaluate; overrides MASK_DIFFUSION_CHECKPOINT_PATH.",
+        help="mask_diffusion checkpoint to evaluate; overrides the selected component's checkpoint.",
     )
     parser.add_argument(
         "--weights",
         type=str,
         default=None,
-        help="YOLO weights to judge; overrides YOLO_WEIGHTS_PATH.",
+        help="detector weights to judge; overrides the selected component's detector.",
     )
     parser.add_argument(
         "--cap",
@@ -104,7 +106,11 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         "--component",
         type=str,
         default=None,
-        help="Missing component name (e.g. tv, showcase, dining_set).",
+        help=(
+            "Missing component to evaluate (e.g. tv, showcase, dining_set). "
+            "Selects the matching diffusion checkpoint and detector from "
+            "components.toml."
+        ),
     )
     parser.add_argument(
         "--skip-yolo",
@@ -118,25 +124,42 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
 def apply_overrides(
     config: SimpleNamespace, hyperparams: SimpleNamespace, args: argparse.Namespace
 ) -> None:
-    """Copy the command-line overrides onto the loaded settings.
+    """Copy the numeric command-line overrides onto the loaded settings.
+
+    The component and the two model paths are handled separately: the component
+    selects a registry row first, and only then may an explicit path override it.
 
     Args:
         config (SimpleNamespace): Config object to mutate.
         hyperparams (SimpleNamespace): Hyperparameter object to mutate.
         args (argparse.Namespace): Parsed command-line options.
     """
-    if args.checkpoint is not None:
-        config.MASK_DIFFUSION_CHECKPOINT_PATH = args.checkpoint
-    if args.weights is not None:
-        config.YOLO_WEIGHTS_PATH = args.weights
-    if args.component is not None:
-        config.MISSING_COMPONENT_CLASS_NAME = args.component
     if args.cap is not None:
         hyperparams.SAMPLE_CAP = args.cap
     if args.draws is not None:
         hyperparams.DRAWS_PER_SAMPLE = args.draws
     if args.seed is not None:
         hyperparams.SEED = args.seed
+
+
+def apply_model_overrides(
+    config: SimpleNamespace, args: argparse.Namespace
+) -> None:
+    """Let explicit ``--checkpoint`` / ``--weights`` win over the registry.
+
+    A manual path is an escape hatch for judging a run that is not (yet) listed
+    in ``components.toml``. Relative paths are anchored at the repository root,
+    exactly like the registry's own paths, so the run does not depend on the
+    working directory.
+
+    Args:
+        config (SimpleNamespace): Config object to mutate.
+        args (argparse.Namespace): Parsed command-line options.
+    """
+    if args.checkpoint is not None:
+        config.MASK_DIFFUSION_CHECKPOINT_PATH = str(anchor_path(args.checkpoint))
+    if args.weights is not None:
+        config.YOLO_WEIGHTS_PATH = str(anchor_path(args.weights))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -156,6 +179,10 @@ def main(argv: list[str] | None = None) -> int:
     anchor_path_keys(config, PATH_CONFIG_KEYS)
     hyperparams: SimpleNamespace = load_hyperparams(str(script_dir / HYPERPARAMS_TOML))
     apply_overrides(config, hyperparams, args)
+    # Component selection fills both model paths; explicit --checkpoint/--weights
+    # then win, which keeps the old escape hatch for an unregistered run.
+    select_component(config, args.component)
+    apply_model_overrides(config, args)
     log: SimpleNamespace = setup_logger(config)
     log.info(
         f"Starting evaluator run_id={config.runtime.RUN_ID}, mode={args.mode}, "

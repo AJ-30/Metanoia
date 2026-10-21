@@ -19,11 +19,12 @@ DEVICE = "mps"
 # ---------------------------------------------------------------------------
 # The missing-component run that answers an upload.
 # ---------------------------------------------------------------------------
-MASK_DIFFUSION_CHECKPOINT_PATH = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
-
-# Name of the missing component to generate (tv, showcase, dining_set, ...) and
-# the group prefix the target VAE layout's class names carry.
+# Default component selected by the upload form (tv, showcase, dining_set, ...).
+# The form's dropdown overrides it. The selected component resolves BOTH models
+# from components.toml at the repository root: its diffusion checkpoint and the
+# missing_yolo detector trained for it.
 MISSING_COMPONENT_CLASS_NAME = "tv"
+# Group prefix the target VAE layout's class names carry.
 TARGET_CLASS_GROUP_PREFIX = "furniture"
 
 # Mask filenames an upload is renamed to before it reaches the frozen encoders.
@@ -39,11 +40,12 @@ FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
 FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
 
 # ---------------------------------------------------------------------------
-# The detector whose bounding boxes are drawn.
+# Detector ontology aliases.
 # ---------------------------------------------------------------------------
-YOLO_WEIGHTS_PATH = "./YOLO/models/montage_epoch_10_last.pt"
-# Ontology the weights were trained on. READ, not copied, so a class id can
-# never mean something different from what the detector learned.
+# The detector's own class names are read from the selected weights (one class
+# for a missing_yolo model, ten for the multi-class YOLO model). This file only
+# supplies aliases that bridge mask names to class names (dining_set ->
+# Dining_table), so a box label can never come from the wrong vocabulary.
 YOLO_HYPERPARAMETERS_PATH = "./YOLO/hyperparameters.toml"
 
 [debug]

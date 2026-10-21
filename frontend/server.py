@@ -34,7 +34,12 @@ if str(ROOT_DIR) not in sys.path:
 from flask import Flask, abort, redirect, render_template, request, send_from_directory  # noqa: E402
 
 from frontend.pipeline import stage_upload  # noqa: E402
-from frontend.settings import get_context  # noqa: E402
+from frontend.settings import (  # noqa: E402
+    available_components,
+    default_component,
+    get_context,
+    load_stage_config,
+)
 from helpers.hyperparams import load_hyperparams  # noqa: E402
 
 # Upload field name -> staged filename, per mask role.
@@ -59,12 +64,23 @@ def create_app(mode: str = "debug") -> Flask:
     hyperparams: SimpleNamespace = load_hyperparams(
         str(script_dir / "hyperparameters.toml")
     )
-    context: Any = get_context(mode)
+    # Only paths and the default selection are read here. Building a full
+    # context would load a VAE stack and a detector before the first upload; the
+    # selected component's context is built lazily and cached per component.
+    stage_config: SimpleNamespace = load_stage_config(mode)
+    components: list[str] = available_components()
+    default_selection: str = default_component(stage_config)
+    if default_selection not in components:
+        raise KeyError(
+            f"Default component '{default_selection}' is not declared in "
+            f"components.toml; choose one of {components} or fix "
+            "MISSING_COMPONENT_CLASS_NAME in frontend/config.toml."
+        )
     # Anchored at the repository root by frontend/settings, so both senders get an
     # absolute directory: Flask prefixes RELATIVE send_from_directory paths with
     # the app's root path, which is this package's folder.
-    upload_root: Path = Path(str(context.config.UPLOAD_DIRECTORY))
-    output_root: Path = Path(str(context.config.OUTPUT_DIRECTORY))
+    upload_root: Path = Path(str(stage_config.UPLOAD_DIRECTORY))
+    output_root: Path = Path(str(stage_config.OUTPUT_DIRECTORY))
 
     app: Flask = Flask(__name__, template_folder=str(script_dir / "templates"))
     # Cap on one request body: both masks, so the configured megabytes.
@@ -77,13 +93,19 @@ def create_app(mode: str = "debug") -> Flask:
         Returns:
             str: Rendered form page.
         """
+        # Keep an explicitly selected component across a failed upload, but never
+        # render a key the registry does not declare.
+        requested: str = str(request.args.get("component", ""))
+        selected: str = (
+            requested if requested in components else default_selection
+        )
         return render_template(
             "index.html",
-            component=context.ontology.name,
-            component_label=context.class_names[context.ontology.yolo_class_id],
-            image_size=context.sampler.image_size,
+            component=selected,
+            components=components,
+            selected_component=selected,
             max_draws=int(hyperparams.MAX_DRAWS),
-            device=str(context.config.DEVICE),
+            device=str(stage_config.DEVICE),
             error=request.args.get("error"),
         )
 
@@ -99,6 +121,16 @@ def create_app(mode: str = "debug") -> Flask:
         request_id: str = (
             f"upload_{time.strftime('%Y%m%d_%H%M%S')}_{int(started * 1000) % 100000}"
         )
+        # The form's component selection decides both models. An empty value
+        # (an older page) falls back to the configured default.
+        selected_component: str = (
+            str(request.form.get("component", "")) or default_selection
+        )
+        if selected_component not in components:
+            return redirect(
+                f"/?error={quote(f'Unknown missing component {selected_component!r}.')}"
+                f"&component={quote(default_selection)}"
+            )
         staged_dir: Path = upload_root / request_id
         staged_dir.mkdir(parents=True, exist_ok=True)
         saved_paths: dict[str, Path] = {}
@@ -106,7 +138,10 @@ def create_app(mode: str = "debug") -> Flask:
             uploaded: Any = request.files.get(role)
             if uploaded is None or not uploaded.filename:
                 if role == "floorplan":
-                    return redirect(f"/?error={quote('A floor-plan mask is required.')}")
+                    return redirect(
+                        f"/?error={quote('A floor-plan mask is required.')}"
+                        f"&component={quote(selected_component)}"
+                    )
                 continue
             destination: Path = staged_dir / filename
             uploaded.save(str(destination))
@@ -121,6 +156,9 @@ def create_app(mode: str = "debug") -> Flask:
                 requested_draws = None
 
         try:
+            # Lazy per component: first use pays the model load, later uses reuse
+            # the cached context. get_context validates the registry key too.
+            context: Any = get_context(mode, selected_component)
             payload: dict[str, Any] = stage_upload(
                 context,
                 request_id,
@@ -129,10 +167,14 @@ def create_app(mode: str = "debug") -> Flask:
                 requested_draws,
             )
         except (ValueError, FileNotFoundError) as exc:
-            # A mask the model cannot read is a user error, so it is shown on the
-            # form instead of a stack trace. Anything else is a real 500.
+            # A mask the model cannot read or a missing selected model is a user
+            # error, shown on the form instead of a stack trace. Anything else
+            # is a real 500.
             shutil.rmtree(staged_dir, ignore_errors=True)
-            return redirect(f"/?error={quote(str(exc))}")
+            return redirect(
+                f"/?error={quote(str(exc))}"
+                f"&component={quote(selected_component)}"
+            )
 
         _prune_old_runs(output_root, int(hyperparams.MAX_CACHED_RUNS))
         _prune_old_runs(upload_root, int(hyperparams.MAX_CACHED_RUNS))

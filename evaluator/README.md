@@ -12,6 +12,13 @@ YOLO look at that image, and scoring **only the missing component**: the
 detector's class-filtered metrics, the box loss against the dataset's own
 ground-truth box, and the generated channel's mask Dice/IoU.
 
+One **component selection** drives the whole run. `--component tv` (or
+`showcase`, `dining_set`) resolves BOTH models from `components.toml` at the
+repository root: the diffusion checkpoint trained for that component and the
+`missing_yolo` detector trained on that same component. The per-component
+detectors are single-class, so the missing component is class id `0`; the
+multi-class `YOLO/` weights remain usable through `--weights`.
+
 Nothing here is trained; only `evaluator/outputs`, `evaluator/telemetry_logs`
 and `debug_logs/evaluator.log` are written to.
 
@@ -77,14 +84,20 @@ Useful options (each overrides the matching TOML key):
 
 | Flag | Overrides | Meaning |
 |---|---|---|
-| `--checkpoint PATH` | `MASK_DIFFUSION_CHECKPOINT_PATH` | Which diffusion run to judge |
-| `--weights PATH` | `YOLO_WEIGHTS_PATH` | Which detector to judge |
-| `--component NAME` | `MISSING_COMPONENT_CLASS_NAME` | Which component to judge (`tv`, `showcase`, `dining_set`, ...) |
+| `--component NAME` | `MISSING_COMPONENT_CLASS_NAME` | Which component to judge (`tv`, `showcase`, `dining_set`, ...); selects its checkpoint **and** its `missing_yolo` detector from `components.toml` |
+| `--checkpoint PATH` | selected checkpoint | Manual escape hatch: judge a diffusion run not listed in the registry |
+| `--weights PATH` | selected detector | Manual escape hatch: judge a detector not listed in the registry |
 | `--cap N` | `SAMPLE_CAP` | `-1` keeps every sample |
 | `--draws N` | `DRAWS_PER_SAMPLE` | Independent diffusion draws per sample |
 | `--seed N` | `SEED` | Base seed of the sampling and the visualization |
 | `--skip-yolo` | – | Channel metrics and figures only, no detector call |
 | `--output-dir PATH` | – | Where to put this run's artifacts |
+
+`--component` is the normal way to switch: the selected row of `components.toml`
+supplies both models, and the detector's own class names decide the class id
+(per-component `missing_yolo` detectors have one class, id `0`). An explicit
+`--checkpoint` or `--weights` still wins over the registry row, so an
+unregistered run can be measured without editing a file.
 
 ### Cost, measured on this machine (MPS)
 
@@ -129,14 +142,27 @@ To watch a run's figures next to the training dashboards:
 
 ## 5. Configuration
 
-`config.toml` holds paths and the component's identity; `hyperparameters.toml`
-holds every number. Two things are deliberately **not** declared here:
+`config.toml` holds paths, the default component and the device;
+`hyperparameters.toml` holds every number. The **component -> models** pairing is
+declared once, in `components.toml` at the repository root, so the evaluator and
+the frontend can never disagree about which detector belongs to which generator:
 
-* the **frozen VAE paths**, which are read from the diffusion checkpoint itself,
-  so an evaluation cannot sample with a VAE the run never saw;
-* the **detector ontology** (`CLASS_NAMES`, `CLASS_ALIASES`), which is read from
-  `YOLO/hyperparameters.toml`, so a class id can never mean something different
-  from what the weights learned.
+```toml
+[default.COMPONENT_VARIANTS.tv]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
+detector_weights = "./missing_yolo/models/tv_best.pt"
+```
+
+Three things are deliberately **not** declared by a stage:
+
+* the **frozen VAE paths**, which are read from the selected diffusion checkpoint
+  itself, so an evaluation cannot sample with a VAE the run never saw;
+* the **detector's class names**, which are read from the selected weights: a
+  `missing_yolo` detector has one class (id `0`) and the multi-class `YOLO/`
+  weights have ten, and only the weights know which id means what;
+* the **component aliases** (`dining_set` -> `Dining_table`), which still come
+  from `YOLO/hyperparameters.toml`, because the mask and dataset vocabularies
+  spell some components differently.
 
 `COMPONENT_LABEL_NAMES` maps a mask component name to the names the dataset's own
 `labels.txt` uses for it. This is required because the two vocabularies differ
@@ -151,8 +177,9 @@ the config at a run trained for that component and the label names come along.
 
 | File | Responsibility |
 |---|---|
-| `run.py` | CLI, config/hyperparams loading, path anchoring, `PYTORCH_ENABLE_MPS_FALLBACK` |
-| `settings.py` | Path anchoring + reading the detector ontology from the YOLO stage |
+| `run.py` | CLI, config/hyperparams loading, component selection, path anchoring, `PYTORCH_ENABLE_MPS_FALLBACK` |
+| `variants.py` | Reads the shared `components.toml` and applies one component's models to a config |
+| `settings.py` | Path anchoring + reading the detector aliases from the YOLO stage |
 | `ontology.py` | One component resolved across mask / detector / label vocabularies |
 | `dataset_gt.py` | The dataset's own `labels.txt` boxes |
 | `compositor.py` | The erased ground truth plus the generated component composite |
@@ -193,5 +220,8 @@ live redraw uses.
   dataset the detector was trained on.
 * The label files carry only the component's class, so every filtered metric is
   attributable to exactly one component.
-* The detector's own class vocabulary is checked against the YOLO stage's
-  `CLASS_NAMES` before anything is evaluated, instead of trusting the file name.
+* The detector's class vocabulary is read from the selected weights and the
+  component is resolved in that vocabulary before anything is evaluated, instead
+  of trusting a file name or another stage's class list.
+* A selected component's checkpoint and weights are checked for existence before
+  any sampling starts, so a wrong registry row cannot waste a diffusion pass.

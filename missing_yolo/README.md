@@ -212,6 +212,12 @@ or directly:
 python missing_yolo/run.py --mode prod --component tv
 ```
 
+The weights saved under `missing_yolo/models/` are the per-component detectors
+the evaluator and the frontend select: `components.toml` at the repository root
+pairs each component's diffusion checkpoint with its `missing_yolo` weights, so
+`--component showcase` / the upload-page dropdown uses that component's
+generator and that component's detector together.
+
 Start the dashboard first (`./run_scripts/start_missing_yolo_server.sh`) to watch
 metrics as they are written. Every run archives the previous run's
 `outputs/` and `telemetry_logs/` into `old_*` before starting.

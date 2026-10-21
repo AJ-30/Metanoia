@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 # Starts the missing-component upload interface: a Flask front end where a
-# floor-plan class-id mask (and optionally its furniture mask) are uploaded, the
-# configured mask_diffusion run generates the missing component, and the trained
-# YOLO detector's bounding boxes are drawn on the result.
+# component is selected (components.toml pairs its diffusion checkpoint with its
+# missing_yolo detector), a floor-plan class-id mask (and optionally its
+# furniture mask) is uploaded, the matching generator draws the component, and
+# the matching detector's bounding boxes are drawn on the result.
 #
 # Nothing is trained; uploads land under frontend/uploads and results under
 # frontend/outputs, both referenced from frontend/config.toml.

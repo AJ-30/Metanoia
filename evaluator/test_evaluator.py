@@ -25,6 +25,7 @@ Run with: ``./venv/bin/python evaluator/test_evaluator.py``
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
@@ -48,7 +49,17 @@ from evaluator.dataset_gt import boxes_to_yolo_lines, parse_label_line, read_com
 from evaluator.ontology import resolve_component_ontology, resolve_yolo_class_id
 from evaluator.report import format_report
 from evaluator.results import DrawAccumulator, aggregate_per_draw
-from evaluator.yolo_eval import prepare_eval_dataset, validate_detector_names
+from evaluator.variants import (
+    apply_component_variant,
+    component_names,
+    load_component_variants,
+    resolve_component_variant,
+)
+from evaluator.yolo_eval import (
+    detector_class_names,
+    prepare_eval_dataset,
+    validate_detector_names,
+)
 from mask_VAE.masking import MaskGroup, MaskLayout
 from mask_diffusion.runner import class_ids_to_one_hot
 
@@ -565,6 +576,76 @@ def test_validate_detector_names_accepts_and_rejects_ontology() -> None:
         pass
     else:  # pragma: no cover - failure path
         raise AssertionError("a shifted detector ontology was accepted")
+
+
+def test_detector_class_names_reads_each_detector_vocabulary() -> None:
+    """A single-class missing_yolo model and a multi-class model both work."""
+    single = _FakeModel({0: "TV"})
+    multi = _FakeModel(
+        {index: name for index, name in enumerate(CLASS_NAMES)}
+    )
+
+    assert detector_class_names(single) == ["TV"]
+    assert detector_class_names(multi) == CLASS_NAMES
+
+
+def test_component_registry_pairs_each_component_with_its_models() -> None:
+    """The selected component fills the checkpoint and the matching detector."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        checkpoint = root / "tv.pt"
+        weights = root / "tv_best.pt"
+        checkpoint.write_bytes(b"")
+        weights.write_bytes(b"")
+        registry = root / "components.toml"
+        registry.write_text(
+            "[default.COMPONENT_VARIANTS.tv]\n"
+            f'mask_diffusion_checkpoint = "{checkpoint}"\n'
+            f'detector_weights = "{weights}"\n',
+            encoding="utf-8",
+        )
+
+        variants = load_component_variants(registry)
+        variant = resolve_component_variant(variants, "tv")
+        config = SimpleNamespace(MISSING_COMPONENT_CLASS_NAME="tv")
+        apply_component_variant(config, variant)
+
+        assert component_names(variants) == ["tv"]
+        assert config.MISSING_COMPONENT_CLASS_NAME == "tv"
+        assert Path(config.MASK_DIFFUSION_CHECKPOINT_PATH) == checkpoint
+        assert Path(config.YOLO_WEIGHTS_PATH) == weights
+
+
+def test_component_registry_fails_fast_on_unknown_or_missing_models() -> None:
+    """An unknown key or an absent model file is a startup error, not a silent fallback."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        checkpoint = root / "tv.pt"
+        checkpoint.write_bytes(b"")
+        registry = root / "components.toml"
+        registry.write_text(
+            "[default.COMPONENT_VARIANTS.tv]\n"
+            f'mask_diffusion_checkpoint = "{checkpoint}"\n'
+            f'detector_weights = "{root / "absent.pt"}"\n',
+            encoding="utf-8",
+        )
+        variants = load_component_variants(registry)
+
+        try:
+            resolve_component_variant(variants, "lamp")
+        except KeyError as exc:
+            assert "lamp" in str(exc) and "tv" in str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("an unknown component was accepted")
+
+        try:
+            apply_component_variant(
+                SimpleNamespace(), resolve_component_variant(variants, "tv")
+            )
+        except FileNotFoundError:
+            pass
+        else:  # pragma: no cover - failure path
+            raise AssertionError("missing detector weights were accepted")
 
 
 def test_predict_component_boxes_filters_to_the_component_class() -> None:

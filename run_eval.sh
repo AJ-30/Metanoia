@@ -5,15 +5,15 @@
 # the given mode (and forwards any extra flags, e.g. --cap -1 for the full
 # test split).
 #
-# Nothing is trained here: the run reads one mask_diffusion checkpoint plus the
-# detector weights, both of which are referenced by path from
-# evaluator/config.toml, and writes only under evaluator/outputs and
+# Nothing is trained here: the run selects one missing component, which pairs a
+# mask_diffusion checkpoint with the matching missing_yolo detector through
+# components.toml, and writes only under evaluator/outputs and
 # evaluator/telemetry_logs.
 #
 # Usage:
-#   ./run_eval.sh                 # smoke pass in debug mode (SAMPLE_CAP samples)
-#   ./run_eval.sh prod            # same, prod logging level
-#   ./run_eval.sh debug --cap -1  # the whole test split, 4 draws per sample
+#   ./run_eval.sh                          # default component, smoke pass
+#   ./run_eval.sh prod --component showcase
+#   ./run_eval.sh debug --cap -1           # whole test split, default component
 #   ./run_eval.sh debug --weights path/to/weights.pt
 
 set -e

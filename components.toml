@@ -1,0 +1,29 @@
+# Per-missing-component model registry, shared by the evaluator and the
+# frontend (both read it through evaluator/variants.py).
+#
+# One row per component answers ONE question: when a user selects component X,
+# which diffusion checkpoint generates X and which detector judges it?
+#   mask_diffusion_checkpoint: self-describing mask_diffusion checkpoint.
+#   detector_weights:          the matching missing_yolo detector (.pt).
+#
+# Both paths are anchored at the repository root when relative. Files are
+# checked when a component is selected, so a missing weight fails before any
+# sampling starts instead of after a long diffusion pass.
+#
+# The default selection still lives in each stage's config.toml
+# (MISSING_COMPONENT_CLASS_NAME); --component on the evaluator command line and
+# the dropdown on the frontend page override it.
+#
+# Tables live last, after every bare key: a bare key written below a table
+# header silently becomes part of that table.
+[default.COMPONENT_VARIANTS.tv]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
+detector_weights = "./missing_yolo/models/tv_best.pt"
+
+[default.COMPONENT_VARIANTS.showcase]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_kind-worm_epoch_no_showcase_1010.pt"
+detector_weights = "./missing_yolo/models/showcase_best.pt"
+
+[default.COMPONENT_VARIANTS.dining_set]
+mask_diffusion_checkpoint = "./mask_diffusion/models/mask_diffusion_brief-shark_epoch_710_no_dining.pt"
+detector_weights = "./missing_yolo/models/missing_yolo_dining_set_new-fly_best.pt"

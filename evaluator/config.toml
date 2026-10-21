@@ -4,11 +4,13 @@
 # Paths, devices and dataset locations only - every tunable number lives in
 # evaluator/hyperparameters.toml.
 #
-# The evaluator is a MEASUREMENT, not a training stage: it loads a trained
-# mask_diffusion checkpoint plus trained YOLO weights, rebuilds every test
-# sample as (real layout without the missing component + the generated
-# component), lets YOLO see that image and scores only the missing component.
-# Nothing here is trained and nothing outside evaluator/outputs is written to.
+# The evaluator is a MEASUREMENT, not a training stage: the selected missing
+# component (components.toml at the repository root) supplies one trained
+# mask_diffusion checkpoint and the missing_yolo detector trained for that same
+# component. It rebuilds every test sample as (real layout without the missing
+# component + the generated component), lets the detector see that image and
+# scores only the missing component. Nothing here is trained and nothing
+# outside evaluator/outputs is written to.
 
 [default]
 DEBUG_LOG_FILE_PATH = "./debug_logs/evaluator.log"
@@ -16,16 +18,13 @@ OUTPUT_SAMPLES_DIRECTORY = "./evaluator/outputs/"
 TELEMETRY_LOG_DIRECTORY = "./evaluator/telemetry_logs/"
 DEVICE = "mps"
 
-# ---------------------------------------------------------------------------
-# Missing-component source: a self-describing mask_diffusion checkpoint.
-# The default is the complete TV run; pointing this at another run (with the
-# component name below) evaluates that run instead.
-# ---------------------------------------------------------------------------
-MASK_DIFFUSION_CHECKPOINT_PATH = "./mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt"
-
 # Name of the missing component, resolved against the target VAE layout to find
-# its channel. Never a channel index: changing the component is this one key
-# plus the label names in hyperparameters.toml.
+# its channel. This is also the default component SELECTION: components.toml
+# (at the repository root) supplies the matching diffusion checkpoint and the
+# matching missing_yolo detector weights. `--component` overrides this key, and
+# `--checkpoint` / `--weights` override the selected models individually.
+# Never a channel index: changing the component is this one key plus the label
+# names in hyperparameters.toml.
 MISSING_COMPONENT_CLASS_NAME = "tv"
 # Group prefix the target layout's class names carry ("furniture/tv"); set to ""
 # for an unprefixed color index.
@@ -53,13 +52,13 @@ FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
 GROUND_TRUTH_LABEL_FILE = "labels.txt"
 
 # ---------------------------------------------------------------------------
-# Detector under test.
+# Detector ontology aliases.
 # ---------------------------------------------------------------------------
-# Trained YOLO weights. The default is the last weights the repo has trained.
-YOLO_WEIGHTS_PATH = "./YOLO/models/montage_epoch_10_last.pt"
-# Ontology the detector was trained against. READ, not copied: the class names
-# must be the detector's own, otherwise class ids would silently mean something
-# else and every filtered metric would be scored against the wrong class.
+# The detector's own CLASS NAMES are read from the selected weights (a
+# missing_yolo model has one class with id 0; the multi-class YOLO model has
+# ten). This file supplies only the aliases that bridge mask names to class
+# names (e.g. dining_set -> Dining_table), so a class id can never be resolved
+# against a vocabulary the weights did not learn.
 YOLO_HYPERPARAMETERS_PATH = "./YOLO/hyperparameters.toml"
 
 [debug]

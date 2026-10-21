@@ -16,7 +16,7 @@
 # Key into [COMPONENT_VARIANTS] in config.toml: "tv", "showcase" or
 # "dining_set". The command line may override it (--component) so the three
 # runs can be launched without editing this file.
-MISSING_COMPONENT = "tv"
+MISSING_COMPONENT = "dining_set"
 
 # ---- Reproducibility ----
 # The train draw for epoch E uses seed = BASE_SEED + E (E = 0 is the

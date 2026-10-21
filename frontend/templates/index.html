@@ -20,6 +20,8 @@
   input[type=file] { display:block; width:100%; color:var(--muted); }
   input[type=number] { width:120px; background:#0b0d13; color:var(--text);
                        border:1px solid var(--border); border-radius:6px; padding:8px; }
+  select { width:100%; max-width:360px; background:#0b0d13; color:var(--text);
+           border:1px solid var(--border); border-radius:6px; padding:8px; }
   button { background:var(--accent); color:#06231d; border:0; border-radius:8px;
            padding:10px 22px; font-weight:700; cursor:pointer; font-size:15px; }
   button:hover { filter:brightness(1.08); }
@@ -32,16 +34,27 @@
 <body>
 <main>
   <h1>Missing component generator</h1>
-  <p class="sub">Upload a floor-plan class-id mask (and, if you have it, the furniture mask), and the
-  model generates the missing <strong>{{ component }}</strong>, then the trained detector draws
-  what it makes of the result.</p>
+  <p class="sub">Choose the missing component, then upload a floor-plan class-id mask (and, if you have
+  it, the furniture mask). The matching diffusion run generates the component, and the matching
+  trained detector draws what it makes of the result.</p>
 
   {% if error %}<div class="error"><strong>Could not run that:</strong> {{ error }}</div>{% endif %}
 
   <form class="card" action="/upload" method="post" enctype="multipart/form-data">
     <div class="field">
+      <label for="component">Missing component <span class="hint">Each component pairs its own diffusion
+      checkpoint with a detector trained on that component alone; both come from
+      <code>components.toml</code>.</span></label>
+      <select id="component" name="component">
+        {% for name in components %}
+        <option value="{{ name }}" {% if name == selected_component %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
       <label for="floorplan">Floor-plan segmentation mask <span class="hint">Required · single-channel class-id PNG
-      (mode <code>L</code>), floorplan classes 0–17. Any size; it is nearest-neighbour resized to {{ image_size }}.</span></label>
+      (mode <code>L</code>), floorplan classes 0–17. Any size; it is nearest-neighbour resized to the
+      model's native square size.</span></label>
       <input type="file" id="floorplan" name="floorplan" accept="image/png,.png" required>
     </div>
     <div class="field">
