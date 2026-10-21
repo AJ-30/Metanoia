@@ -1,0 +1,68 @@
+
+==============================================================================
+        MISSING-COMPONENT YOLO VALIDATION REPORT
+==============================================================================
+Component          : showcase
+Detector class     : Showcase
+Generator          : /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_kind-worm_epoch_no_showcase_1010.pt
+Detector weights   : /Users/aatmaj/Metanoia/missing_yolo/models/showcase_best.pt
+Split              : val (always regenerated)
+Source split       : /Users/aatmaj/FurnitureArranger/datasets/work/validate
+Samples            : 9960 (7885 positive / 2075 background)
+Ground-truth boxes : 11687 (mean 1.4822 per positive)
+Render             : seed 90210, 257.4s for 9960 images (conditions 14.7s)
+Test half          : 9960 samples carved but not rendered (reserved for the training report)
+------------------------------------------------------------------------------
+Generator/labels.txt agreement on the regenerated val split
+------------------------------------------------------------------------------
+  scored samples   : 7885
+  mean box IoU     : 0.4230
+  fraction >= IoU  : 0.1: 0.7911, 0.3: 0.6648, 0.5: 0.4235, 0.7: 0.2029
+------------------------------------------------------------------------------
+Ultralytics validation (single class; official mAP/precision/recall)
+------------------------------------------------------------------------------
+  precision        : 0.5673
+  recall           : 0.4067
+  F1               : 0.4738
+  mAP@50           : 0.3459
+  mAP@50-95        : 0.1511
+  mAP@75           : 0.1122
+  fitness          : 0.1511
+  speed (ms/img)   : pre 0.1308 | infer 1.9249 | loss 0.0001 | post 2.0029
+  class Showcase        : P 0.5673 | R 0.4067 | mAP50 0.3459 | mAP50-95 0.1511
+  confusion matrix (rows=true, columns=predicted):
+                        Showcase  background
+    Showcase                6405       10764
+    background              5282           0
+    counts: TP 6405 | FP 5282 | FN 10764 | TN 0
+------------------------------------------------------------------------------
+Thresholded box and image metrics (greedy match at IoU 0.50)
+------------------------------------------------------------------------------
+  conf   TP    FP    FN    prec   rec    F1     boxJ   imgAcc detRate FA-rate spec   balAcc
+  0.25   3912  2449  7775  0.6150 0.3347 0.4335 0.2767 0.4843 0.4095  0.2313  0.7687 0.5891
+  0.5    3345  1770  8342  0.6540 0.2862 0.3982 0.2486 0.4522 0.3509  0.1629  0.8371 0.5940
+  0.75   2368  909   9319  0.7226 0.2026 0.3165 0.1880 0.3914 0.2514  0.0766  0.9234 0.5874
+------------------------------------------------------------------------------
+Primary threshold 0.25: localisation of matched boxes
+------------------------------------------------------------------------------
+  IoU              : mean 0.7579 | median 0.7676 | p10 0.5714..p90 0.9226
+  centre dist (px) : mean 5.3605 | median 4.1148 | p10 0.8064..p90 11.6696
+  L1 on (cx,cy,w,h): mean 0.0166 | median 0.0137 | p10 0.0035..p90 0.0340
+  mean confidence  : TP 0.7149 | FP 0.6307
+  image outcomes   : detected 3229 / 7885 positive | missed 4656 | false alarms 480 / 2075 background | correctly empty 1595
+------------------------------------------------------------------------------
+Artifacts
+------------------------------------------------------------------------------
+  metrics JSON     : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/metrics.json
+  per-image CSV    : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/per_image.csv
+  samples          : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/samples/sample_manifest.csv
+  Ultralytics      : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/ultralytics/val
+==============================================================================
+------------------------------------------------------------------------------
+Additional tables (generated from saved labels/predictions)
+------------------------------------------------------------------------------
+  tables report    : missing_yolo/validation_outputs/showcase/tables.txt
+  confusion CSV    : missing_yolo/validation_outputs/showcase/confusion_matrix.csv
+  FP summary CSV   : missing_yolo/validation_outputs/showcase/false_positive_summary.csv
+  precision CSV    : missing_yolo/validation_outputs/showcase/precision_table.csv
+==============================================================================

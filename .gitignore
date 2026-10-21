@@ -1,3 +1,4 @@
+.DS_Store
 *raw
 *.pt
 *.mp4
@@ -28,8 +29,11 @@ frontend/outputs/*
 # (one per run id). Archived by train_missing_yolo.sh into missing_yolo/old_*.
 missing_yolo/outputs/*
 missing_yolo/telemetry_logs/*
-# Standalone validation reports: one folder per component with a regenerated
-# val dataset, saved predictions, sample images and metrics. Archived by
-# validate_missing_yolo.sh into missing_yolo/old_validation_outputs/.
-missing_yolo/validation_outputs/*
+# Standalone validation reports: the small metrics/tables/CSVs are versioned,
+# but the regenerated val dataset, Ultralytics curves/saved labels and sample
+# PNGs stay local. Archived by validate_missing_yolo.sh into
+# missing_yolo/old_validation_outputs/.
+missing_yolo/validation_outputs/*/dataset/
+missing_yolo/validation_outputs/*/ultralytics/
+missing_yolo/validation_outputs/*/samples/
 missing_yolo/old_validation_outputs/*

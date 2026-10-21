@@ -165,6 +165,10 @@ missing_yolo/validation_outputs/<component>/
 ├── metrics.txt              human-readable report
 ├── metrics.json             every number in the report
 ├── per_image.csv            one row per sample and confidence threshold
+├── tables.txt               confusion, false-positive mean and precision tables
+├── confusion_matrix.csv     2x2 box/image confusion cells per threshold
+├── false_positive_summary.csv  run-level FP means + per-image distribution
+├── precision_table.csv      precision/recall sweep over confidence
 ├── dataset/                 regenerated val images, labels, data.yaml, manifest
 ├── ultralytics/val/         PR/F1/P/R curves, confusion matrix, saved predictions
 └── samples/
@@ -186,6 +190,20 @@ precision, recall, F1, box Jaccard, image accuracy, positive detection rate,
 false-alarm rate, specificity and balanced accuracy. Matched-box IoU, centre
 distance and L1 on `(cx, cy, w, h)` are summarized at the primary threshold.
 Undefined values are `n/a`, never a misleading `0.0`.
+
+`tables.txt` adds the tables easiest to compare across runs: box-level and
+image-level confusion matrices, false-positive counts averaged over the run
+(per image / positive image / background image / image with an FP), and a
+precision sweep over `VALIDATION_PRECISION_THRESHOLDS`. The same data is in
+`confusion_matrix.csv`, `false_positive_summary.csv` and `precision_table.csv`.
+`meanBestIoU` for a false positive is its best overlap with any GT box; FPs on
+background images have no GT box and are excluded from that mean.
+These can be rebuilt from an existing report's saved labels and predictions
+without rerendering any image:
+
+```bash
+./venv/bin/python missing_yolo/validation_tables.py --mode prod --component all
+```
 
 **Validation vs training:** the val half is generator-unseen and is what the
 trainer early-stopped on. The other half of `work/validate` is carved

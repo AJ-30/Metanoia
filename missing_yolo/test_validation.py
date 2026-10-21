@@ -37,6 +37,10 @@ from missing_yolo.validation_metrics import (
     read_prediction_labels,
     summarize_values,
 )
+from missing_yolo.validation_tables import (
+    build_validation_tables,
+    write_tables,
+)
 
 
 class _CLOSE:
@@ -394,6 +398,212 @@ def test_summarize_values_returns_none_for_empty() -> None:
     result = summarize_values([])
     # Assert
     assert result is None
+
+
+def _write_table_fixture(root: Path) -> tuple[Path, Path]:
+    """Create the tiny two-image split used by the extra-table tests.
+
+    Args:
+        root (Path): Temporary root folder.
+
+    Returns:
+        tuple[Path, Path]: Ground-truth and prediction label directories.
+    """
+    gt_dir: Path = root / "gt"
+    pred_dir: Path = root / "pred"
+    write_text(gt_dir / "positive.txt", ["0 0.5 0.5 0.2 0.2"])
+    write_text(gt_dir / "background.txt", [])
+    write_text(
+        pred_dir / "positive.txt",
+        [
+            "0 0.5 0.5 0.2 0.2 0.90",
+            "0 0.1 0.1 0.1 0.1 0.80",
+        ],
+    )
+    write_text(pred_dir / "background.txt", ["0 0.2 0.2 0.1 0.1 0.90"])
+    return gt_dir, pred_dir
+
+
+def test_build_validation_tables_counts_confusion_and_fp_means() -> None:
+    """Box/image matrices and run-level FP means agree with the tiny split."""
+    # Arrange
+    with tempfile.TemporaryDirectory() as tmp:
+        gt_dir, pred_dir = _write_table_fixture(Path(tmp))
+        # Act
+        tables = build_validation_tables(
+            stems=["positive", "background"],
+            ground_truth_dir=gt_dir,
+            prediction_dir=pred_dir,
+            report_thresholds=[0.85, 0.75],
+            precision_thresholds=[0.85, 0.75, 0.95],
+            iou_threshold=0.5,
+            image_size=256,
+            class_name="TV",
+        )
+        # Assert: at 0.85 the positive image is TP-only and the background is FP.
+        box_085 = tables["confusion_matrix"]["box"]["0.85"]
+        assert box_085["labels"] == ["TV", "background"]
+        assert box_085["matrix"] == [[1, 0], [1, 0]]
+        assert box_085["counts"] == {"tp": 1, "fp": 1, "fn": 0, "tn": 0}
+        image_085 = tables["confusion_matrix"]["image"]["0.85"]
+        assert image_085["matrix"] == [[1, 0], [1, 0]]
+        assert image_085["counts"] == {"tp": 1, "fp": 1, "fn": 0, "tn": 0}
+
+        fp_085 = tables["false_positive_summary"]["0.85"]
+        assert fp_085["fp_boxes"] == 1
+        assert fp_085["mean_fp_per_image"] == _CLOSE(0.5)
+        assert fp_085["mean_fp_per_positive_image"] == _CLOSE(0.0)
+        assert fp_085["mean_fp_per_background_image"] == _CLOSE(1.0)
+        assert fp_085["mean_fp_per_image_with_fp"] == _CLOSE(1.0)
+        assert fp_085["median_fp_per_image"] == _CLOSE(0.5)
+        assert fp_085["max_fp_per_image"] == 1
+        assert fp_085["mean_fp_confidence"] == _CLOSE(0.9)
+        # The only FP in this threshold sits on the background image, which has
+        # no GT box, so a best-IoU mean is undefined rather than zero.
+        assert fp_085["mean_fp_best_iou"] is None
+
+        # At 0.75 the low-confidence false positive on the positive image is
+        # included, giving two FPs and a defined best-IoU mean of zero.
+        assert tables["confusion_matrix"]["box"]["0.75"]["matrix"] == [
+            [1, 0],
+            [2, 0],
+        ]
+        fp_075 = tables["false_positive_summary"]["0.75"]
+        assert fp_075["fp_boxes"] == 2
+        assert fp_075["mean_fp_per_positive_image"] == _CLOSE(1.0)
+        assert fp_075["mean_fp_per_background_image"] == _CLOSE(1.0)
+        assert fp_075["mean_fp_confidence"] == _CLOSE(0.85)
+        assert fp_075["mean_fp_best_iou"] == _CLOSE(0.0)
+
+
+def test_build_validation_tables_precision_sweep_tracks_thresholds() -> None:
+    """The precision table reports counts, ratios and image rates per threshold."""
+    # Arrange
+    with tempfile.TemporaryDirectory() as tmp:
+        gt_dir, pred_dir = _write_table_fixture(Path(tmp))
+        # Act
+        tables = build_validation_tables(
+            stems=["positive", "background"],
+            ground_truth_dir=gt_dir,
+            prediction_dir=pred_dir,
+            report_thresholds=[0.85],
+            precision_thresholds=[0.25, 0.75, 0.85, 0.95],
+            iou_threshold=0.5,
+            image_size=256,
+        )
+        rows = {
+            row["conf_threshold"]: row for row in tables["precision_table"]
+        }
+        # Assert
+        assert list(rows) == [0.25, 0.75, 0.85, 0.95]
+        assert rows[0.85]["tp"] == 1
+        assert rows[0.85]["fp"] == 1
+        assert rows[0.85]["fn"] == 0
+        assert rows[0.85]["precision"] == _CLOSE(0.5)
+        assert rows[0.85]["recall"] == _CLOSE(1.0)
+        assert rows[0.85]["f1"] == _CLOSE(2.0 / 3.0)
+        assert rows[0.85]["jaccard"] == _CLOSE(0.5)
+        assert rows[0.85]["positive_detection_rate"] == _CLOSE(1.0)
+        assert rows[0.85]["false_alarm_rate"] == _CLOSE(1.0)
+        assert rows[0.85]["specificity"] == _CLOSE(0.0)
+        assert rows[0.85]["balanced_accuracy"] == _CLOSE(0.5)
+
+        # Above every confidence no boxes are predicted: precision is undefined,
+        # recall is zero, and the background image is correctly empty.
+        assert rows[0.95]["tp"] == 0
+        assert rows[0.95]["fp"] == 0
+        assert rows[0.95]["fn"] == 1
+        assert rows[0.95]["precision"] is None
+        assert rows[0.95]["recall"] == _CLOSE(0.0)
+        assert rows[0.95]["f1"] is None
+        assert rows[0.95]["specificity"] == _CLOSE(1.0)
+        assert rows[0.95]["balanced_accuracy"] == _CLOSE(0.5)
+
+
+def test_build_validation_tables_rejects_bad_thresholds() -> None:
+    """Empty or out-of-range confidence lists are configuration errors."""
+    # Arrange
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        # Act / Assert
+        with _expect_raises(ValueError):
+            build_validation_tables(
+                stems=["positive"],
+                ground_truth_dir=root,
+                prediction_dir=root,
+                report_thresholds=[],
+                precision_thresholds=[0.25],
+                iou_threshold=0.5,
+                image_size=256,
+            )
+        with _expect_raises(ValueError):
+            build_validation_tables(
+                stems=["positive"],
+                ground_truth_dir=root,
+                prediction_dir=root,
+                report_thresholds=[0.25],
+                precision_thresholds=[1.25],
+                iou_threshold=0.5,
+                image_size=256,
+            )
+        with _expect_raises(ValueError):
+            build_validation_tables(
+                stems=["positive"],
+                ground_truth_dir=root,
+                prediction_dir=root,
+                report_thresholds=[0.25],
+                precision_thresholds=[0.25],
+                iou_threshold=1.5,
+                image_size=256,
+            )
+
+
+def test_write_tables_creates_csv_and_text_artifacts() -> None:
+    """The table writer emits the three CSVs and the readable tables.txt."""
+    # Arrange
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        gt_dir, pred_dir = _write_table_fixture(root / "fixture")
+        tables = build_validation_tables(
+            stems=["positive", "background"],
+            ground_truth_dir=gt_dir,
+            prediction_dir=pred_dir,
+            report_thresholds=[0.85],
+            precision_thresholds=[0.85],
+            iou_threshold=0.5,
+            image_size=256,
+            class_name="TV",
+        )
+        official = {
+            "labels": ["TV", "background"],
+            "matrix": [[2, 0], [0, 0]],
+            "counts": {"tp": 2, "fp": 0, "fn": 0, "tn": 0},
+        }
+        # Act
+        paths = write_tables(
+            output_dir=root / "report",
+            tables=tables,
+            class_name="TV",
+            iou_threshold=0.5,
+            official_confusion=official,
+            official_conf_threshold=0.001,
+        )
+        # Assert
+        assert all(path.is_file() for path in paths.values())
+        confusion_text = paths["confusion_matrix"].read_text(encoding="utf-8")
+        assert "scope,level,conf_threshold,true_label,predicted_label,count" in (
+            confusion_text
+        )
+        assert "official,box,0.001,TV,TV,2" in confusion_text
+        assert "thresholded,image,0.85,positive,positive,1" in confusion_text
+        fp_text = paths["false_positive_summary"].read_text(encoding="utf-8")
+        assert fp_text.startswith("conf_threshold,fp_boxes,total_images")
+        precision_text = paths["precision_table"].read_text(encoding="utf-8")
+        assert precision_text.startswith("conf_threshold,tp,fp,fn")
+        tables_text = paths["tables_txt"].read_text(encoding="utf-8")
+        assert "False positives: means over the run" in tables_text
+        assert "Precision table over the confidence sweep" in tables_text
+        assert "Official Ultralytics confusion matrix" in tables_text
 
 
 def _run_all_tests() -> int:

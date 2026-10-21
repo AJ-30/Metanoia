@@ -1,0 +1,68 @@
+
+==============================================================================
+        MISSING-COMPONENT YOLO VALIDATION REPORT
+==============================================================================
+Component          : tv
+Detector class     : TV
+Generator          : /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt
+Detector weights   : /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt
+Split              : val (always regenerated)
+Source split       : /Users/aatmaj/FurnitureArranger/datasets/work/validate
+Samples            : 9960 (9240 positive / 720 background)
+Ground-truth boxes : 9240 (mean 1.0000 per positive)
+Render             : seed 90210, 230.5s for 9960 images (conditions 15.8s)
+Test half          : 9960 samples carved but not rendered (reserved for the training report)
+------------------------------------------------------------------------------
+Generator/labels.txt agreement on the regenerated val split
+------------------------------------------------------------------------------
+  scored samples   : 9240
+  mean box IoU     : 0.7941
+  fraction >= IoU  : 0.1: 0.9786, 0.3: 0.9668, 0.5: 0.9396, 0.7: 0.8379
+------------------------------------------------------------------------------
+Ultralytics validation (single class; official mAP/precision/recall)
+------------------------------------------------------------------------------
+  precision        : 0.9706
+  recall           : 0.9337
+  F1               : 0.9518
+  mAP@50           : 0.9370
+  mAP@50-95        : 0.6166
+  mAP@75           : 0.7114
+  fitness          : 0.6166
+  speed (ms/img)   : pre 0.1367 | infer 1.9708 | loss 0.0001 | post 2.1806
+  class TV              : P 0.9706 | R 0.9337 | mAP50 0.9370 | mAP50-95 0.6166
+  confusion matrix (rows=true, columns=predicted):
+                              TV  background
+    TV                      8817         580
+    background               423           0
+    counts: TP 8817 | FP 423 | FN 580 | TN 0
+------------------------------------------------------------------------------
+Thresholded box and image metrics (greedy match at IoU 0.50)
+------------------------------------------------------------------------------
+  conf   TP    FP    FN    prec   rec    F1     boxJ   imgAcc detRate FA-rate spec   balAcc
+  0.25   8669  326   571   0.9638 0.9382 0.9508 0.9062 0.9324 0.9382  0.1417  0.8583 0.8983
+  0.5    8633  272   607   0.9695 0.9343 0.9516 0.9076 0.9307 0.9343  0.1153  0.8847 0.9095
+  0.75   8553  204   687   0.9767 0.9256 0.9505 0.9057 0.9243 0.9256  0.0931  0.9069 0.9163
+------------------------------------------------------------------------------
+Primary threshold 0.25: localisation of matched boxes
+------------------------------------------------------------------------------
+  IoU              : mean 0.8428 | median 0.8650 | p10 0.7049..p90 0.9417
+  centre dist (px) : mean 3.8075 | median 2.6139 | p10 0.6199..p90 8.7804
+  L1 on (cx,cy,w,h): mean 0.0105 | median 0.0085 | p10 0.0032..p90 0.0211
+  mean confidence  : TP 0.8513 | FP 0.7171
+  image outcomes   : detected 8669 / 9240 positive | missed 571 | false alarms 102 / 720 background | correctly empty 618
+------------------------------------------------------------------------------
+Artifacts
+------------------------------------------------------------------------------
+  metrics JSON     : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/metrics.json
+  per-image CSV    : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/per_image.csv
+  samples          : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/samples/sample_manifest.csv
+  Ultralytics      : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/ultralytics/val
+==============================================================================
+------------------------------------------------------------------------------
+Additional tables (generated from saved labels/predictions)
+------------------------------------------------------------------------------
+  tables report    : missing_yolo/validation_outputs/tv/tables.txt
+  confusion CSV    : missing_yolo/validation_outputs/tv/confusion_matrix.csv
+  FP summary CSV   : missing_yolo/validation_outputs/tv/false_positive_summary.csv
+  precision CSV    : missing_yolo/validation_outputs/tv/precision_table.csv
+==============================================================================

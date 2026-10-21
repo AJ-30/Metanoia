@@ -79,6 +79,10 @@ from missing_yolo.validation_metrics import (
     read_prediction_labels,
     threshold_key,
 )
+from missing_yolo.validation_tables import (
+    build_validation_tables,
+    write_tables,
+)
 from YOLO.dataset import (
     SampleFolder,
     list_sample_folders,
@@ -597,6 +601,31 @@ class MissingYoloValidator:
             image_size=int(self.hyperparams.RENDER_IMAGE_SIZE),
         )
         self._write_per_image(per_image_rows)
+        # The table report reads the same saved labels/predictions as
+        # evaluate_split, so its confusion matrices and precision sweep cannot
+        # drift from the headline metrics.
+        extra_tables: dict[str, Any] = build_validation_tables(
+            stems=[source.stem for source in val_sources],
+            ground_truth_dir=self.paths.label_dir,
+            prediction_dir=prediction_dir,
+            report_thresholds=thresholds,
+            precision_thresholds=[
+                float(value)
+                for value in self.hyperparams.VALIDATION_PRECISION_THRESHOLDS
+            ],
+            iou_threshold=float(self.hyperparams.VALIDATION_MATCH_IOU),
+            image_size=int(self.hyperparams.RENDER_IMAGE_SIZE),
+            class_id=0,
+            class_name=self.variant.detector_class_name,
+        )
+        table_paths: dict[str, Path] = write_tables(
+            output_dir=self.component_root,
+            tables=extra_tables,
+            class_name=self.variant.detector_class_name,
+            iou_threshold=float(self.hyperparams.VALIDATION_MATCH_IOU),
+            official_confusion=official.get("confusion_matrix"),
+            official_conf_threshold=float(self.hyperparams.VALIDATION_VAL_CONF),
+        )
         sample_info: dict[str, Any] = self._write_samples(
             val_sources=val_sources,
             label_index=label_index,
@@ -642,10 +671,14 @@ class MissingYoloValidator:
             },
             "ultralytics": official,
             "thresholded": threshold_summaries,
+            "confusion_matrices": extra_tables["confusion_matrix"],
+            "false_positive_summary": extra_tables["false_positive_summary"],
+            "precision_table": extra_tables["precision_table"],
             "primary_threshold": primary_threshold,
             "iou_threshold": float(self.hyperparams.VALIDATION_MATCH_IOU),
             "per_image_csv": str(self.paths.per_image_csv),
             "samples": sample_info,
+            "tables": {name: str(path) for name, path in table_paths.items()},
             "elapsed_seconds": time.time() - started,
         }
         write_json(self.paths.metrics_json, summary)
@@ -1196,6 +1229,14 @@ class MissingYoloValidator:
             "-" * 78,
             f"  metrics JSON     : {summary['output_directory']}/metrics.json",
             f"  per-image CSV    : {summary['per_image_csv']}",
+            f"  tables report    : "
+            f"{summary.get('tables', {}).get('tables_txt', 'n/a')}",
+            f"  confusion CSV    : "
+            f"{summary.get('tables', {}).get('confusion_matrix', 'n/a')}",
+            f"  FP summary CSV   : "
+            f"{summary.get('tables', {}).get('false_positive_summary', 'n/a')}",
+            f"  precision CSV    : "
+            f"{summary.get('tables', {}).get('precision_table', 'n/a')}",
             f"  samples          : {summary['samples']['manifest']}",
             f"  Ultralytics      : {official.get('save_dir') or 'n/a'}",
             "=" * 78,
@@ -1360,6 +1401,10 @@ reused from a previous render.
     ├── metrics.txt             human-readable report
     ├── metrics.json            every number in the report
     ├── per_image.csv           one row per sample and confidence threshold
+    ├── tables.txt              confusion, false-positive mean and precision tables
+    ├── confusion_matrix.csv    box/image confusion cells for every threshold
+    ├── false_positive_summary.csv  run-level FP means and per-image distribution
+    ├── precision_table.csv     precision sweep over confidence
     ├── dataset/                regenerated val render + labels + data.yaml
     ├── ultralytics/val/        curves, confusion matrix, saved predictions
     └── samples/                balanced raw and GT-vs-prediction images
@@ -1381,6 +1426,19 @@ reused from a previous render.
 * **FA-rate** — fraction of background images with at least one false positive.
 * **spec** — specificity: fraction of background images correctly left empty.
 * **balAcc** — mean of `detRate` and `spec`.
+* **box/image confusion matrix** — 2×2 matrices at each configured threshold.
+  Box-level rows are true class (component, background) and columns are the
+  prediction; TN is zero because background-to-background box pairs are not
+  measured. Image-level rows are true image type (positive, background) and
+  columns are whether at least one box was correctly matched (positive) or any
+  box was emitted (background).
+* **false-positive means** — totals divided by all images, positive images,
+  background images, and images that actually produced at least one FP, plus
+  the median/p90/max FP count per image and mean FP confidence/best IoU.
+  `meanBestIoU` is over FPs on positive images; background FPs have no GT box
+  and are excluded from that mean.
+* **precision sweep** — the same greedy box matching at every threshold in
+  `VALIDATION_PRECISION_THRESHOLDS`; `precision_table.csv` is the curve.
 * **matched IoU / centre distance / L1** — localisation quality of matched boxes
   at the primary threshold. `n/a` means there were no matches (not zero).
 * **agreement mean / fractions** — box-IoU between the component the generator

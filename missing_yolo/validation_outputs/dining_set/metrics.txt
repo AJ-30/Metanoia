@@ -1,0 +1,68 @@
+
+==============================================================================
+        MISSING-COMPONENT YOLO VALIDATION REPORT
+==============================================================================
+Component          : dining_set
+Detector class     : Dining_table
+Generator          : /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_brief-shark_epoch_710_no_dining.pt
+Detector weights   : /Users/aatmaj/Metanoia/missing_yolo/models/missing_yolo_dining_set_new-fly_best.pt
+Split              : val (always regenerated)
+Source split       : /Users/aatmaj/FurnitureArranger/datasets/work/validate
+Samples            : 9960 (6387 positive / 3573 background)
+Ground-truth boxes : 6387 (mean 1.0000 per positive)
+Render             : seed 90210, 219.1s for 9960 images (conditions 12.3s)
+Test half          : 9960 samples carved but not rendered (reserved for the training report)
+------------------------------------------------------------------------------
+Generator/labels.txt agreement on the regenerated val split
+------------------------------------------------------------------------------
+  scored samples   : 6387
+  mean box IoU     : 0.5488
+  fraction >= IoU  : 0.1: 0.9512, 0.3: 0.8802, 0.5: 0.6584, 0.7: 0.2513
+------------------------------------------------------------------------------
+Ultralytics validation (single class; official mAP/precision/recall)
+------------------------------------------------------------------------------
+  precision        : 0.6200
+  recall           : 0.5634
+  F1               : 0.5903
+  mAP@50           : 0.4558
+  mAP@50-95        : 0.1455
+  mAP@75           : 0.0471
+  fitness          : 0.1455
+  speed (ms/img)   : pre 0.1251 | infer 1.9485 | loss 0.0001 | post 1.9239
+  class Dining_table    : P 0.6200 | R 0.5634 | mAP50 0.4558 | mAP50-95 0.1455
+  confusion matrix (rows=true, columns=predicted):
+                      Dining_table  background
+    Dining_table            4443        3025
+    background              1944           0
+    counts: TP 4443 | FP 1944 | FN 3025 | TN 0
+------------------------------------------------------------------------------
+Thresholded box and image metrics (greedy match at IoU 0.50)
+------------------------------------------------------------------------------
+  conf   TP    FP    FN    prec   rec    F1     boxJ   imgAcc detRate FA-rate spec   balAcc
+  0.25   2824  1316  3563  0.6821 0.4421 0.5365 0.3666 0.6082 0.4421  0.0949  0.9051 0.6736
+  0.5    2460  981   3927  0.7149 0.3852 0.5006 0.3339 0.5824 0.3852  0.0649  0.9351 0.6601
+  0.75   1806  615   4581  0.7460 0.2828 0.4101 0.2579 0.5277 0.2828  0.0344  0.9656 0.6242
+------------------------------------------------------------------------------
+Primary threshold 0.25: localisation of matched boxes
+------------------------------------------------------------------------------
+  IoU              : mean 0.6880 | median 0.6845 | p10 0.5441..p90 0.8363
+  centre dist (px) : mean 10.1125 | median 9.1840 | p10 3.1317..p90 18.9390
+  L1 on (cx,cy,w,h): mean 0.0300 | median 0.0279 | p10 0.0121..p90 0.0511
+  mean confidence  : TP 0.7316 | FP 0.6572
+  image outcomes   : detected 2824 / 6387 positive | missed 3563 | false alarms 339 / 3573 background | correctly empty 3234
+------------------------------------------------------------------------------
+Artifacts
+------------------------------------------------------------------------------
+  metrics JSON     : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/metrics.json
+  per-image CSV    : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/per_image.csv
+  samples          : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/samples/sample_manifest.csv
+  Ultralytics      : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/ultralytics/val
+==============================================================================
+------------------------------------------------------------------------------
+Additional tables (generated from saved labels/predictions)
+------------------------------------------------------------------------------
+  tables report    : missing_yolo/validation_outputs/dining_set/tables.txt
+  confusion CSV    : missing_yolo/validation_outputs/dining_set/confusion_matrix.csv
+  FP summary CSV   : missing_yolo/validation_outputs/dining_set/false_positive_summary.csv
+  precision CSV    : missing_yolo/validation_outputs/dining_set/precision_table.csv
+==============================================================================

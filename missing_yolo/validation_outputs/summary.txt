@@ -1,0 +1,21 @@
+
+====================================================================================================
+        MISSING-COMPONENT YOLO VALIDATION SUMMARY
+====================================================================================================
+Output root : /Users/aatmaj/Metanoia/missing_yolo/validation_outputs
+Elapsed     : 1055.7s
+----------------------------------------------------------------------------------------------------
+component    samples positives background boxes  mAP50  mAP50-95 prec   rec    conf  TP    FP    FN    F1     imgAcc
+tv           9960    9240      720        9240   0.9370 0.6166    0.9706 0.9337 0.25  8669  326   571   0.9508 0.9324
+showcase     9960    7885      2075       11687  0.3459 0.1511    0.5673 0.4067 0.25  3912  2449  7775  0.4335 0.4843
+dining_set   9960    6387      3573       6387   0.4558 0.1455    0.6200 0.5634 0.25  2824  1316  3563  0.5365 0.6082
+----------------------------------------------------------------------------------------------------
+Metric notes
+----------------------------------------------------------------------------------------------------
+  mAP/precision/recall are Ultralytics' official values (low-confidence
+  val pass); thresholded TP/FP/FN use greedy conf-order matching at the
+  configured IoU. Image accuracy = (detected positive images + correctly
+  empty background images) / all images. Balanced accuracy averages the
+  positive detection rate and specificity. Undefined values are n/a.
+====================================================================================================
+

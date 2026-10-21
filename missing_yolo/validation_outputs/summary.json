@@ -1,0 +1,109 @@
+{
+  "components": [
+    {
+      "background_samples": 720,
+      "class_name": "TV",
+      "component": "tv",
+      "ground_truth_boxes": 9240,
+      "mAP50": 0.9369590705779345,
+      "mAP50_95": 0.6166445509676471,
+      "output_directory": "/Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv",
+      "positive_samples": 9240,
+      "precision": 0.9706347820587639,
+      "primary_box_counts": {
+        "fn": 571,
+        "fp": 326,
+        "ground_truth": 9240,
+        "predictions": 8995,
+        "tp": 8669
+      },
+      "primary_threshold": 0.25,
+      "recall": 0.9336651700828005,
+      "samples": 9960,
+      "thresholded_box_metrics": {
+        "f1": 0.9508088840142582,
+        "jaccard": 0.9062303993309638,
+        "precision": 0.9637576431350751,
+        "recall": 0.9382034632034632
+      },
+      "thresholded_image_metrics": {
+        "accuracy": 0.932429718875502,
+        "balanced_accuracy": 0.8982683982683982,
+        "false_alarm_rate": 0.14166666666666666,
+        "positive_detection_rate": 0.9382034632034632,
+        "specificity": 0.8583333333333333
+      }
+    },
+    {
+      "background_samples": 2075,
+      "class_name": "Showcase",
+      "component": "showcase",
+      "ground_truth_boxes": 11687,
+      "mAP50": 0.3459407306560549,
+      "mAP50_95": 0.15106956899491644,
+      "output_directory": "/Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase",
+      "positive_samples": 7885,
+      "precision": 0.5673160677721826,
+      "primary_box_counts": {
+        "fn": 7775,
+        "fp": 2449,
+        "ground_truth": 11687,
+        "predictions": 6361,
+        "tp": 3912
+      },
+      "primary_threshold": 0.25,
+      "recall": 0.40668605743056935,
+      "samples": 9960,
+      "thresholded_box_metrics": {
+        "f1": 0.43351063829787234,
+        "jaccard": 0.2767402376910017,
+        "precision": 0.6149976418802076,
+        "recall": 0.33473089757850605
+      },
+      "thresholded_image_metrics": {
+        "accuracy": 0.4843373493975904,
+        "balanced_accuracy": 0.5890932149651236,
+        "false_alarm_rate": 0.23132530120481928,
+        "positive_detection_rate": 0.40951173113506656,
+        "specificity": 0.7686746987951807
+      }
+    },
+    {
+      "background_samples": 3573,
+      "class_name": "Dining_table",
+      "component": "dining_set",
+      "ground_truth_boxes": 6387,
+      "mAP50": 0.45579420017202676,
+      "mAP50_95": 0.14546885048133756,
+      "output_directory": "/Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set",
+      "positive_samples": 6387,
+      "precision": 0.6200340847819433,
+      "primary_box_counts": {
+        "fn": 3563,
+        "fp": 1316,
+        "ground_truth": 6387,
+        "predictions": 4140,
+        "tp": 2824
+      },
+      "primary_threshold": 0.25,
+      "recall": 0.5633555856134742,
+      "samples": 9960,
+      "thresholded_box_metrics": {
+        "f1": 0.5365251258668187,
+        "jaccard": 0.36661041152797613,
+        "precision": 0.6821256038647343,
+        "recall": 0.44214811335525284
+      },
+      "thresholded_image_metrics": {
+        "accuracy": 0.6082329317269076,
+        "balanced_accuracy": 0.6736349298934114,
+        "false_alarm_rate": 0.0948782535684299,
+        "positive_detection_rate": 0.44214811335525284,
+        "specificity": 0.9051217464315701
+      }
+    }
+  ],
+  "elapsed_seconds": 1055.7331502437592,
+  "generated_at": "2026-10-21 11:31:49",
+  "output_root": "/Users/aatmaj/Metanoia/missing_yolo/validation_outputs"
+}
