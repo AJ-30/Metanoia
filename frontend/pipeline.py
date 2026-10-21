@@ -9,7 +9,10 @@ travels, so nothing about the interface can quietly change the result:
    it into a class-id mask (argmax over channels, no tuned threshold);
 3. the composite is built - floorplan, real furniture minus the missing
    component, generated component on top - and the detector is run on it;
-4. the four panels and the detection table are written out.
+4. an optional uploaded ``labels.txt`` is matched against the detector's boxes,
+   and both the ground truth (green) and the predictions (red) are drawn on the
+   composite;
+5. the panels, the detection table and the comparison metrics are written out.
 
 A missing furniture upload becomes a blank layout, which is what "generate the
 component into an empty floor plan" means: the blank mask still goes through the
@@ -28,15 +31,22 @@ from PIL import Image
 from PIL import UnidentifiedImageError as PILUnidentifiedImageError
 import torch
 
+from evaluator.box_metrics import PredictedBox, pixel_boxes_to_predictions
 from evaluator.compositor import (
     build_composite,
     build_conditioned_overlay,
     render_layout_ids,
     tensor_to_image,
 )
+from evaluator.dataset_gt import Box
 from evaluator.ontology import ComponentOntology
 from evaluator.visualize import annotate_composite, render_component_image
 from evaluator.yolo_eval import predict_component_boxes
+from frontend.comparison import (
+    DetectionComparison,
+    compare_boxes,
+    read_ground_truth_labels,
+)
 from mask_diffusion.inference import (
     ACCEPTED_MASK_IMAGE_MODES,
     MaskDiffusionSampler,
@@ -48,6 +58,7 @@ FLOORPLAN_PANEL: str = "floorplan.png"
 CONDITIONED_PANEL: str = "conditioned.png"
 COMPONENT_PANEL: str = "component_draw_{draw}.png"
 COMPOSITE_PANEL: str = "composite_draw_{draw}.png"
+GT_OVERLAY_PANEL: str = "composite_draw_{draw}_ground_truth.png"
 ANNOTATED_PANEL: str = "composite_draw_{draw}_boxes.png"
 
 # Class id of the furniture background, i.e. an empty layout.
@@ -146,8 +157,9 @@ def stage_upload(
     floorplan_path: Path,
     furniture_path: Path | None,
     draws: int | None = None,
+    ground_truth_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Encode, generate, composite and detect one upload.
+    """Encode, generate, composite, detect and optionally score one upload.
 
     Args:
         context (Any): The cached ``FrontendContext``.
@@ -157,13 +169,20 @@ def stage_upload(
             ``None`` to generate the component into an empty layout.
         draws (int | None): Number of independent diffusion chains, or ``None``
             to use the stage default. Clamped to ``1..MAX_DRAWS``.
+        ground_truth_path (Path | None): Optional uploaded YOLO ``labels.txt``
+            describing the component in the composite, or ``None`` when the
+            user did not upload one. The file is validated before any costly
+            generation starts.
 
     Returns:
         dict[str, Any]: The result payload: panel filenames, the per-draw
-        detections, the component identity, timings and the generated size.
+        detections and comparisons, the component identity, timings and the
+        generated size.
 
     Raises:
-        ValueError: If a mask is not a class-id mask in the expected range.
+        ValueError: If a mask is not a class-id mask in the expected range, or
+            the uploaded label file is malformed.
+        FileNotFoundError: If the uploaded label file vanished after upload.
     """
     started: float = time.time()
     sampler: MaskDiffusionSampler = context.sampler
@@ -173,6 +192,18 @@ def stage_upload(
     draws = _clamp_draws(
         draws if draws is not None else int(hyperparams.DEFAULT_DRAWS),
         int(hyperparams.MAX_DRAWS),
+    )
+    # Parse the optional labels before encoding: a bad label file should fail in
+    # a second, not after a full diffusion chain has already run.
+    ground_truth: list[Box] = (
+        read_ground_truth_labels(
+            ground_truth_path,
+            class_id=ontology.yolo_class_id,
+            max_boxes=int(hyperparams.MAX_GROUND_TRUTH_BOXES),
+            label_names=ontology.label_names,
+        )
+        if ground_truth_path is not None
+        else []
     )
 
     sample_dir: Path = _prepare_sample_dir(
@@ -229,8 +260,8 @@ def stage_upload(
         )
         panels[f"component_draw_{draw}"] = panel_3
 
-        # Panel 4: the composite the detector judges, and the same image with the
-        # boxes it returned drawn on it.
+        # Panel 4: the composite the detector judges, then the same image with
+        # the uploaded ground truth only, then ground truth and predictions.
         composite: Image.Image = build_composite(
             conditions["floorplan_ids"][0:1],
             conditions["furniture_ids"][0:1],
@@ -253,8 +284,31 @@ def stage_upload(
                 class_id=ontology.yolo_class_id,
             )
         )
+        comparison: DetectionComparison | None = None
+        if ground_truth_path is not None:
+            panel_4_gt: str = GT_OVERLAY_PANEL.format(draw=draw)
+            annotate_composite(
+                composite,
+                ground_truth,
+                [],
+                context.class_names,
+                ontology.yolo_class_id,
+            ).save(str(output_root / panel_4_gt))
+            panels[f"ground_truth_draw_{draw}"] = panel_4_gt
+            comparison = compare_boxes(
+                ground_truth,
+                pixel_boxes_to_predictions(
+                    found, ontology.yolo_class_id, image_size
+                ),
+                iou_threshold=float(hyperparams.MATCH_IOU_THRESHOLD),
+                image_size=image_size,
+            )
         annotate_composite(
-            composite, [], found, context.class_names, ontology.yolo_class_id
+            composite,
+            ground_truth,
+            found,
+            context.class_names,
+            ontology.yolo_class_id,
         ).save(str(output_root / panel_4_boxes))
         panels[f"boxes_draw_{draw}"] = panel_4_boxes
         detections.append(
@@ -271,6 +325,7 @@ def stage_upload(
                     }
                     for box in found
                 ],
+                "comparison": comparison,
             }
         )
 
@@ -283,6 +338,8 @@ def stage_upload(
         "draws": draws,
         "elapsed_seconds": time.time() - started,
         "furniture_uploaded": furniture_path is not None,
+        "ground_truth_uploaded": ground_truth_path is not None,
+        "ground_truth_boxes": len(ground_truth),
         "generated_pixels": int(masks[0].sum()),
     }
 

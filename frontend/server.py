@@ -47,6 +47,27 @@ UPLOAD_MASKS: dict[str, str] = {
     "floorplan": "floorplan.png",
     "furniture": "furniture.png",
 }
+# Optional YOLO labels uploaded beside the masks, and the name they are staged
+# under. The labels are text, not an image, so they are kept out of
+# UPLOAD_MASKS and handled separately.
+GROUND_TRUTH_FIELD: str = "ground_truth"
+GROUND_TRUTH_LABELS_FILENAME: str = "ground_truth_labels.txt"
+
+
+def format_metric(value: float | int | None, digits: int = 3) -> str:
+    """Format an optional metric for the result page.
+
+    Args:
+        value (float | int | None): Metric value, or ``None`` when undefined.
+        digits (int): Decimal places to show.
+
+    Returns:
+        str: The formatted number, or ``"n/a"`` when the metric is undefined,
+            which is different from a real zero.
+    """
+    if value is None:
+        return "n/a"
+    return f"{float(value):.{int(digits)}f}"
 
 
 def create_app(mode: str = "debug") -> Flask:
@@ -83,8 +104,12 @@ def create_app(mode: str = "debug") -> Flask:
     output_root: Path = Path(str(stage_config.OUTPUT_DIRECTORY))
 
     app: Flask = Flask(__name__, template_folder=str(script_dir / "templates"))
+    app.add_template_filter(format_metric, "metric")
     # Cap on one request body: both masks, so the configured megabytes.
     app.config["MAX_CONTENT_LENGTH"] = int(hyperparams.MAX_UPLOAD_MB) * 1024 * 1024
+    max_label_bytes: int = (
+        int(hyperparams.MAX_GROUND_TRUTH_LABEL_MB) * 1024 * 1024
+    )
 
     @app.get("/")
     def index() -> str:
@@ -147,6 +172,26 @@ def create_app(mode: str = "debug") -> Flask:
             uploaded.save(str(destination))
             saved_paths[role] = destination
 
+        # Optional ground-truth labels: a text file, validated by the pipeline
+        # before the diffusion chain starts. Absent means "no comparison".
+        ground_truth_path: Path | None = None
+        uploaded_labels: Any = request.files.get(GROUND_TRUTH_FIELD)
+        if uploaded_labels is not None and uploaded_labels.filename:
+            destination = staged_dir / GROUND_TRUTH_LABELS_FILENAME
+            uploaded_labels.save(str(destination))
+            if destination.stat().st_size > max_label_bytes:
+                shutil.rmtree(staged_dir, ignore_errors=True)
+                limit_mb: int = int(hyperparams.MAX_GROUND_TRUTH_LABEL_MB)
+                message: str = (
+                    "The ground-truth labels file is larger than "
+                    f"{limit_mb} MB."
+                )
+                return redirect(
+                    f"/?error={quote(message)}"
+                    f"&component={quote(selected_component)}"
+                )
+            ground_truth_path = destination
+
         # The form's draw count, clamped by the pipeline against MAX_DRAWS.
         requested_draws: int | None = None
         if request.form.get("draws"):
@@ -162,14 +207,15 @@ def create_app(mode: str = "debug") -> Flask:
             payload: dict[str, Any] = stage_upload(
                 context,
                 request_id,
-                saved_paths["floorplan"],
-                saved_paths.get("furniture"),
-                requested_draws,
+                floorplan_path=saved_paths["floorplan"],
+                furniture_path=saved_paths.get("furniture"),
+                draws=requested_draws,
+                ground_truth_path=ground_truth_path,
             )
         except (ValueError, FileNotFoundError) as exc:
-            # A mask the model cannot read or a missing selected model is a user
-            # error, shown on the form instead of a stack trace. Anything else
-            # is a real 500.
+            # A mask or label file the model cannot read, or a missing selected
+            # model, is a user error shown on the form instead of a stack trace.
+            # Anything else is a real 500.
             shutil.rmtree(staged_dir, ignore_errors=True)
             return redirect(
                 f"/?error={quote(str(exc))}"
@@ -188,8 +234,12 @@ def create_app(mode: str = "debug") -> Flask:
             draws=payload["draws"],
             generated_pixels=payload["generated_pixels"],
             elapsed_seconds=payload["elapsed_seconds"],
+            ground_truth_uploaded=payload["ground_truth_uploaded"],
+            ground_truth_boxes=payload["ground_truth_boxes"],
             seed=int(hyperparams.SEED),
             conf=float(hyperparams.YOLO_CONF),
+            match_iou=float(hyperparams.MATCH_IOU_THRESHOLD),
+            image_size=int(context.sampler.image_size),
             checkpoint=str(context.config.MASK_DIFFUSION_CHECKPOINT_PATH),
             weights=str(context.config.YOLO_WEIGHTS_PATH),
         )

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generated {{ component_label }} · YOLO detections</title>
+<title>Generated {{ component_label }} · YOLO detections{% if ground_truth_uploaded %} · ground-truth comparison{% endif %}</title>
 <style>
   :root { --bg:#0f1117; --panel:#171a23; --border:#262b3a; --text:#e6e9ef; --muted:#98a2b3; --accent:#5eead4; --gt:#4ade80; --pred:#f87171; }
   * { box-sizing: border-box; }
@@ -12,6 +12,7 @@
   main { max-width: 1280px; margin: 0 auto; padding: 28px 18px 64px; }
   h1 { font-size:22px; margin:0 0 4px; }
   h2 { font-size:16px; margin:28px 0 10px; color:var(--accent); }
+  h3 { font-size:14px; margin:22px 0 8px; color:var(--text); }
   p.sub { margin:0 0 20px; color:var(--muted); }
   .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
   .cell { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px; }
@@ -28,17 +29,52 @@
   a, .back { color:var(--accent); text-decoration:none; font-weight:600; }
   .meta { color:var(--muted); font-size:13px; margin:6px 0 0; }
   .empty { color:var(--muted); }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; color:var(--muted); font-size:13px;
+            margin:0 0 16px; }
+  .swatch { display:inline-block; width:12px; height:12px; border-radius:2px;
+            vertical-align:-1px; margin-right:6px; }
+  .swatch.gt { background:var(--gt); }
+  .swatch.pred { background:var(--pred); }
+  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+                 gap:10px; margin:10px 0 4px; }
+  .metric { background:var(--panel); border:1px solid var(--border); border-radius:9px;
+            padding:10px 12px; }
+  .metric .k { display:block; color:var(--muted); font-size:12px; text-transform:uppercase;
+               letter-spacing:.03em; }
+  .metric .v { display:block; font-size:20px; font-weight:700; margin-top:2px; }
+  .status { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--accent);
+            border-radius:8px; padding:10px 14px; margin:14px 0 0; }
+  .status strong { color:var(--accent); }
+  .section { margin-top:26px; }
+  .missed { color:var(--pred); font-weight:600; }
+  .matched { color:var(--gt); font-weight:600; }
+  .scroll { overflow-x:auto; }
+  code { background:#0b0d13; border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
 </style>
 </head>
 <body>
 <main>
   <p><a href="/?component={{ component }}">&larr; upload another</a></p>
-  <h1>Generated {{ component_label }} &mdash; detector output</h1>
+  <h1>Generated {{ component_label }} &mdash; detector output{% if ground_truth_uploaded %} and ground-truth comparison{% endif %}</h1>
   <p class="sub">
     Run <span class="tag">{{ request_id }}</span> · {{ draws }} draw(s) ·
     generated pixels in draw 0: {{ generated_pixels }} · {{ elapsed_seconds|round(1) }}s ·
     seed {{ seed }}
+    {% if ground_truth_uploaded %}· {{ ground_truth_boxes }} uploaded ground-truth box(es){% endif %}
   </p>
+
+  {% if ground_truth_uploaded %}
+  <p class="legend">
+    <span><span class="swatch gt"></span>green = uploaded ground truth</span>
+    <span><span class="swatch pred"></span>red = this draw's YOLO predictions</span>
+    <span>matched at IoU &ge; {{ match_iou }}</span>
+    <span>confidence threshold {{ conf }}</span>
+  </p>
+  {% endif %}
+
+  {% macro metric(label, value) -%}
+  <div class="metric"><span class="k">{{ label }}</span><span class="v">{{ value }}</span></div>
+  {%- endmacro %}
 
   {% for draw in detections %}
   <h2>Draw {{ draw.draw }}</h2>
@@ -61,13 +97,135 @@
            alt="Composite">
       <div class="cap">4 · composite before detection</div>
     </div>
+    {% if ground_truth_uploaded %}
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels['ground_truth_draw_%d'|format(draw.draw)] }}"
+           alt="Ground-truth overlay">
+      <div class="cap">5 · ground truth only (green overlay)</div>
+    </div>
+    {% endif %}
     <div class="cell">
       <img src="/outputs/{{ request_id }}/{{ panels['boxes_draw_%d'|format(draw.draw)] }}"
-           alt="YOLO detections">
-      <div class="cap">5 · what YOLO drew (red boxes, label + confidence)</div>
+           alt="YOLO detections{% if ground_truth_uploaded %} and ground truth{% endif %}">
+      <div class="cap">{% if ground_truth_uploaded %}6 · ground truth (green) vs prediction (red){% else %}5 · what YOLO drew (red boxes, label + confidence){% endif %}</div>
     </div>
   </div>
 
+  {% if ground_truth_uploaded and draw.comparison %}
+  {% set c = draw.comparison %}
+  <div class="section">
+    <h3>Detection metrics</h3>
+    <div class="metric-grid">
+      {{ metric('Ground-truth boxes', c.ground_truth_boxes) }}
+      {{ metric('Predictions', c.predicted_boxes) }}
+      {{ metric('Matched (TP)', c.matched_boxes) }}
+      {{ metric('False positives (FP)', c.false_positive_boxes) }}
+      {{ metric('Missed (FN)', c.missed_boxes) }}
+      {{ metric('Precision', c.precision|metric) }}
+      {{ metric('Recall', c.recall|metric) }}
+      {{ metric('F1', c.f1|metric) }}
+      {{ metric('Jaccard (TP / union)', c.jaccard|metric) }}
+      {{ metric('Mean IoU over union', c.mean_iou_over_union|metric) }}
+      {{ metric('Best IoU', c.best_iou|metric) }}
+      {{ metric('Mean matched IoU', (c.matched_iou.mean if c.matched_iou else none)|metric) }}
+      {{ metric('Median matched IoU', (c.matched_iou.median if c.matched_iou else none)|metric) }}
+      {{ metric('Mean centre distance (px)', (c.center_distance_px.mean if c.center_distance_px else none)|metric) }}
+      {{ metric('Mean centre distance (norm)', (c.center_distance_normalized.mean if c.center_distance_normalized else none)|metric) }}
+      {{ metric('Mean L1 box error', (c.l1_norm.mean if c.l1_norm else none)|metric) }}
+      {{ metric('Mean TP confidence', c.mean_tp_confidence|metric) }}
+      {{ metric('Mean FP confidence', c.mean_fp_confidence|metric) }}
+    </div>
+    <div class="status">
+      <strong>{{ c.status|replace('_', ' ') }}</strong> &mdash; {{ c.status_caption }}.
+    </div>
+
+    <h3>Localization distributions (matched boxes)</h3>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Measurement</th><th>n</th><th>mean</th><th>median</th><th>p10</th><th>p90</th><th>min</th><th>max</th></tr>
+        </thead>
+        <tbody>
+          {% for label, stats in [
+              ('IoU', c.matched_iou),
+              ('centre distance (px)', c.center_distance_px),
+              ('centre distance (normalized)', c.center_distance_normalized),
+              ('L1 box error', c.l1_norm),
+          ] %}
+          <tr>
+            {% if stats %}
+            <td>{{ label }}</td>
+            <td>{{ stats.count }}</td>
+            <td>{{ stats.mean|metric }}</td>
+            <td>{{ stats.median|metric }}</td>
+            <td>{{ stats.p10|metric }}</td>
+            <td>{{ stats.p90|metric }}</td>
+            <td>{{ stats.minimum|metric }}</td>
+            <td>{{ stats.maximum|metric }}</td>
+            {% else %}
+            <td>{{ label }}</td><td colspan="7" class="empty">no matched boxes</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Ground-truth boxes and their match</h3>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>GT #</th><th>GT center (cx, cy)</th><th>GT size (w, h)</th><th>Result</th>
+              <th>Confidence</th><th>IoU</th><th>centre distance (px)</th><th>L1</th></tr>
+        </thead>
+        <tbody>
+          {% for pair in c.pairs %}
+          <tr>
+            <td>{{ pair.gt_index + 1 }}</td>
+            <td>{{ '%.4f'|format(pair.ground_truth.cx) }}, {{ '%.4f'|format(pair.ground_truth.cy) }}</td>
+            <td>{{ '%.4f'|format(pair.ground_truth.w) }}, {{ '%.4f'|format(pair.ground_truth.h) }}</td>
+            {% if pair.prediction %}
+            <td class="matched">matched</td>
+            <td>{{ pair.prediction.confidence|metric }}</td>
+            <td>{{ pair.iou|metric }}</td>
+            <td>{{ pair.center_distance_px|metric(2) }}</td>
+            <td>{{ pair.l1_norm|metric }}</td>
+            {% else %}
+            <td class="missed">missed</td><td>n/a</td><td>n/a</td><td>n/a</td><td>n/a</td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="empty">The uploaded labels contain no boxes: a legitimate negative layout.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if c.false_positives %}
+    <h3>False positives (predictions that matched no ground truth)</h3>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Confidence</th><th>center (cx, cy)</th><th>size (w, h)</th><th>best IoU to any GT</th></tr>
+        </thead>
+        <tbody>
+          {% for fp in c.false_positives %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ fp.prediction.confidence|metric }}</td>
+            <td>{{ '%.4f'|format(fp.prediction.box.cx) }}, {{ '%.4f'|format(fp.prediction.box.cy) }}</td>
+            <td>{{ '%.4f'|format(fp.prediction.box.w) }}, {{ '%.4f'|format(fp.prediction.box.h) }}</td>
+            <td>{{ fp.best_iou|metric }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <h3>All predictions in this draw</h3>
   <table>
     <thead><tr><th>Detected</th><th>Confidence</th><th>center (cx, cy)</th><th>size (w, h)</th></tr></thead>
     <tbody>
@@ -87,8 +245,21 @@
   {% endfor %}
 
   <p class="meta">Diffusion: <code>{{ checkpoint }}</code> · detector: <code>{{ weights }}</code></p>
-  <p class="meta">Green boxes are ground truth (none here: an uploaded floor plan carries no dataset
-  labels), red boxes are this run's predictions.</p>
+  {% if ground_truth_uploaded %}
+  <p class="meta">
+    Metrics are computed on the composite in the {{ image_size }}&times;{{ image_size }} render domain. A prediction claims a
+    ground-truth box when their IoU is at least {{ match_iou }}; predictions are taken in confidence
+    order, and each box can be claimed once. TP = matched, FP = unmatched prediction,
+    FN = unmatched ground truth. Precision = TP/(TP+FP), recall = TP/(TP+FN),
+    F1 = 2PR/(P+R), Jaccard = TP/(TP+FP+FN). Centre distance is in render pixels; normalized
+    distance divides by the render side. L1 is the mean absolute error of the four normalized box
+    parameters.
+  </p>
+  {% else %}
+  <p class="meta">Green boxes would be uploaded ground truth, red boxes are this run's predictions.
+    No <code>labels.txt</code> was uploaded, so there is nothing to score; upload one on the form to
+    get IoU, precision, recall and the per-box comparison.</p>
+  {% endif %}
 </main>
 </body>
 </html>

@@ -16,6 +16,10 @@ sees instead of the result:
    without bound.
 6. The staged masks must be re-saved under the exact filenames the frozen
    encoders read.
+7. Uploaded labels must be parsed strictly (numeric YOLO lines, named dataset
+   lines and class-less lines, empty file as a negative, another numeric
+   class/out-of-range/zero-area rejected), and the comparison must count
+   TP/FP/FN, IoU and confidence correctly.
 
 Run with: ``./venv/bin/python frontend/test_frontend.py``
 (or ``pytest frontend/test_frontend.py`` when pytest is installed).
@@ -34,13 +38,32 @@ _ROOT_DIR: Path = Path(__file__).resolve().parent.parent
 if str(_ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(_ROOT_DIR))
 
+from evaluator.box_metrics import PredictedBox
+from evaluator.dataset_gt import Box
+from flask import render_template
+from frontend.comparison import (
+    STATUS_CORRECT_EMPTY,
+    STATUS_DETECTED_ALL,
+    STATUS_DETECTED_PARTIAL,
+    STATUS_FALSE_ALARM,
+    STATUS_MISSED,
+    compare_boxes,
+    read_ground_truth_labels,
+)
 from frontend.pipeline import (  # noqa: E402
     _clamp_draws,
     build_blank_mask,
     save_upload_as,
     validate_and_load_mask,
 )
-from frontend.server import _prune_old_runs, UPLOAD_MASKS  # noqa: E402
+from frontend.server import (  # noqa: E402
+    GROUND_TRUTH_FIELD,
+    GROUND_TRUTH_LABELS_FILENAME,
+    UPLOAD_MASKS,
+    _prune_old_runs,
+    create_app,
+    format_metric,
+)
 
 # Class counts of the two layouts the encoders were trained with: 18 floorplan
 # classes and 11 furniture classes, background included.
@@ -194,6 +217,315 @@ def test_upload_mask_roles_name_each_field_once() -> None:
     """Each form field maps to exactly one staged filename."""
     assert set(UPLOAD_MASKS) == {"floorplan", "furniture"}
     assert len(set(UPLOAD_MASKS.values())) == len(UPLOAD_MASKS)
+
+
+def _write_text(path: Path, text: str) -> None:
+    """Write one UTF-8 text fixture.
+
+    Args:
+        path (Path): Destination file.
+        text (str): File contents.
+    """
+    path.write_text(text, encoding="utf-8")
+
+
+def test_read_ground_truth_labels_accepts_both_line_forms() -> None:
+    """Full YOLO lines and class-less lines both parse, in file order."""
+    text = "0 0.5 0.5 0.2 0.2\n\n0.25 0.25 0.1 0.1\n"
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, text)
+        boxes = read_ground_truth_labels(path, class_id=0, max_boxes=10)
+    assert len(boxes) == 2
+    assert boxes[0] == Box(cx=0.5, cy=0.5, w=0.2, h=0.2)
+    assert boxes[1] == Box(cx=0.25, cy=0.25, w=0.1, h=0.1)
+
+
+def test_read_ground_truth_labels_accepts_dataset_component_names() -> None:
+    """The dataset's ``Name cx cy w h`` lines score the named component only."""
+    text = (
+        "Sofa 0.1 0.1 0.1 0.1\n"
+        "TV 0.5 0.5 0.2 0.2\n"
+        "Chair 0.8 0.8 0.1 0.1\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, text)
+        boxes = read_ground_truth_labels(
+            path, class_id=0, max_boxes=10, label_names=("TV",)
+        )
+    assert boxes == [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)]
+
+
+def test_read_ground_truth_labels_named_form_keeps_numeric_class_strict() -> None:
+    """A numeric line for another class is still refused when names are known."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, "1 0.5 0.5 0.2 0.2\n")
+        try:
+            read_ground_truth_labels(
+                path, class_id=0, max_boxes=10, label_names=("TV",)
+            )
+        except ValueError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("labels for another numeric class were accepted")
+    assert "class id 1" in message
+    assert "TV" in message
+
+
+def test_read_ground_truth_labels_empty_file_is_a_negative_sample() -> None:
+    """A blank labels.txt is a legitimate negative, not a parse error."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, "\n   \n")
+        boxes = read_ground_truth_labels(path, class_id=0, max_boxes=10)
+    assert boxes == []
+
+
+def test_read_ground_truth_labels_rejects_another_class() -> None:
+    """Labels for another component must be refused, not silently dropped."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, "1 0.5 0.5 0.2 0.2\n")
+        try:
+            read_ground_truth_labels(path, class_id=0, max_boxes=10)
+        except ValueError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("labels for another class were accepted")
+    assert "class id 1" in message
+    assert "line 1" in message
+
+
+def test_read_ground_truth_labels_rejects_wrong_field_count() -> None:
+    """A malformed line names the expected YOLO forms."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, "0 0.5 0.5\n")
+        try:
+            read_ground_truth_labels(path, class_id=0, max_boxes=10)
+        except ValueError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("a short label line was accepted")
+    assert "5 fields" in message and "4 fields" in message
+
+
+def test_read_ground_truth_labels_rejects_out_of_range_values() -> None:
+    """Normalized coordinates outside 0..1 are a format error."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, "0 1.5 0.5 0.2 0.2\n")
+        try:
+            read_ground_truth_labels(path, class_id=0, max_boxes=10)
+        except ValueError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("an out-of-range box was accepted")
+    assert "cx=1.5" in message and "0..1" in message
+
+
+def test_read_ground_truth_labels_rejects_zero_area_and_nonfinite() -> None:
+    """Zero-area and NaN boxes cannot produce a meaningful IoU."""
+    cases = {
+        "zero": "0 0.5 0.5 0.0 0.2\n",
+        "nan": "0 0.5 nan 0.2 0.2\n",
+    }
+    for name, text in cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "labels.txt"
+            _write_text(path, text)
+            try:
+                read_ground_truth_labels(path, class_id=0, max_boxes=10)
+            except ValueError:
+                pass
+            else:  # pragma: no cover - failure path
+                raise AssertionError(f"the {name} label line was accepted")
+
+
+def test_read_ground_truth_labels_enforces_the_box_cap() -> None:
+    """One upload cannot turn the page into an unbounded table."""
+    text = "0 0.5 0.5 0.2 0.2\n" * 3
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, text)
+        try:
+            read_ground_truth_labels(path, class_id=0, max_boxes=2)
+        except ValueError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("more boxes than the cap were accepted")
+    assert "more than 2 boxes" in message
+
+
+def test_read_ground_truth_labels_rejects_binary_content() -> None:
+    """A binary file uploaded into the labels field gets a text message."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        path.write_bytes(b"\xff\xfe\x00\x00")
+        try:
+            read_ground_truth_labels(path, class_id=0, max_boxes=10)
+        except ValueError as exc:
+            message = str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("binary content was accepted as labels")
+    assert "UTF-8" in message
+
+
+def test_compare_boxes_perfect_match_reports_full_agreement() -> None:
+    """An identical box has IoU 1, no FP/FN and every rate at its best value."""
+    gt = [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)]
+    prediction = [PredictedBox(box=Box(cx=0.5, cy=0.5, w=0.2, h=0.2), confidence=0.9)]
+    comparison = compare_boxes(gt, prediction, iou_threshold=0.5, image_size=256)
+    assert comparison.status == STATUS_DETECTED_ALL
+    assert comparison.matched_boxes == 1
+    assert comparison.false_positive_boxes == 0
+    assert comparison.missed_boxes == 0
+    assert comparison.precision == 1.0
+    assert comparison.recall == 1.0
+    assert comparison.f1 == 1.0
+    assert comparison.jaccard == 1.0
+    assert comparison.best_iou == 1.0
+    assert comparison.matched_iou is not None
+    assert comparison.matched_iou.mean == 1.0
+    assert comparison.center_distance_px is not None
+    assert comparison.center_distance_px.mean == 0.0
+    assert comparison.mean_tp_confidence == 0.9
+    assert comparison.pairs[0].prediction is not None
+
+
+def test_compare_boxes_counts_partial_match_and_false_positive() -> None:
+    """A matched box, a missed box and an invented box are counted separately."""
+    gt = [
+        Box(cx=0.3, cy=0.3, w=0.2, h=0.2),
+        Box(cx=0.7, cy=0.7, w=0.2, h=0.2),
+    ]
+    predictions = [
+        PredictedBox(box=Box(cx=0.3, cy=0.3, w=0.2, h=0.2), confidence=0.8),
+        PredictedBox(box=Box(cx=0.05, cy=0.05, w=0.05, h=0.05), confidence=0.4),
+    ]
+    comparison = compare_boxes(gt, predictions, iou_threshold=0.5, image_size=256)
+    assert comparison.status == STATUS_DETECTED_PARTIAL
+    assert comparison.matched_boxes == 1
+    assert comparison.false_positive_boxes == 1
+    assert comparison.missed_boxes == 1
+    assert comparison.precision == 0.5
+    assert comparison.recall == 0.5
+    assert comparison.f1 == 0.5
+    assert comparison.jaccard == 1.0 / 3.0
+    assert comparison.pairs[1].prediction is None
+    assert comparison.false_positives[0].best_iou is not None
+    assert comparison.false_positives[0].best_iou < 0.5
+
+
+def test_compare_boxes_all_missed_is_not_a_match() -> None:
+    """A prediction below the IoU threshold is both a miss and a false positive."""
+    gt = [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)]
+    predictions = [
+        PredictedBox(box=Box(cx=0.05, cy=0.05, w=0.1, h=0.1), confidence=0.7)
+    ]
+    comparison = compare_boxes(gt, predictions, iou_threshold=0.5, image_size=256)
+    assert comparison.status == STATUS_MISSED
+    assert comparison.matched_boxes == 0
+    assert comparison.missed_boxes == 1
+    assert comparison.false_positive_boxes == 1
+    assert comparison.matched_iou is None
+    assert comparison.best_iou == 0.0
+
+
+def test_compare_boxes_distinguishes_false_alarm_from_correct_empty() -> None:
+    """With no ground truth, any prediction is a false alarm and none is correct."""
+    prediction = [PredictedBox(box=Box(cx=0.5, cy=0.5, w=0.2, h=0.2), confidence=0.6)]
+    false_alarm = compare_boxes([], prediction, iou_threshold=0.5, image_size=256)
+    correct_empty = compare_boxes([], [], iou_threshold=0.5, image_size=256)
+    assert false_alarm.status == STATUS_FALSE_ALARM
+    assert false_alarm.precision == 0.0
+    assert false_alarm.recall is None
+    assert correct_empty.status == STATUS_CORRECT_EMPTY
+    assert correct_empty.precision is None
+    assert correct_empty.f1 is None
+
+
+def test_compare_boxes_rejects_invalid_parameters() -> None:
+    """Bad thresholds and image sizes fail instead of producing silent numbers."""
+    try:
+        compare_boxes([], [], iou_threshold=1.5, image_size=256)
+    except ValueError:
+        pass
+    else:  # pragma: no cover - failure path
+        raise AssertionError("an out-of-range IoU threshold was accepted")
+    try:
+        compare_boxes([], [], iou_threshold=0.5, image_size=0)
+    except ValueError:
+        pass
+    else:  # pragma: no cover - failure path
+        raise AssertionError("a non-positive image size was accepted")
+
+
+def test_format_metric_shows_undefined_values_as_na() -> None:
+    """None is displayed as n/a, never as a misleading zero."""
+    assert format_metric(None) == "n/a"
+    assert format_metric(0.123456, 3) == "0.123"
+    assert format_metric(0, 2) == "0.00"
+
+
+def test_result_template_renders_both_comparison_branches() -> None:
+    """The result page renders metrics with labels and a clear note without them."""
+    app = create_app("debug")
+    comparison = compare_boxes(
+        [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)],
+        [PredictedBox(box=Box(cx=0.5, cy=0.5, w=0.2, h=0.2), confidence=0.9)],
+        iou_threshold=0.5,
+        image_size=256,
+    )
+    common = {
+        "request_id": "upload_test",
+        "panels": {
+            "floorplan": "floorplan.png",
+            "conditioned": "conditioned.png",
+            "component_draw_0": "component.png",
+            "composite_draw_0": "composite.png",
+            "ground_truth_draw_0": "ground_truth.png",
+            "boxes_draw_0": "boxes.png",
+        },
+        "component": "tv",
+        "component_label": "TV",
+        "draws": 1,
+        "generated_pixels": 10,
+        "elapsed_seconds": 1.0,
+        "seed": 1234,
+        "conf": 0.25,
+        "match_iou": 0.5,
+        "image_size": 256,
+        "checkpoint": "checkpoint.pt",
+        "weights": "weights.pt",
+    }
+    with app.app_context():
+        with_labels = render_template(
+            "result.html",
+            detections=[{"draw": 0, "found": [], "comparison": comparison}],
+            ground_truth_uploaded=True,
+            ground_truth_boxes=1,
+            **common,
+        )
+        without_labels = render_template(
+            "result.html",
+            detections=[{"draw": 0, "found": [], "comparison": None}],
+            ground_truth_uploaded=False,
+            ground_truth_boxes=0,
+            **common,
+        )
+    assert "Detection metrics" in with_labels
+    assert "ground truth only (green overlay)" in with_labels
+    assert "Mean matched IoU" in with_labels
+    assert "nothing to score" in without_labels
+
+
+def test_ground_truth_upload_constants_are_distinct() -> None:
+    """The label field cannot collide with a mask field or its filename."""
+    assert GROUND_TRUTH_FIELD not in UPLOAD_MASKS
+    assert GROUND_TRUTH_LABELS_FILENAME not in set(UPLOAD_MASKS.values())
 
 
 def _run_all_tests() -> int:

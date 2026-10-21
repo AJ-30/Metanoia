@@ -29,6 +29,16 @@ YOLO_CONF = 0.25
 YOLO_IMGSZ = 416
 YOLO_MAX_BOXES = 300
 
+# ---- Ground-truth comparison ----
+# Minimum IoU for a prediction to claim an uploaded ground-truth box. This is
+# the same 0.5 the evaluator and the validation report use, so the page's
+# precision/recall mean the same thing as the offline numbers.
+MATCH_IOU_THRESHOLD = 0.5
+# Upload guards: one labels.txt cannot turn the page into an unbounded table or
+# push a huge text file through the request body.
+MAX_GROUND_TRUTH_BOXES = 500
+MAX_GROUND_TRUTH_LABEL_MB = 2
+
 # ---- Uploads ----
 # Flask's request size cap, and the accepted upload content types.
 MAX_UPLOAD_MB = 16

@@ -12,6 +12,11 @@ floor-plan class-id mask of a plan that is missing it, and the page shows
 5. **what YOLO makes of it** — the same composite with the detector's bounding
    boxes drawn, plus a table of class, confidence and box coordinates.
 
+If you also upload the layout's ground-truth YOLO `labels.txt`, the page draws
+the ground truth in **green** and the predictions in **red**, adds a ground-truth
+only overlay, and reports IoU, TP/FP/FN, precision, recall, F1, Jaccard, centre
+distance and box error for every draw.
+
 The component selector drives **both** models: the dropdown chooses a row of
 `components.toml` at the repository root, which pairs the component's
 `mask_diffusion` checkpoint with the `missing_yolo` detector trained on that
@@ -49,11 +54,14 @@ models in memory. `Ctrl-C` stops it. Nothing is trained, and nothing outside
 | **Missing component** | yes | Dropdown of every row in `components.toml`; selects the generator **and** the detector together. |
 | **Floor-plan mask** | yes | `floorplan_segmentation.png` — single-channel class-id PNG (mode `L`), floorplan classes 0–17. Any pixel size; it is nearest-neighbour resized to the model's native square size. |
 | **Furniture mask** | no | `furniture_segmentation.png` — the layout the component has to fit into. Leave empty to generate into an empty floor plan. Its classes are 0–10; any instance of the selected component already in it is ignored, because that is exactly what the model was trained on. |
+| **Ground-truth labels** | no | `labels.txt` — the layout's boxes for the selected component. One `cls cx cy w h` line per box (numeric YOLO class id), one `Name cx cy w h` line (the dataset's own form, e.g. `TV 0.5 0.5 0.2 0.2`), or `cx cy w h` when the class is implicit; all values normalized to 0–1 on the same square render domain. A numeric class id must match the selected detector's component class; named lines for other furniture are ignored, so the dataset's multi-class `labels.txt` can be uploaded unchanged. Blank lines and an empty file mean “no component here”. |
 
 An upload that is not a class-id mask (a colour render, a JPEG photo, a random
 file) is refused on the form with a message about the upload, never a stack trace
 and never a server path. The same guard catches a class id above the layout's
-range instead of silently clamping it onto a neighbouring class.
+range instead of silently clamping it onto a neighbouring class. A malformed
+label file gets the same treatment: the line number and the problem are shown on
+the form, and the diffusion chain never starts.
 
 **Diffusion draws**: `1` is the default; up to `MAX_DRAWS` (4) renders one panel
 set per draw, so you can see the variation the model has learned. Each draw is a
@@ -61,12 +69,30 @@ full 1000-step reverse chain, which is why the count is bounded.
 
 ## 3. Reading the result page
 
-* Red boxes are this run's predictions (label + confidence); green boxes would be
-  ground truth, and an uploaded floor plan carries no dataset labels, so there are
-  none here. For the scored version of this comparison, see `evaluator/README.md`.
-* The table's centre and size are normalized to `0..1` in the 256x256 render
-  domain — the same convention as a YOLO label file.
-* "generated pixels" is the size of the generated component mask; a layout where
+* The first four panels are the floorplan, the conditioned layout, the generated
+  component and the untouched composite.
+* With ground-truth labels, panel 5 is the composite with **green** ground-truth
+  boxes only, and panel 6 is the same composite with ground truth in green and
+  the detector's predictions in **red**. Without labels there is no panel 5 and
+  panel 6 shows red predictions only.
+* The metrics block is computed per draw on the 256×256 composite. A prediction
+  claims a ground-truth box when their IoU is at least `MATCH_IOU_THRESHOLD`
+  (`frontend/hyperparameters.toml`, `0.5` by default); predictions are taken in
+  confidence order and each box can be claimed once. TP is a match, FP is an
+  unmatched prediction, FN is an unmatched ground-truth box.
+* Precision = `TP/(TP+FP)`, recall = `TP/(TP+FN)`, F1 = `2PR/(P+R)`, Jaccard =
+  `TP/(TP+FP+FN)`. “Mean IoU over union” divides the sum of matched IoUs by the
+  union count, so FP and FN boxes contribute zero.
+* The localization table reports mean, median, p10, p90, min and max of the
+  matched IoUs, centre distances (pixels and normalized by the render side) and
+  the L1 error of the four normalized box parameters.
+* `n/a` means a rate is undefined (for example recall with no ground-truth
+  boxes), which is deliberately different from a real zero. With no labels
+  uploaded, nothing is scored and the page says so instead of pretending every
+  prediction is a false positive.
+* The prediction table's centre and size are normalized to `0..1` in the
+  256×256 render domain — the same convention as a YOLO label file.
+* “generated pixels” is the size of the generated component mask; a layout where
   the model produced nothing shows `0` and the detector will have nothing to find.
 
 ## 4. Package layout
@@ -75,10 +101,11 @@ full 1000-step reverse chain, which is why the count is bounded.
 |---|---|
 | `server.py` | Flask routes: form, upload handler, image servers, run pruning |
 | `settings.py` | Per-component context building and caching (one load per component) |
-| `pipeline.py` | Upload → validate → encode → sample → decode → composite → detect |
+| `pipeline.py` | Upload → validate → encode → sample → decode → composite → detect → compare |
+| `comparison.py` | Parse uploaded YOLO labels, match them to predictions, compute IoU/rates/localization |
 | `../components.toml` | Component → diffusion checkpoint + `missing_yolo` detector, shared with the evaluator |
 | `templates/index.html` | The upload form |
-| `templates/result.html` | The five panels and the detection table |
+| `templates/result.html` | The panels, ground-truth comparison, metrics and detection table |
 | `test_frontend.py` | Unit tests of the pure logic (`./venv/bin/python frontend/test_frontend.py`) |
 
 Everything the stage knows about generation and detection is imported, not
@@ -91,8 +118,9 @@ this stage owns are the upload handling and the two pages.
 
 `config.toml` picks the default component, the directories and the device;
 `hyperparameters.toml` picks the numbers (draws, chunk, alpha, confidence, size
-caps, cached runs). The component -> models pairing is **not** declared here:
-`components.toml` at the repository root is the single source the evaluator and
-the frontend both read, so the two stages can never disagree about which
-generator and detector belong together. To add a component, add one row there
-(and its label names to `COMPONENT_LABEL_NAMES`); no Python edit is needed.
+caps, match IoU, label-file guards, cached runs). The component -> models pairing
+is **not** declared here: `components.toml` at the repository root is the single
+source the evaluator and the frontend both read, so the two stages can never
+disagree about which generator and detector belong together. To add a component,
+add one row there (and its label names to `COMPONENT_LABEL_NAMES`); no Python
+edit is needed.

@@ -35,8 +35,9 @@
 <main>
   <h1>Missing component generator</h1>
   <p class="sub">Choose the missing component, then upload a floor-plan class-id mask (and, if you have
-  it, the furniture mask). The matching diffusion run generates the component, and the matching
-  trained detector draws what it makes of the result.</p>
+  it, the furniture mask and the ground-truth YOLO labels). The matching diffusion run generates the
+  component, and the matching trained detector draws what it makes of the result; with labels, the page
+  also scores ground truth against those predictions.</p>
 
   {% if error %}<div class="error"><strong>Could not run that:</strong> {{ error }}</div>{% endif %}
 
@@ -62,6 +63,16 @@
       has to fit the component into. Leave empty to generate into an empty room. Furniture classes 0–10;
       any <code>{{ component }}</code> present in it is ignored, exactly as the model was trained.</span></label>
       <input type="file" id="furniture" name="furniture" accept="image/png,.png">
+    </div>
+    <div class="field">
+      <label for="ground_truth">Ground-truth labels <span class="hint">Optional · the layout's plain
+      <code>labels.txt</code> in the same square domain. Each line is
+      <code>cls cx cy w h</code>, <code>Name cx cy w h</code> (e.g. <code>TV 0.5 0.5 0.2 0.2</code>),
+      or <code>cx cy w h</code>, all normalized to 0–1. A numeric class must match the selected
+      detector; dataset names for other furniture are ignored, so the dataset's own file works as-is.
+      A blank file means “no component here”. Uploading labels adds green ground-truth boxes, red
+      prediction boxes, IoU and precision/recall/F1 to the result.</span></label>
+      <input type="file" id="ground_truth" name="ground_truth" accept=".txt,text/plain">
     </div>
     <div class="field">
       <label for="draws">Diffusion draws <span class="hint">Independent samples per upload; each draw is a
