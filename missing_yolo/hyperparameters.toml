@@ -123,6 +123,33 @@ EPOCH_OVERLAY_MAX_BOXES = 25
 # Columns of the per-epoch montage grid (rows follow from the stem count).
 EPOCH_OVERLAY_MONTAGE_COLS = 4
 
+# ---- Standalone validation report (missing_yolo/validate.py) ----
+# The report ALWAYS regenerates the val half of SOURCE_VAL_SPLIT_DIR from the
+# frozen generator, then runs the matching missing_yolo weights over every
+# image. Nothing is trained in this pass.
+#
+# Ultralytics validation pass. VAL_CONF=0.001 keeps the low-confidence tail in
+# the saved prediction files (save_txt=True); the report then thresholds those
+# predictions itself, so one inference pass supplies both the official mAP and
+# every thresholded number.
+VALIDATION_BATCH_SIZE = 16
+VALIDATION_VAL_CONF = 0.001
+VALIDATION_NMS_IOU = 0.7
+VALIDATION_MAX_DETECTIONS = 300
+# Maximum predicted boxes drawn per sample image (highest confidence first).
+VALIDATION_MAX_BOXES = 25
+# Confidence thresholds reported in the thresholded tables and per-image CSV.
+# The first value is the primary threshold used for the images and manifest.
+VALIDATION_CONF_THRESHOLDS = [0.25, 0.5, 0.75]
+VALIDATION_REPORT_CONF = 0.25
+# Greedy match threshold for TP/FP/FN, identical to the evaluator's box rule.
+VALIDATION_MATCH_IOU = 0.5
+# Balanced visual panel per component: 12 positive + 12 negative samples.
+VALIDATION_SAMPLE_POSITIVES = 12
+VALIDATION_SAMPLE_NEGATIVES = 12
+VALIDATION_SAMPLE_SEED = 1234
+VALIDATION_MONTAGE_COLS = 6
+
 # ---- Ultralytics internal augmentation overrides ----
 # The per-epoch generation already supplies the variation, so
 # mosaic/mixup (multi-image composites) and the built-in flips are disabled;

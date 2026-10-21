@@ -28,3 +28,8 @@ frontend/outputs/*
 # (one per run id). Archived by train_missing_yolo.sh into missing_yolo/old_*.
 missing_yolo/outputs/*
 missing_yolo/telemetry_logs/*
+# Standalone validation reports: one folder per component with a regenerated
+# val dataset, saved predictions, sample images and metrics. Archived by
+# validate_missing_yolo.sh into missing_yolo/old_validation_outputs/.
+missing_yolo/validation_outputs/*
+missing_yolo/old_validation_outputs/*

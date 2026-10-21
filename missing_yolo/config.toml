@@ -20,6 +20,10 @@ DEBUG_LOG_FILE_PATH = "./debug_logs/missing_yolo.log"
 MODEL_SAVE_PATH = "./missing_yolo/models/"
 TELEMETRY_LOG_DIRECTORY = "./missing_yolo/telemetry_logs/"
 OUTPUT_SAMPLES_DIRECTORY = "./missing_yolo/outputs/"
+# Standalone validation reports, one folder per component (see
+# missing_yolo/validate.py and ./validate_missing_yolo.sh). The run always
+# regenerates its val split, so this tree is self-contained and reproducible.
+VALIDATION_OUTPUT_DIRECTORY = "./missing_yolo/validation_outputs/"
 DEVICE = "mps"
 
 # Base of the generated Ultralytics dataset tree. The run's actual root is

@@ -127,19 +127,90 @@ epoch-end overlays, and the Ultralytics augmentation overrides.
 
 ---
 
-## 4. Files
+## 4. Standalone validation report (all three components)
+
+Training ends with a val/test summary, but the report also needs a reproducible
+per-component pass over the **entire val split** with full metrics and sample
+images. That is what `validate.py` does; it never trains and never reuses a
+previous render:
+
+```bash
+./validate_missing_yolo.sh                         # debug, all components
+./validate_missing_yolo.sh debug tv                # one component
+./validate_missing_yolo.sh debug tv --cap 16       # cap for a smoke run
+./validate_missing_yolo.sh prod all                # full production run
+```
+
+or directly:
+
+```bash
+python missing_yolo/validate.py --mode prod --component all
+```
+
+For each component the run:
+
+1. carves the same family-disjoint val half the trainer used
+   (`VAL_FAMILY_FRACTION`, `BASE_SEED`) and indexes `labels.txt`;
+2. rebuilds the frozen generator from the component's checkpoint, encodes the
+   conditions and **regenerates every val image** with `VAL_RENDER_SEED`
+   (`generate_split`, not the skipping `render_split_once`);
+3. loads the matching detector from the shared `components.toml` row and
+   verifies that its class vocabulary is the component's single class;
+4. runs Ultralytics over the whole split with `save_txt`/`save_conf`, so one
+   inference pass supplies both the official mAP and the thresholded tables;
+5. writes the report folder below.
+
+```
+missing_yolo/validation_outputs/<component>/
+├── metrics.txt              human-readable report
+├── metrics.json             every number in the report
+├── per_image.csv            one row per sample and confidence threshold
+├── dataset/                 regenerated val images, labels, data.yaml, manifest
+├── ultralytics/val/         PR/F1/P/R curves, confusion matrix, saved predictions
+└── samples/
+    ├── positive/            raw reconstruction + GT/pred annotated image
+    ├── negative/            raw reconstruction + GT/pred annotated image
+    ├── sample_manifest.csv
+    ├── montage_reconstructions.png
+    └── montage_annotated.png
+```
+
+The run also writes `validation_outputs/summary.txt`, `summary.json` and a
+`README.md` explaining every metric. These are ignored by git; the shell script
+archives a previous run into `missing_yolo/old_validation_outputs/`.
+
+**Metrics reported per component:** Ultralytics precision, recall, F1, mAP@50,
+mAP@50-95, mAP@75, fitness and speed; the official confusion matrix; and, at
+each configured confidence threshold (`VALIDATION_CONF_THRESHOLDS`), TP/FP/FN,
+precision, recall, F1, box Jaccard, image accuracy, positive detection rate,
+false-alarm rate, specificity and balanced accuracy. Matched-box IoU, centre
+distance and L1 on `(cx, cy, w, h)` are summarized at the primary threshold.
+Undefined values are `n/a`, never a misleading `0.0`.
+
+**Validation vs training:** the val half is generator-unseen and is what the
+trainer early-stopped on. The other half of `work/validate` is carved
+consistently but deliberately **not rendered here**; `work/test` is never used
+because the generator trained on it.
+
+---
+
+## 5. Files
 
 ```
 missing_yolo/
 ├── __init__.py              package overview
 ├── run.py                   CLI entry: python missing_yolo/run.py --mode debug|prod [--component X]
 ├── runner.py                MissingYoloRunner: wiring, validation, epoch callback, telemetry, reports
+├── validate.py              standalone per-component val regeneration + detector report
+├── validation_metrics.py    greedy matching, thresholded/image metrics, balanced sample selection
 ├── dataset.py               FrozenMaskDiffusionStack (frozen generator) + ArrangementGenerator (writes splits)
 ├── labels.py                labels.txt -> target lines; component/labels.txt agreement telemetry
 ├── test_missing_yolo.py     AAA unit tests, no checkpoints or GPU needed
+├── test_validation.py       AAA unit tests for the validation metric layer
 ├── config.toml              paths + [COMPONENT_VARIANTS] table
 ├── hyperparameters.toml     every tunable number
-├── models/ outputs/ telemetry_logs/ old_outputs/ old_telemetry_logs/
+├── models/ outputs/ telemetry_logs/ validation_outputs/
+├── old_outputs/ old_telemetry_logs/ old_validation_outputs/
 ```
 
 Reused rather than duplicated: `conditional_diffusion.runner.build_frozen_mask_vae`
@@ -161,7 +232,7 @@ the `YOLO/` precedent.
 
 ---
 
-## 5. Per-epoch behaviour
+## 6. Per-epoch behaviour
 
 1. `results.csv` gains a row → a `row_kind = detection` telemetry row is written
    **before** the long redraw, so the dashboard curves grow during the run.
@@ -180,7 +251,7 @@ are stable.
 
 ---
 
-## 6. Telemetry
+## 7. Telemetry
 
 One CSV per run (`missing_yolo/telemetry_logs/<run_id>.csv`) with two row kinds,
 distinguished by `row_kind`, so each column has real gaps rather than invented
@@ -198,7 +269,7 @@ same server, same figure names, no server change needed.
 
 ---
 
-## 7. Running
+## 8. Running
 
 ```bash
 ./train_missing_yolo.sh debug              # MISSING_COMPONENT from the TOML
@@ -222,15 +293,24 @@ Start the dashboard first (`./run_scripts/start_missing_yolo_server.sh`) to watc
 metrics as they are written. Every run archives the previous run's
 `outputs/` and `telemetry_logs/` into `old_*` before starting.
 
+Standalone validation (regenerates the val split, writes one report folder per
+component; see section 4):
+
+```bash
+./validate_missing_yolo.sh debug all
+./validate_missing_yolo.sh prod all
+```
+
 Tests (no checkpoints, no dataset, no GPU):
 
 ```bash
-./venv/bin/python missing_yolo/test_missing_yolo.py     # or: -m pytest
+./venv/bin/python missing_yolo/test_missing_yolo.py
+./venv/bin/python missing_yolo/test_validation.py
 ```
 
 ---
 
-## 8. Measured costs and knobs
+## 9. Measured costs and knobs
 
 Full-pool numbers on an M1 Pro, from the generation pass benchmark
 (2,048 samples: sample + decode + render + PNG + agreement):
@@ -253,7 +333,7 @@ if sampling is.
 
 ---
 
-## 9. Failure-fast rules
+## 10. Failure-fast rules
 
 The run aborts before the expensive work rather than training on a silently
 wrong setup:
@@ -274,7 +354,16 @@ wrong setup:
 * train set too small for the configured gradient accumulation (reused
   `validate_training_budget`).
 
-## 10. Known limitations
+The standalone validation pass adds:
+
+* unknown component in either registry, or a missing detector weights file;
+* `components.toml` and `missing_yolo/config.toml` pointing at different
+  generators for the same component;
+* detector weights whose class vocabulary is not the component's single class;
+* a cap that removes every val sample;
+* malformed rendered labels or prediction files, and confidences outside `0..1`.
+
+## 11. Known limitations
 
 * Agreement is measured per epoch but **not acted on**. A component whose
   generator disagrees with `labels.txt` badly (notably `showcase`) trains on a

@@ -8519,3 +8519,189 @@
 [new-fly] 2026-10-21 07:12:10 | INFO | missing_yolo.runner:756 - FINAL VAL: mAP50=0.4558 mAP50-95=0.1455 precision=0.6200 recall=0.5634
 [new-fly] 2026-10-21 07:13:30 | INFO | missing_yolo.runner:756 - FINAL TEST (generator-unseen): mAP50=0.4155 mAP50-95=0.1274 precision=0.5254 recall=0.5986
 [new-fly] 2026-10-21 07:13:30 | INFO | missing_yolo.runner:739 - Run summary: component 'dining_set' (class 'Dining_table'), train 69776 samples from /Users/aatmaj/FurnitureArranger/datasets/work/train, val/test carved from /Users/aatmaj/FurnitureArranger/datasets/work/validate, dataset root /Users/aatmaj/Downloads/datasets/missing_yolo_live/dining_set, manifest /Users/aatmaj/Downloads/datasets/missing_yolo_live/dining_set/redraw_manifest.csv, weights /Users/aatmaj/Metanoia/missing_yolo/outputs/ultralytics_new-fly/train/weights/best.pt.
+[useful-lemur] 2026-10-21 11:04:21 | INFO | __main__:1448 - Starting missing_yolo validation for ['tv'] in debug mode on mps; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke.0XRN9J.
+[useful-lemur] 2026-10-21 11:04:21 | INFO | __main__:518 - Validating component 'tv' (class 'TV') with weights /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke.0XRN9J/tv.
+[useful-lemur] 2026-10-21 11:04:21 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_amused-corgi_epoch__no_tv_700.pt -> missing component 'furniture/tv' (channel 2 of 11), image size 256, 1000 reverse steps, class 'TV'.
+[useful-lemur] 2026-10-21 11:04:26 | INFO | __main__:727 - Carved 19920 validate samples into 8 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[useful-lemur] 2026-10-21 11:04:26 | INFO | __main__:753 - Val targets: 8 positive (0 background), 8 boxes of class 'TV'.
+[useful-lemur] 2026-10-21 11:04:27 | INFO | missing_yolo.dataset:864 - Condition encoding: 8/8.
+[useful-lemur] 2026-10-21 11:04:27 | INFO | missing_yolo.dataset:869 - Cached 8 condition pairs (128-d each).
+[useful-lemur] 2026-10-21 11:04:29 | INFO | missing_yolo.dataset:974 - Reverse chain: 8/8 samples (seed=90210).
+[useful-lemur] 2026-10-21 11:04:30 | INFO | missing_yolo.dataset:1398 - val generation: 8/8 images (seed=90210).
+[useful-lemur] 2026-10-21 11:04:30 | INFO | missing_yolo.dataset:1425 - val generation done: 8 images, 8 labels in 3.1s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 1.0, '0.3': 1.0, '0.5': 1.0, '0.7': 1.0} over 8 scored samples (mean 0.828288).
+[useful-lemur] 2026-10-21 11:04:30 | INFO | __main__:564 - Regenerated 8 val images in 3.1s (conditions 0.6s, seed 90210); data.yaml /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke.0XRN9J/tv/dataset/data.yaml.
+[useful-lemur] 2026-10-21 11:04:30 | INFO | __main__:803 - Running Ultralytics val on tv (batch 16, imgsz 416, device mps)...
+[useful-lemur] 2026-10-21 11:04:32 | INFO | __main__:1024 - Saved 8 sample images (8 positives / 0 backgrounds available) to /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke.0XRN9J/tv/samples.
+[useful-lemur] 2026-10-21 11:04:32 | INFO | __main__:656 - Component 'tv' report written: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke.0XRN9J/tv/metrics.json and /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke.0XRN9J/tv/metrics.txt.
+[kind-lizard] 2026-10-21 11:07:00 | INFO | __main__:1463 - Starting missing_yolo validation for ['tv'] in debug mode on mps; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG.
+[kind-lizard] 2026-10-21 11:07:00 | INFO | __main__:518 - Validating component 'tv' (class 'TV') with weights /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG/tv.
+[kind-lizard] 2026-10-21 11:07:01 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_amused-corgi_epoch__no_tv_700.pt -> missing component 'furniture/tv' (channel 2 of 11), image size 256, 1000 reverse steps, class 'TV'.
+[kind-lizard] 2026-10-21 11:07:01 | INFO | __main__:727 - Carved 19920 validate samples into 4 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[kind-lizard] 2026-10-21 11:07:01 | INFO | __main__:753 - Val targets: 4 positive (0 background), 4 boxes of class 'TV'.
+[kind-lizard] 2026-10-21 11:07:02 | INFO | missing_yolo.dataset:864 - Condition encoding: 4/4.
+[kind-lizard] 2026-10-21 11:07:02 | INFO | missing_yolo.dataset:869 - Cached 4 condition pairs (128-d each).
+[kind-lizard] 2026-10-21 11:07:05 | INFO | missing_yolo.dataset:974 - Reverse chain: 4/4 samples (seed=90210).
+[kind-lizard] 2026-10-21 11:07:05 | INFO | missing_yolo.dataset:1398 - val generation: 4/4 images (seed=90210).
+[kind-lizard] 2026-10-21 11:07:05 | INFO | missing_yolo.dataset:1425 - val generation done: 4 images, 4 labels in 2.9s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 1.0, '0.3': 1.0, '0.5': 1.0, '0.7': 1.0} over 4 scored samples (mean 0.788172).
+[kind-lizard] 2026-10-21 11:07:05 | INFO | __main__:564 - Regenerated 4 val images in 2.9s (conditions 0.6s, seed 90210); data.yaml /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG/tv/dataset/data.yaml.
+[kind-lizard] 2026-10-21 11:07:05 | INFO | __main__:803 - Running Ultralytics val on tv (batch 16, imgsz 416, device mps)...
+[kind-lizard] 2026-10-21 11:07:07 | INFO | __main__:1024 - Saved 4 sample images (4 positives / 0 backgrounds available) to /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG/tv/samples.
+[kind-lizard] 2026-10-21 11:07:07 | INFO | __main__:656 - Component 'tv' report written: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG/tv/metrics.json and /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG/tv/metrics.txt.
+[kind-lizard] 2026-10-21 11:07:07 | INFO | __main__:1484 - Validation complete for ['tv'] in 6.7s. Reports: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_smoke2.fN1KqG/summary.txt and one metrics.txt per component folder.
+[light-kodiak] 2026-10-21 11:10:42 | INFO | __main__:1463 - Starting missing_yolo validation for ['tv', 'showcase', 'dining_set'] in debug mode on mps; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws.
+[light-kodiak] 2026-10-21 11:10:42 | INFO | __main__:518 - Validating component 'tv' (class 'TV') with weights /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/tv.
+[light-kodiak] 2026-10-21 11:10:42 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_amused-corgi_epoch__no_tv_700.pt -> missing component 'furniture/tv' (channel 2 of 11), image size 256, 1000 reverse steps, class 'TV'.
+[light-kodiak] 2026-10-21 11:10:43 | INFO | __main__:727 - Carved 19920 validate samples into 2 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[light-kodiak] 2026-10-21 11:10:43 | INFO | __main__:753 - Val targets: 2 positive (0 background), 2 boxes of class 'TV'.
+[light-kodiak] 2026-10-21 11:10:43 | INFO | missing_yolo.dataset:864 - Condition encoding: 2/2.
+[light-kodiak] 2026-10-21 11:10:43 | INFO | missing_yolo.dataset:869 - Cached 2 condition pairs (128-d each).
+[light-kodiak] 2026-10-21 11:10:46 | INFO | missing_yolo.dataset:974 - Reverse chain: 2/2 samples (seed=90210).
+[light-kodiak] 2026-10-21 11:10:46 | INFO | missing_yolo.dataset:1398 - val generation: 2/2 images (seed=90210).
+[light-kodiak] 2026-10-21 11:10:46 | INFO | missing_yolo.dataset:1425 - val generation done: 2 images, 2 labels in 2.7s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 1.0, '0.3': 1.0, '0.5': 1.0, '0.7': 1.0} over 2 scored samples (mean 0.787454).
+[light-kodiak] 2026-10-21 11:10:46 | INFO | __main__:564 - Regenerated 2 val images in 2.7s (conditions 0.6s, seed 90210); data.yaml /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/tv/dataset/data.yaml.
+[light-kodiak] 2026-10-21 11:10:46 | INFO | __main__:803 - Running Ultralytics val on tv (batch 16, imgsz 416, device mps)...
+[light-kodiak] 2026-10-21 11:10:48 | INFO | __main__:1024 - Saved 2 sample images (2 positives / 0 backgrounds available) to /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/tv/samples.
+[light-kodiak] 2026-10-21 11:10:48 | INFO | __main__:656 - Component 'tv' report written: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/tv/metrics.json and /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/tv/metrics.txt.
+[light-kodiak] 2026-10-21 11:10:48 | INFO | __main__:518 - Validating component 'showcase' (class 'Showcase') with weights /Users/aatmaj/Metanoia/missing_yolo/models/showcase_best.pt; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/showcase.
+[light-kodiak] 2026-10-21 11:10:48 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_kind-worm_epoch_no_showcase_1010.pt -> missing component 'furniture/showcase' (channel 5 of 11), image size 256, 1000 reverse steps, class 'Showcase'.
+[light-kodiak] 2026-10-21 11:10:49 | INFO | __main__:727 - Carved 19920 validate samples into 2 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[light-kodiak] 2026-10-21 11:10:49 | INFO | __main__:753 - Val targets: 2 positive (0 background), 4 boxes of class 'Showcase'.
+[light-kodiak] 2026-10-21 11:10:49 | INFO | missing_yolo.dataset:864 - Condition encoding: 2/2.
+[light-kodiak] 2026-10-21 11:10:49 | INFO | missing_yolo.dataset:869 - Cached 2 condition pairs (128-d each).
+[light-kodiak] 2026-10-21 11:10:51 | INFO | missing_yolo.dataset:974 - Reverse chain: 2/2 samples (seed=90210).
+[light-kodiak] 2026-10-21 11:10:51 | INFO | missing_yolo.dataset:1398 - val generation: 2/2 images (seed=90210).
+[light-kodiak] 2026-10-21 11:10:51 | INFO | missing_yolo.dataset:1425 - val generation done: 2 images, 4 labels in 2.1s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 1.0, '0.3': 0.5, '0.5': 0.5, '0.7': 0.5} over 2 scored samples (mean 0.472200).
+[light-kodiak] 2026-10-21 11:10:51 | INFO | __main__:564 - Regenerated 2 val images in 2.1s (conditions 0.0s, seed 90210); data.yaml /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/showcase/dataset/data.yaml.
+[light-kodiak] 2026-10-21 11:10:51 | INFO | __main__:803 - Running Ultralytics val on showcase (batch 16, imgsz 416, device mps)...
+[light-kodiak] 2026-10-21 11:10:52 | INFO | __main__:1024 - Saved 2 sample images (2 positives / 0 backgrounds available) to /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/showcase/samples.
+[light-kodiak] 2026-10-21 11:10:52 | INFO | __main__:656 - Component 'showcase' report written: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/showcase/metrics.json and /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/showcase/metrics.txt.
+[light-kodiak] 2026-10-21 11:10:52 | INFO | __main__:518 - Validating component 'dining_set' (class 'Dining_table') with weights /Users/aatmaj/Metanoia/missing_yolo/models/missing_yolo_dining_set_new-fly_best.pt; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/dining_set.
+[light-kodiak] 2026-10-21 11:10:53 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_brief-shark_epoch_710_no_dining.pt -> missing component 'furniture/dining_set' (channel 3 of 11), image size 256, 1000 reverse steps, class 'Dining_table'.
+[light-kodiak] 2026-10-21 11:10:53 | INFO | __main__:727 - Carved 19920 validate samples into 2 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[light-kodiak] 2026-10-21 11:10:53 | INFO | __main__:753 - Val targets: 2 positive (0 background), 2 boxes of class 'Dining_table'.
+[light-kodiak] 2026-10-21 11:10:53 | INFO | missing_yolo.dataset:864 - Condition encoding: 2/2.
+[light-kodiak] 2026-10-21 11:10:53 | INFO | missing_yolo.dataset:869 - Cached 2 condition pairs (128-d each).
+[light-kodiak] 2026-10-21 11:10:55 | INFO | missing_yolo.dataset:974 - Reverse chain: 2/2 samples (seed=90210).
+[light-kodiak] 2026-10-21 11:10:55 | INFO | missing_yolo.dataset:1398 - val generation: 2/2 images (seed=90210).
+[light-kodiak] 2026-10-21 11:10:55 | INFO | missing_yolo.dataset:1425 - val generation done: 2 images, 2 labels in 2.2s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 1.0, '0.3': 1.0, '0.5': 1.0, '0.7': 0.0} over 2 scored samples (mean 0.570854).
+[light-kodiak] 2026-10-21 11:10:55 | INFO | __main__:564 - Regenerated 2 val images in 2.2s (conditions 0.0s, seed 90210); data.yaml /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/dining_set/dataset/data.yaml.
+[light-kodiak] 2026-10-21 11:10:55 | INFO | __main__:803 - Running Ultralytics val on dining_set (batch 16, imgsz 416, device mps)...
+[light-kodiak] 2026-10-21 11:10:56 | INFO | __main__:1024 - Saved 2 sample images (2 positives / 0 backgrounds available) to /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/dining_set/samples.
+[light-kodiak] 2026-10-21 11:10:56 | INFO | __main__:656 - Component 'dining_set' report written: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/dining_set/metrics.json and /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/dining_set/metrics.txt.
+[light-kodiak] 2026-10-21 11:10:56 | INFO | __main__:1484 - Validation complete for ['tv', 'showcase', 'dining_set'] in 14.9s. Reports: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_all_smoke.JpByws/summary.txt and one metrics.txt per component folder.
+[game-weasel] 2026-10-21 11:13:42 | INFO | __main__:1463 - Starting missing_yolo validation for ['tv'] in debug mode on mps; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH.
+[game-weasel] 2026-10-21 11:13:42 | INFO | __main__:518 - Validating component 'tv' (class 'TV') with weights /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt; output /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH/tv.
+[game-weasel] 2026-10-21 11:13:42 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_amused-corgi_epoch__no_tv_700.pt -> missing component 'furniture/tv' (channel 2 of 11), image size 256, 1000 reverse steps, class 'TV'.
+[game-weasel] 2026-10-21 11:13:43 | INFO | __main__:727 - Carved 19920 validate samples into 1 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[game-weasel] 2026-10-21 11:13:43 | INFO | __main__:753 - Val targets: 1 positive (0 background), 1 boxes of class 'TV'.
+[game-weasel] 2026-10-21 11:13:44 | INFO | missing_yolo.dataset:864 - Condition encoding: 1/1.
+[game-weasel] 2026-10-21 11:13:44 | INFO | missing_yolo.dataset:869 - Cached 1 condition pairs (128-d each).
+[game-weasel] 2026-10-21 11:13:46 | INFO | missing_yolo.dataset:974 - Reverse chain: 1/1 samples (seed=90210).
+[game-weasel] 2026-10-21 11:13:46 | INFO | missing_yolo.dataset:1398 - val generation: 1/1 images (seed=90210).
+[game-weasel] 2026-10-21 11:13:46 | INFO | missing_yolo.dataset:1425 - val generation done: 1 images, 1 labels in 2.3s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 1.0, '0.3': 1.0, '0.5': 1.0, '0.7': 1.0} over 1 scored samples (mean 0.741746).
+[game-weasel] 2026-10-21 11:13:46 | INFO | __main__:564 - Regenerated 1 val images in 2.3s (conditions 0.4s, seed 90210); data.yaml /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH/tv/dataset/data.yaml.
+[game-weasel] 2026-10-21 11:13:46 | INFO | __main__:803 - Running Ultralytics val on tv (batch 16, imgsz 416, device mps)...
+[game-weasel] 2026-10-21 11:13:48 | INFO | __main__:1024 - Saved 1 sample images (1 positives / 0 backgrounds available) to /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH/tv/samples.
+[game-weasel] 2026-10-21 11:13:48 | INFO | __main__:656 - Component 'tv' report written: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH/tv/metrics.json and /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH/tv/metrics.txt.
+[game-weasel] 2026-10-21 11:13:48 | INFO | __main__:1484 - Validation complete for ['tv'] in 6.1s. Reports: /private/var/folders/ny/kcfkgh9s0tsbd_d3015v19rr0000gn/T/opencode/missing_yolo_shell_smoke.xr6tOH/summary.txt and one metrics.txt per component folder.
+[meet-gnu] 2026-10-21 11:14:13 | INFO | __main__:1463 - Starting missing_yolo validation for ['tv', 'showcase', 'dining_set'] in debug mode on mps; output /Users/aatmaj/Metanoia/missing_yolo/validation_outputs.
+[meet-gnu] 2026-10-21 11:14:13 | INFO | __main__:518 - Validating component 'tv' (class 'TV') with weights /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt; output /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv.
+[meet-gnu] 2026-10-21 11:14:14 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_amused-corgi_epoch__no_tv_700.pt -> missing component 'furniture/tv' (channel 2 of 11), image size 256, 1000 reverse steps, class 'TV'.
+[meet-gnu] 2026-10-21 11:14:15 | INFO | __main__:727 - Carved 19920 validate samples into 9960 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[meet-gnu] 2026-10-21 11:14:16 | INFO | __main__:753 - Val targets: 9240 positive (720 background), 9240 boxes of class 'TV'.
+[meet-gnu] 2026-10-21 11:14:18 | INFO | missing_yolo.dataset:864 - Condition encoding: 512/9960.
+[meet-gnu] 2026-10-21 11:14:32 | INFO | missing_yolo.dataset:864 - Condition encoding: 9960/9960.
+[meet-gnu] 2026-10-21 11:14:32 | INFO | missing_yolo.dataset:869 - Cached 9960 condition pairs (128-d each).
+[meet-gnu] 2026-10-21 11:15:29 | INFO | missing_yolo.dataset:974 - Reverse chain: 9960/9960 samples (seed=90210).
+[meet-gnu] 2026-10-21 11:15:39 | INFO | missing_yolo.dataset:1398 - val generation: 512/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:15:51 | INFO | missing_yolo.dataset:1398 - val generation: 1024/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:00 | INFO | missing_yolo.dataset:1398 - val generation: 1536/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:09 | INFO | missing_yolo.dataset:1398 - val generation: 2048/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:17 | INFO | missing_yolo.dataset:1398 - val generation: 2560/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:26 | INFO | missing_yolo.dataset:1398 - val generation: 3072/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:35 | INFO | missing_yolo.dataset:1398 - val generation: 3584/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:44 | INFO | missing_yolo.dataset:1398 - val generation: 4096/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:16:55 | INFO | missing_yolo.dataset:1398 - val generation: 4608/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:04 | INFO | missing_yolo.dataset:1398 - val generation: 5120/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:12 | INFO | missing_yolo.dataset:1398 - val generation: 5632/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:21 | INFO | missing_yolo.dataset:1398 - val generation: 6144/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:29 | INFO | missing_yolo.dataset:1398 - val generation: 6656/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:39 | INFO | missing_yolo.dataset:1398 - val generation: 7168/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:47 | INFO | missing_yolo.dataset:1398 - val generation: 7680/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:17:55 | INFO | missing_yolo.dataset:1398 - val generation: 8192/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:18:03 | INFO | missing_yolo.dataset:1398 - val generation: 8704/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:18:11 | INFO | missing_yolo.dataset:1398 - val generation: 9216/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:18:19 | INFO | missing_yolo.dataset:1398 - val generation: 9728/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:18:22 | INFO | missing_yolo.dataset:1398 - val generation: 9960/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:18:22 | INFO | missing_yolo.dataset:1425 - val generation done: 9960 images, 9240 labels in 230.5s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 0.9785714285714285, '0.3': 0.9667748917748917, '0.5': 0.9396103896103896, '0.7': 0.8378787878787879} over 9240 scored samples (mean 0.794147).
+[meet-gnu] 2026-10-21 11:18:22 | INFO | __main__:564 - Regenerated 9960 val images in 230.5s (conditions 15.8s, seed 90210); data.yaml /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/dataset/data.yaml.
+[meet-gnu] 2026-10-21 11:18:23 | INFO | __main__:803 - Running Ultralytics val on tv (batch 16, imgsz 416, device mps)...
+[meet-gnu] 2026-10-21 11:20:10 | INFO | __main__:1024 - Saved 24 sample images (9240 positives / 720 backgrounds available) to /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/samples.
+[meet-gnu] 2026-10-21 11:20:10 | INFO | __main__:656 - Component 'tv' report written: /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/metrics.json and /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/tv/metrics.txt.
+[meet-gnu] 2026-10-21 11:20:10 | INFO | __main__:518 - Validating component 'showcase' (class 'Showcase') with weights /Users/aatmaj/Metanoia/missing_yolo/models/showcase_best.pt; output /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase.
+[meet-gnu] 2026-10-21 11:20:11 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_kind-worm_epoch_no_showcase_1010.pt -> missing component 'furniture/showcase' (channel 5 of 11), image size 256, 1000 reverse steps, class 'Showcase'.
+[meet-gnu] 2026-10-21 11:20:11 | INFO | __main__:727 - Carved 19920 validate samples into 9960 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[meet-gnu] 2026-10-21 11:20:12 | INFO | __main__:753 - Val targets: 7885 positive (2075 background), 11687 boxes of class 'Showcase'.
+[meet-gnu] 2026-10-21 11:20:14 | INFO | missing_yolo.dataset:864 - Condition encoding: 512/9960.
+[meet-gnu] 2026-10-21 11:20:27 | INFO | missing_yolo.dataset:864 - Condition encoding: 9960/9960.
+[meet-gnu] 2026-10-21 11:20:27 | INFO | missing_yolo.dataset:869 - Cached 9960 condition pairs (128-d each).
+[meet-gnu] 2026-10-21 11:21:42 | INFO | missing_yolo.dataset:974 - Reverse chain: 9960/9960 samples (seed=90210).
+[meet-gnu] 2026-10-21 11:21:53 | INFO | missing_yolo.dataset:1398 - val generation: 512/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:22:05 | INFO | missing_yolo.dataset:1398 - val generation: 1024/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:22:17 | INFO | missing_yolo.dataset:1398 - val generation: 1536/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:22:28 | INFO | missing_yolo.dataset:1398 - val generation: 2048/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:22:36 | INFO | missing_yolo.dataset:1398 - val generation: 2560/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:22:46 | INFO | missing_yolo.dataset:1398 - val generation: 3072/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:22:55 | INFO | missing_yolo.dataset:1398 - val generation: 3584/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:04 | INFO | missing_yolo.dataset:1398 - val generation: 4096/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:12 | INFO | missing_yolo.dataset:1398 - val generation: 4608/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:21 | INFO | missing_yolo.dataset:1398 - val generation: 5120/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:29 | INFO | missing_yolo.dataset:1398 - val generation: 5632/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:37 | INFO | missing_yolo.dataset:1398 - val generation: 6144/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:46 | INFO | missing_yolo.dataset:1398 - val generation: 6656/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:23:56 | INFO | missing_yolo.dataset:1398 - val generation: 7168/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:04 | INFO | missing_yolo.dataset:1398 - val generation: 7680/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:13 | INFO | missing_yolo.dataset:1398 - val generation: 8192/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:22 | INFO | missing_yolo.dataset:1398 - val generation: 8704/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:31 | INFO | missing_yolo.dataset:1398 - val generation: 9216/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:40 | INFO | missing_yolo.dataset:1398 - val generation: 9728/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:44 | INFO | missing_yolo.dataset:1398 - val generation: 9960/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:24:44 | INFO | missing_yolo.dataset:1425 - val generation done: 9960 images, 11687 labels in 257.4s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 0.7911223842739379, '0.3': 0.6648065948002536, '0.5': 0.42346227013316423, '0.7': 0.20291693088142043} over 7885 scored samples (mean 0.422956).
+[meet-gnu] 2026-10-21 11:24:44 | INFO | __main__:564 - Regenerated 9960 val images in 257.4s (conditions 14.7s, seed 90210); data.yaml /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/dataset/data.yaml.
+[meet-gnu] 2026-10-21 11:24:44 | INFO | __main__:803 - Running Ultralytics val on showcase (batch 16, imgsz 416, device mps)...
+[meet-gnu] 2026-10-21 11:26:22 | INFO | __main__:1024 - Saved 24 sample images (7885 positives / 2075 backgrounds available) to /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/samples.
+[meet-gnu] 2026-10-21 11:26:22 | INFO | __main__:656 - Component 'showcase' report written: /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/metrics.json and /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/showcase/metrics.txt.
+[meet-gnu] 2026-10-21 11:26:22 | INFO | __main__:518 - Validating component 'dining_set' (class 'Dining_table') with weights /Users/aatmaj/Metanoia/missing_yolo/models/missing_yolo_dining_set_new-fly_best.pt; output /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set.
+[meet-gnu] 2026-10-21 11:26:23 | INFO | missing_yolo.dataset:555 - Frozen generator ready on mps: mask_diffusion_brief-shark_epoch_710_no_dining.pt -> missing component 'furniture/dining_set' (channel 3 of 11), image size 256, 1000 reverse steps, class 'Dining_table'.
+[meet-gnu] 2026-10-21 11:26:26 | INFO | __main__:727 - Carved 19920 validate samples into 9960 val (rendered) and 9960 test (not rendered, generator-unseen but reserved for the training report).
+[meet-gnu] 2026-10-21 11:26:27 | INFO | __main__:753 - Val targets: 6387 positive (3573 background), 6387 boxes of class 'Dining_table'.
+[meet-gnu] 2026-10-21 11:26:28 | INFO | missing_yolo.dataset:864 - Condition encoding: 512/9960.
+[meet-gnu] 2026-10-21 11:26:39 | INFO | missing_yolo.dataset:864 - Condition encoding: 9960/9960.
+[meet-gnu] 2026-10-21 11:26:39 | INFO | missing_yolo.dataset:869 - Cached 9960 condition pairs (128-d each).
+[meet-gnu] 2026-10-21 11:27:39 | INFO | missing_yolo.dataset:974 - Reverse chain: 9960/9960 samples (seed=90210).
+[meet-gnu] 2026-10-21 11:27:48 | INFO | missing_yolo.dataset:1398 - val generation: 512/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:27:56 | INFO | missing_yolo.dataset:1398 - val generation: 1024/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:03 | INFO | missing_yolo.dataset:1398 - val generation: 1536/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:11 | INFO | missing_yolo.dataset:1398 - val generation: 2048/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:19 | INFO | missing_yolo.dataset:1398 - val generation: 2560/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:27 | INFO | missing_yolo.dataset:1398 - val generation: 3072/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:36 | INFO | missing_yolo.dataset:1398 - val generation: 3584/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:44 | INFO | missing_yolo.dataset:1398 - val generation: 4096/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:28:52 | INFO | missing_yolo.dataset:1398 - val generation: 4608/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:01 | INFO | missing_yolo.dataset:1398 - val generation: 5120/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:09 | INFO | missing_yolo.dataset:1398 - val generation: 5632/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:17 | INFO | missing_yolo.dataset:1398 - val generation: 6144/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:25 | INFO | missing_yolo.dataset:1398 - val generation: 6656/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:33 | INFO | missing_yolo.dataset:1398 - val generation: 7168/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:42 | INFO | missing_yolo.dataset:1398 - val generation: 7680/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:51 | INFO | missing_yolo.dataset:1398 - val generation: 8192/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:29:59 | INFO | missing_yolo.dataset:1398 - val generation: 8704/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:30:07 | INFO | missing_yolo.dataset:1398 - val generation: 9216/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:30:15 | INFO | missing_yolo.dataset:1398 - val generation: 9728/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:30:19 | INFO | missing_yolo.dataset:1398 - val generation: 9960/9960 images (seed=90210).
+[meet-gnu] 2026-10-21 11:30:19 | INFO | missing_yolo.dataset:1425 - val generation done: 9960 images, 6387 labels in 219.1s (seed=90210); component agrees with labels.txt at IoU>={'0.1': 0.9511507750117426, '0.3': 0.8802254579614842, '0.5': 0.6583685611398152, '0.7': 0.2512916862376703} over 6387 scored samples (mean 0.548831).
+[meet-gnu] 2026-10-21 11:30:19 | INFO | __main__:564 - Regenerated 9960 val images in 219.1s (conditions 12.3s, seed 90210); data.yaml /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/dataset/data.yaml.
+[meet-gnu] 2026-10-21 11:30:19 | INFO | __main__:803 - Running Ultralytics val on dining_set (batch 16, imgsz 416, device mps)...
+[meet-gnu] 2026-10-21 11:31:49 | INFO | __main__:1024 - Saved 24 sample images (6387 positives / 3573 backgrounds available) to /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/samples.
+[meet-gnu] 2026-10-21 11:31:49 | INFO | __main__:656 - Component 'dining_set' report written: /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/metrics.json and /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/dining_set/metrics.txt.
+[meet-gnu] 2026-10-21 11:31:49 | INFO | __main__:1484 - Validation complete for ['tv', 'showcase', 'dining_set'] in 1055.7s. Reports: /Users/aatmaj/Metanoia/missing_yolo/validation_outputs/summary.txt and one metrics.txt per component folder.
