@@ -1,0 +1,19 @@
+# Run configuration for training / prediction (paths, logging). Relative paths
+# are resolved against the repository root. Select with `--mode debug|prod`.
+
+[default]
+PROCESSED_ROOT = "./datasets/processed"
+# Dataset trained on (see datasets/processed/<name>).
+DATASET = "resplan"
+# Every run lives in RUNS_DIR/<run name>/ (checkpoints, telemetry, grids).
+# Re-using a run name resumes it from its latest checkpoint.
+RUNS_DIR = "./Reconstruction/runs"
+LOG_FILE_PATH = "./Reconstruction/logs/model.log"
+# Where predict.py writes <case_id>.npz files (under the run directory).
+PREDICTIONS_SUBDIR = "predictions"
+
+[debug]
+IS_DEBUG = true
+
+[prod]
+IS_DEBUG = false

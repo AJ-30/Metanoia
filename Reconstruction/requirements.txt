@@ -1,0 +1,12 @@
+# Dependencies of the Reconstruction package (Python >= 3.10).
+numpy>=1.24
+scipy>=1.10
+shapely>=2.0
+opencv-python>=4.8
+scikit-image>=0.22
+matplotlib>=3.7
+pandas>=2.0            # evaluation tables
+networkx>=3.0          # needed to unpickle ResPlan (plans contain graphs)
+tomli>=2.0; python_version < "3.11"
+torch>=2.0             # only for data_prep/dataset.py and later model stages
+pytest>=8              # unit tests

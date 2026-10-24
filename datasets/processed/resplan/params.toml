@@ -1,0 +1,182 @@
+# Data-preparation parameters: canvas, class taxonomy, wall splitting,
+# missing-component generation and leakage control. All pixel values are in
+# canvas pixels unless stated otherwise.
+
+[canvas]
+# Square raster size (H = W).
+SIZE = 256
+# Empty border kept around every plan after fitting it to the canvas.
+PADDING_PX = 8
+# Sub-pixel precision bits for cv2.fillPoly (coordinates * 2**SHIFT).
+FILL_SHIFT_BITS = 4
+# Instances smaller than this after rasterization are dropped.
+MIN_INSTANCE_AREA_PX = 4
+
+[taxonomy]
+# Channel order of the semantic maps = STRUCTURE_CLASSES + ROOM_CLASSES.
+# Structure classes are drawn on top of room classes. Within the structure
+# layer, later classes overwrite earlier ones (openings over walls).
+# The taxonomy is shared by all datasets so they can be mixed in training;
+# classes a dataset lacks (e.g. railing/column in ResPlan) stay empty.
+STRUCTURE_CLASSES = ["wall", "railing", "column", "window", "door"]
+ROOM_CLASSES = ["living", "bedroom", "bathroom", "kitchen", "storage", "balcony", "other_room", "stair"]
+
+# Component type of each class. Types drive sampling balance, removal rules
+# and the per-type evaluation breakdown.
+[taxonomy.component_type]
+wall = "wall"
+railing = "other"
+column = "other"
+door = "door"
+window = "window"
+living = "room"
+bedroom = "room"
+bathroom = "room"
+kitchen = "room"
+storage = "room"
+balcony = "room"
+other_room = "room"
+stair = "other"
+
+# ResPlan key -> our class. Keys not listed (inner, land, garden, parking,
+# pool, neighbor) are context only and are not rasterized.
+[taxonomy.resplan_class_map]
+wall = "wall"
+door = "door"
+front_door = "door"
+window = "window"
+living = "living"
+bedroom = "bedroom"
+bathroom = "bathroom"
+kitchen = "kitchen"
+storage = "storage"
+balcony = "balcony"
+stair = "stair"
+
+# CubiCasa5K SVG element class (first token of the `class` attribute) -> our
+# class. Rooms are handled by [taxonomy.cubicasa_space_map]. Unlisted
+# elements (FixedFurniture, labels, controls, ...) are ignored.
+[taxonomy.cubicasa_class_map]
+Wall = "wall"
+Railing = "railing"
+Column = "column"
+Door = "door"
+Window = "window"
+Stairs = "stair"
+
+# CubiCasa "Space <Type> ..." -> room class, keyed by the first type token
+# (e.g. "Outdoor Balcony Glazed" -> "Outdoor"). Unlisted tokens map to
+# cubicasa.UNKNOWN_SPACE_CLASS.
+[taxonomy.cubicasa_space_map]
+LivingRoom = "living"
+Dining = "living"
+Den = "living"
+Entry = "living"
+DraughtLobby = "living"
+Hall = "living"
+Alcove = "living"
+RecreationRoom = "living"
+Library = "living"
+Bedroom = "bedroom"
+Bath = "bathroom"
+Sauna = "bathroom"
+Kitchen = "kitchen"
+Storage = "storage"
+Closet = "storage"
+DressingRoom = "storage"
+Utility = "storage"
+Outdoor = "balcony"
+Undefined = "other_room"
+UserDefined = "other_room"
+Room = "other_room"
+Office = "other_room"
+Garage = "other_room"
+CarPort = "other_room"
+TechnicalRoom = "other_room"
+Attic = "other_room"
+Basement = "other_room"
+Elevated = "other_room"
+OpenToBelow = "other_room"
+
+# RGB hex colours used by every visualization.
+[colors]
+background = "#ffffff"
+wall = "#2b2b2b"
+railing = "#8c6d31"
+column = "#5b2a86"
+door = "#d62728"
+window = "#1f9bd6"
+other_room = "#e0e0e0"
+living = "#e8e1cf"
+bedroom = "#b9dcb1"
+bathroom = "#f6c28b"
+kitchen = "#c3b6e0"
+storage = "#d9c2a3"
+balcony = "#cfd8dc"
+stair = "#f2a7c3"
+mask_outline = "#ff00ff"
+
+[wall_split]
+# Walls are split into segments at T/X junctions of their skeleton. The
+# skeleton is computed at SIZE * UPSCALE for smoother centre lines.
+UPSCALE = 2
+# Radius (canvas px) cleared around every junction before labelling segments.
+JUNCTION_CLEAR_RADIUS_PX = 3
+# Skeleton pieces shorter than this (canvas px) are spurs, not segments;
+# their pixels are absorbed by the nearest real segment.
+MIN_SEGMENT_LENGTH_PX = 6
+
+[cubicasa]
+# SVG units per metre. Verified on the release: every plan carrying metric
+# room labels gives 100.0 (p5-p95: 99.9-100.3), and door widths scaled this
+# way have a median of 0.80 m.
+SVG_UNITS_PER_METRE = 100.0
+# Room class for Space types missing from [taxonomy.cubicasa_space_map].
+UNKNOWN_SPACE_CLASS = "other_room"
+# Floors with fewer walls / rooms than this are skipped (e.g. empty attics).
+MIN_WALLS_PER_FLOOR = 4
+MIN_ROOMS_PER_FLOOR = 1
+# Plausible median door width (m); floors outside are logged as suspicious.
+DOOR_WIDTH_RANGE_M = [0.5, 1.2]
+# Plan id = house id * FLOOR_ID_FACTOR + floor index (unique per floor).
+FLOOR_ID_FACTOR = 10
+
+[missing]
+# Component types that can be removed. "other" = stairs, railings, columns.
+COMPONENT_TYPES = ["wall", "door", "window", "room", "other"]
+# Types that also support the "hard" removal mode (see README).
+HARD_MODE_TYPES = ["wall", "door", "window", "room"]
+# Margins (px) of extra context erased around the removed component.
+MARGINS_PX = [0, 4, 8, 16]
+# Radius (px) for adjacency between instances (touching = within radius).
+NEIGHBOR_RADIUS_PX = 2
+# Radius (px) within which a component counts as touching the exterior.
+EXTERIOR_RADIUS_PX = 6
+# Area quantiles (computed on TRAIN only) separating small/medium/large.
+SIZE_BIN_QUANTILES = [0.3333, 0.6667]
+SIZE_BIN_NAMES = ["small", "medium", "large"]
+
+[missing.train]
+# On-the-fly sampling probabilities for training cases.
+HARD_MODE_PROB = 0.3
+# One probability per entry of MARGINS_PX.
+MARGIN_PROBS = [0.7, 0.1, 0.1, 0.1]
+# Probability of a complete plan with an empty target ("nothing missing").
+EMPTY_CASE_PROB = 0.0
+# Random 90-degree rotations / flips applied to training cases.
+DIHEDRAL_AUGMENT = true
+
+[missing.eval]
+# Per val/test plan and per available type: one easy and (if supported) one
+# hard case at margin 0. For this fraction of plans, extra easy cases at every
+# margin > 0 are added for the missing-region-size sweep.
+MARGIN_SWEEP_FRACTION = 0.25
+
+[dedup]
+# Near-duplicate filtering of val/test plans against train (ResPlan reports
+# listings republished across splits). A val/test plan is excluded when its
+# label thumbnail agrees with some train plan on at least THRESHOLD of the
+# occupied pixels.
+ENABLED = true
+THUMB_SIZE = 64
+THRESHOLD = 0.95

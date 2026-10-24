@@ -1,0 +1,46 @@
+# Evaluation parameters. Pixel values are canvas pixels (256x256 canvas).
+
+[decode]
+# A predicted channel counts as "on" when its value (in [0, 1]) exceeds this.
+THRESHOLD = 0.5
+
+[components]
+# Connected pieces smaller than this are ignored (prediction noise).
+MIN_AREA_PX = 4
+# IoU thresholds at which detection precision / recall / F1 are reported.
+# The first one is the headline threshold.
+IOU_THRESHOLDS = [0.5, 0.25, 0.75]
+
+[structure]
+# Radius for "touching" tests (opening on a wall, door between two rooms).
+TOUCH_RADIUS_PX = 3
+# Room classes that are open to the outside by design (no enclosure check).
+OPEN_ROOM_CLASSES = ["balcony"]
+# Classes forming the building shell for the wall-connectivity count.
+SHELL_CLASSES = ["wall", "railing", "column", "window", "door"]
+
+[report]
+# Columns shown in summary.md (all metrics are always in summary.json).
+HEADLINE_COLUMNS = ["cases", "precision@0.5", "recall@0.5", "f1@0.5", "primary_detection",
+                    "bestk_primary_detection", "primary_iou", "type_accuracy", "connection_accuracy",
+                    "loc_error_m_median", "pixel_iou", "shell_exact", "openings_on_wall",
+                    "rooms_enclosed", "rooms_reachable"]
+
+[rules]
+# Rule-based baseline: gaps in walls up to this length become doors
+# (interior) or windows (on the exterior); longer gaps become walls.
+DOOR_MAX_M = 1.6
+# Longest gap (m) the baseline tries to close at all.
+GAP_MAX_M = 3.0
+# A candidate gap is kept only if its thickness is at most this factor times
+# the plan's median wall thickness (rejects corridors between two walls).
+THICKNESS_FACTOR = 1.6
+# ... and only if at least this share of it has no room label (corridors
+# between walls are room-labelled; real wall gaps are at least partly free).
+MIN_FREE_FRACTION = 0.2
+# Unlabelled areas enclosed by walls get this room class.
+FILL_ROOM_CLASS = "bedroom"
+# Minimum area (px) of an enclosed unlabelled area to be filled as a room.
+MIN_ROOM_AREA_PX = 60
+# Fallback metres per pixel when a plan has no scale.
+DEFAULT_METRES_PER_PX = 0.06

@@ -1,0 +1,24 @@
+{
+  "run_id": "dataprep-resplan-20260930-144728",
+  "dataset": "resplan",
+  "mode": "prod",
+  "git_commit": "47b6bc97f3b4a9c3981205eac97edfcd14a131af",
+  "inputs": {
+    "/home/micml/26d0361/Metanoia/datasets/resplan/12/ResPlan.pkl": "63a509af3c09600e3088cee74949ff51",
+    "/home/micml/26d0361/Metanoia/datasets/resplan/12/split.json": "e83b46e6a0597cc5159403a57b997b9c"
+  },
+  "config": {
+    "RESPLAN_PICKLE_PATH": "./datasets/resplan/12/ResPlan.pkl",
+    "RESPLAN_SPLIT_PATH": "./datasets/resplan/12/split.json",
+    "INCLUDE_AUGMENTED_IN_TRAIN": false,
+    "CUBICASA_ZIP_PATH": "./datasets/cubicasa5k.zip",
+    "PROCESSED_ROOT": "./datasets/processed",
+    "LOG_FILE_PATH": "./Reconstruction/logs/data_prep.log",
+    "VISUALIZATION_DIR": "./Reconstruction/outputs/data_prep",
+    "SEED": 42,
+    "NUM_WORKERS": 16,
+    "IS_DEBUG": false,
+    "MAX_ITEMS_PER_SPLIT": -1,
+    "MODE": "prod"
+  }
+}

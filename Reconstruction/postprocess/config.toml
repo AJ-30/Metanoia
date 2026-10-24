@@ -1,0 +1,18 @@
+# Run configuration for post-processing saved predictions. Relative paths are
+# resolved against the repository root. Select with `--mode debug|prod`.
+
+[default]
+PROCESSED_ROOT = "./datasets/processed"
+LOG_FILE_PATH = "./Reconstruction/logs/postprocess.log"
+NUM_WORKERS = 16
+# Cases per task handed to a worker process.
+BATCH_SIZE = 64
+
+[debug]
+IS_DEBUG = true
+# Process only the first N cases (-1 = all).
+MAX_CASES = 400
+
+[prod]
+IS_DEBUG = false
+MAX_CASES = -1

@@ -1,0 +1,50 @@
+# Post-processing parameters. Pixel values are canvas pixels (256x256 canvas).
+#
+# A *pipeline* is an ordered list of steps (see steps.py); the same input
+# predictions can therefore be re-processed with any ablation without
+# touching code. Every step reads its own [steps.<name>] table.
+
+[aggregate]
+# K samples per case are fused to one prediction: a pixel/channel is "on"
+# when at least this fraction of the samples has it on (K = 1: identity).
+VOTE_THRESHOLD = 0.5
+
+[pipelines]
+# Ablation ladder, cheapest first. "none" only aggregates.
+none = []
+clean = ["remove_small", "openings_on_wall"]
+rooms = ["remove_small", "openings_on_wall", "snap_rooms"]
+walls = ["remove_small", "openings_on_wall", "close_wall_gaps", "align_walls"]
+full = ["remove_small", "openings_on_wall", "close_wall_gaps", "align_walls", "snap_rooms"]
+
+[steps.remove_small]
+# Added pieces smaller than this are prediction noise and dropped.
+STRUCTURE_MIN_AREA_PX = 12
+ROOM_MIN_AREA_PX = 60
+
+[steps.openings_on_wall]
+# A door/window must touch a wall (input or predicted) within this radius.
+TOUCH_RADIUS_PX = 3
+
+[steps.close_wall_gaps]
+# Predicted walls are bridged to walls up to this far away along an axis.
+MAX_GAP_PX = 6
+# Only gaps next to a predicted wall are closed (never untouched input gaps).
+NEAR_PREDICTION_PX = 3
+
+[steps.align_walls]
+# A predicted wall piece whose pixels fill at least this share of its
+# bounding box is replaced by the full box (straight, axis-aligned walls).
+MIN_FILL = 0.7
+# Pieces thicker than this (px) in both directions are left alone.
+MAX_THICKNESS_PX = 14
+
+[steps.snap_rooms]
+# Free space (no structure, no input room label) enclosed by walls and
+# touched by predicted rooms becomes ONE room of the majority predicted class
+# if the prediction covers at least this share of it, else it is cleared.
+MIN_COVERAGE = 0.3
+# Regions larger than this share of the canvas are treated as the exterior.
+MAX_REGION_FRACTION = 0.5
+# Rooms extend this far under the walls surrounding them (as in the data).
+UNDER_WALL_PX = 1

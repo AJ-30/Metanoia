@@ -1,0 +1,127 @@
+{
+  "splits": {
+    "train": {
+      "source_items": 13053,
+      "plans": 13053,
+      "errors": 0,
+      "notes": {},
+      "near_duplicates_excluded": 0,
+      "instances_per_class": {
+        "balcony": 16728,
+        "bathroom": 31045,
+        "bedroom": 31311,
+        "door": 96330,
+        "kitchen": 13015,
+        "living": 13264,
+        "stair": 578,
+        "storage": 1360,
+        "wall": 273158,
+        "window": 94724
+      },
+      "metres_per_px_median": 0.06117074372752166,
+      "metres_per_px_unknown": 0
+    },
+    "val": {
+      "source_items": 1632,
+      "plans": 1632,
+      "errors": 0,
+      "notes": {},
+      "near_duplicates_excluded": 61,
+      "instances_per_class": {
+        "balcony": 2072,
+        "bathroom": 3872,
+        "bedroom": 3899,
+        "door": 12003,
+        "kitchen": 1622,
+        "living": 1660,
+        "stair": 73,
+        "storage": 186,
+        "wall": 34005,
+        "window": 11818
+      },
+      "metres_per_px_median": 0.061198219508650474,
+      "metres_per_px_unknown": 0
+    },
+    "test": {
+      "source_items": 1632,
+      "plans": 1632,
+      "errors": 0,
+      "notes": {},
+      "near_duplicates_excluded": 56,
+      "instances_per_class": {
+        "balcony": 2062,
+        "bathroom": 3877,
+        "bedroom": 3905,
+        "door": 11949,
+        "kitchen": 1626,
+        "living": 1644,
+        "stair": 77,
+        "storage": 181,
+        "wall": 34021,
+        "window": 11856
+      },
+      "metres_per_px_median": 0.060536907906717306,
+      "metres_per_px_unknown": 0
+    }
+  },
+  "eval_cases": {
+    "val": {
+      "total": 17527,
+      "type_mode": {
+        "door/easy": 2780,
+        "door/hard": 1571,
+        "other/easy": 128,
+        "room/easy": 2780,
+        "room/hard": 1571,
+        "wall/easy": 2780,
+        "wall/hard": 1571,
+        "window/easy": 2776,
+        "window/hard": 1570
+      },
+      "margin_px": {
+        "0": 12634,
+        "16": 1631,
+        "4": 1631,
+        "8": 1631
+      },
+      "size_bin": {
+        "large": 6771,
+        "medium": 5830,
+        "small": 4926
+      },
+      "location": {
+        "exterior": 13056,
+        "interior": 4471
+      }
+    },
+    "test": {
+      "total": 16912,
+      "type_mode": {
+        "door/easy": 2626,
+        "door/hard": 1576,
+        "other/easy": 112,
+        "room/easy": 2626,
+        "room/hard": 1576,
+        "wall/easy": 2626,
+        "wall/hard": 1576,
+        "window/easy": 2622,
+        "window/hard": 1572
+      },
+      "margin_px": {
+        "0": 12667,
+        "16": 1415,
+        "4": 1415,
+        "8": 1415
+      },
+      "size_bin": {
+        "large": 6759,
+        "medium": 5654,
+        "small": 4499
+      },
+      "location": {
+        "exterior": 12690,
+        "interior": 4222
+      }
+    }
+  }
+}

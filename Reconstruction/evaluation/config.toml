@@ -1,0 +1,30 @@
+# Run configuration for evaluation. Relative paths are resolved against the
+# repository root. Select a table with `--mode debug|prod`.
+
+[default]
+# Processed datasets written by data_prep/build_dataset.py.
+PROCESSED_ROOT = "./datasets/processed"
+# Results go to OUTPUT_DIR/<dataset>/<split>/<run name>/.
+OUTPUT_DIR = "./Reconstruction/outputs/evaluation"
+LOG_FILE_PATH = "./Reconstruction/logs/evaluation.log"
+NUM_WORKERS = 16
+# Cases per task handed to a worker process.
+BATCH_SIZE = 32
+# Qualitative example rows saved per run, and the seed choosing them.
+NUM_EXAMPLES = 8
+SEED = 42
+
+[debug]
+IS_DEBUG = true
+# Evaluate only the first N cases (-1 = all).
+MAX_CASES = 400
+
+[prod]
+IS_DEBUG = false
+MAX_CASES = -1
+
+# best_worst.py: rows per best / worst list, and the cases.csv columns that
+# rank cases (first is the main key, later ones break ties; higher = better).
+BEST_WORST_COUNT = 5
+BEST_WORST_RANK_COLUMNS = ["primary_iou", "pixel_iou"]
+BEST_WORST_DIR = "best_worst"

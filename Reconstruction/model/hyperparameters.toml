@@ -1,0 +1,114 @@
+# Model, diffusion and training hyperparameters. --mode debug applies the [overrides.debug] tables (tiny model, few steps) for smoke tests.
+
+[model]
+# Conditional U-Net. Input: noisy target + incomplete plan + 2 coordinate channels.
+output: v-prediction of the target.
+
+BASE_CHANNELS = 128
+CHANNEL_MULTS = [1, 2, 2, 4, 4]      # resolutions 256, 128, 64, 32, 16
+NUM_RES_BLOCKS = 2
+ATTENTION_RESOLUTIONS = [32, 16]
+NUM_HEADS = 4
+GROUP_NORM_GROUPS = 32
+DROPOUT = 0.0
+USE_COORDINATES = true
+# Auxiliary head predics the missing component type from the bottleneck.
+# TYPE_CLASSES = ["wall", "door", "window", "room", "other", "none"] Order defines class indices; "none" = nothing missing.
+
+
+[diffusion]
+TIMESTEPS = 1000
+# Cosine noise schedule (Nichol & Dhariwal 2021); betas clipped at MAX_BETA.
+MAX_BETA = 0.999
+# DDIM steps used for validation and prediction.
+SAMPLING_STEPS = 50
+# Clip predicted x0 to [-1, 1] during sampling.
+CLIP_X0 = true
+
+
+[loss]
+# Pixels near the missing part weigh (1 + FOREGROUND_WEIGHT) times more,
+# otherwise the model learns to predict "nothing" (targets are mostly empty).
+FOREGROUND_WEIGHT = 8.0
+FOREGROUND_DILATION_PX = 3
+# Weight of the auxiliary type cross-entropy.
+TYPE_LOSS_WEIGHT = 0.1
+
+
+[train]
+SEED = 42
+BATCH_SIZE_PER_GPU = 16
+# Each per-GPU batch runs in micro-batches of this size with gradient
+# accumulation (same optimizer batch, less activation memory): 16 samples at
+# 256² do not fit a 44 GB A40. 0 = no splitting.
+MICRO_BATCH_SIZE = 8
+LEARNING_RATE = 1.0e-4
+WEIGHT_DECAY = 0.01
+ADAM_BETAS = [0.9, 0.999]
+WARMUP_STEPS = 2000
+TOTAL_STEPS = 150000
+# Cosine decay from the peak LR down to this fraction at TOTAL_STEPS.
+MIN_LR_FRACTION = 0.1
+GRAD_CLIP_NORM = 1.0
+EMA_DECAY = 0.9999
+# "bf16" (A100/A40/H100) or "fp32".
+PRECISION = "bf16"
+# Data-loader workers per GPU (cases are generated on the fly on CPU).
+NUM_WORKERS = 12
+
+
+[logging]
+LOG_EVERY_STEPS = 50
+# Full checkpoints (for resuming) every CHECKPOINT_EVERY_STEPS; the newest
+# KEEP_CHECKPOINTS are kept. Every MILESTONE_EVERY_STEPS (a multiple of
+# CHECKPOINT_EVERY_STEPS) a weights-only milestone is kept forever:
+# 25k steps ~ 123 epochs at global batch 64 -> 6 milestones in 150k steps.
+CHECKPOINT_EVERY_STEPS = 5000
+KEEP_CHECKPOINTS = 3
+MILESTONE_EVERY_STEPS = 25000
+VALIDATE_EVERY_STEPS = 5000
+# Fixed, seeded subset of the frozen val cases used during training.
+VAL_CASES = 256
+VAL_BATCH_SIZE = 32
+# Rows in the qualitative grid saved at each validation.
+VAL_GRID_ROWS = 8
+# Denoising grid saved at each validation: this many fixed cases (covering
+# different types / modes), with the model's estimate at these timesteps
+# (mapped to the nearest step of the DDIM schedule).
+DENOISE_GRID_ROWS = 6
+DENOISE_SNAPSHOT_TIMESTEPS = [999, 800, 600, 400, 200, 0]
+
+[predict]
+# Samples per case (K) and batch size for predict.py.
+SAMPLES_PER_CASE = 1
+BATCH_SIZE = 32
+
+# ---------------------------------------------------------------------------
+[overrides.debug.model]
+BASE_CHANNELS = 32
+CHANNEL_MULTS = [1, 2, 2, 2]
+NUM_RES_BLOCKS = 1
+ATTENTION_RESOLUTIONS = [32]
+GROUP_NORM_GROUPS = 8
+
+[overrides.debug.diffusion]
+SAMPLING_STEPS = 10
+
+[overrides.debug.train]
+BATCH_SIZE_PER_GPU = 4
+MICRO_BATCH_SIZE = 2
+WARMUP_STEPS = 20
+TOTAL_STEPS = 200
+NUM_WORKERS = 4
+
+[overrides.debug.logging]
+LOG_EVERY_STEPS = 10
+CHECKPOINT_EVERY_STEPS = 100
+MILESTONE_EVERY_STEPS = 100
+VALIDATE_EVERY_STEPS = 100
+VAL_CASES = 16
+VAL_BATCH_SIZE = 8
+VAL_GRID_ROWS = 4
+
+[overrides.debug.predict]
+BATCH_SIZE = 8
