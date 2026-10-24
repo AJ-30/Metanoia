@@ -1,11 +1,8 @@
 """Conditional U-Net denoiser.
 
-Input channels = [noisy target x_t (C), incomplete plan I (C), optional x/y
-coordinate maps (2)]. The coordinates give convolutions absolute position,
-which helps decide *where* something is missing.
+Input channels = [noisy target x_t (C), incomplete plan I (C), optional x/y coordinate maps (2)]. The coordinates give convolutions absolute position, which helps decide *where* something is missing.
 
-Output: v-prediction of the missing part (C channels) and logits of the
-missing component type from an auxiliary head on the bottleneck.
+Output: velocity prediction of missing part (C channels) and logits of the missing component type from an auxiliary head on the bottleneck.
 
 Building blocks: residual blocks with timestep-conditioned GroupNorm
 (scale/shift), self-attention at selected resolutions, strided-conv
@@ -22,12 +19,11 @@ from torch import nn
 
 def timestep_embedding(t: torch.Tensor, dim: int, max_period: float = 10000.0) -> torch.Tensor:
     """Sinusoidal embedding of integer timesteps (Transformer positional encoding).
-
+    int t -> 128 dim
     Args:
         t (torch.Tensor): (B,) timesteps.
         dim (int): Embedding size (even).
         max_period (float): Longest sinusoid period.
-
     Returns:
         torch.Tensor: (B, dim) embedding.
     """
@@ -125,18 +121,17 @@ class AttentionBlock(nn.Module):
 
 
 class ConditionalUNet(nn.Module):
-    """U-Net predicting v (and the missing type) from (x_t, incomplete plan, t)."""
+    """U-Net predicting velocity (and the missing type) from (x_t, incomplete plan, t)."""
 
     def __init__(self, num_channels: int, image_size: int, cfg: SimpleNamespace) -> None:
         """Build the network.
-
         Args:
-            num_channels (int): Semantic channels C of target and condition.
-            image_size (int): Canvas size (square).
-            cfg (SimpleNamespace): ``[model]`` hyperparameters.
+            num_channels (int): Num channels for target, condition.
+            image_size: (int): o/p size (256*256).
+            cfg: model hyperparams.
         """
         super().__init__()
-        base: int = cfg.BASE_CHANNELS
+        base: int = cfg.BASE_CHANNELS#
         emb_dim: int = 4 * base
         groups: int = cfg.GROUP_NORM_GROUPS
         self.base: int = base
@@ -150,11 +145,11 @@ class ConditionalUNet(nn.Module):
         self.stem = nn.Conv2d(in_ch, base, 3, padding=1)
         block = lambda i, o: ResBlock(i, o, emb_dim, groups, cfg.DROPOUT)
 
-        # Encoder: remember the channel count of every skip connection.
+        # Encoder remembers channel count of every skip connection.
         self.down = nn.ModuleList()
-        skips: list[int] = [base]
-        ch: int = base
-        resolution: int = image_size
+        skips = [base]
+        ch= base
+        resolution= image_size
         for level, mult in enumerate(cfg.CHANNEL_MULTS):
             for _ in range(cfg.NUM_RES_BLOCKS):
                 layers: list[nn.Module] = [block(ch, base * mult)]
@@ -172,7 +167,7 @@ class ConditionalUNet(nn.Module):
         self.type_head = nn.Sequential(nn.GroupNorm(groups, ch), nn.SiLU(), nn.AdaptiveAvgPool2d(1), nn.Flatten(),
                                        nn.Linear(ch, len(cfg.TYPE_CLASSES)))
 
-        # Decoder mirrors the encoder, consuming one skip per block.
+        # Decoder sameas enc, also takes one skip per block.
         self.up = nn.ModuleList()
         for level, mult in reversed(list(enumerate(cfg.CHANNEL_MULTS))):
             for index in range(cfg.NUM_RES_BLOCKS + 1):
@@ -181,12 +176,14 @@ class ConditionalUNet(nn.Module):
                 if resolution in cfg.ATTENTION_RESOLUTIONS:
                     layers.append(AttentionBlock(ch, cfg.NUM_HEADS, groups))
                 if level > 0 and index == cfg.NUM_RES_BLOCKS:
-                    layers.append(nn.Upsample(scale_factor=2, mode="nearest"))
+                    layers.append(nn.Upsample(scale_factor=2))
                     layers.append(nn.Conv2d(ch, ch, 3, padding=1))
                     resolution *= 2
                 self.up.append(nn.ModuleList(layers))
-        assert not skips, "encoder/decoder skip bookkeeping is inconsistent"
-        self.out = nn.Sequential(nn.GroupNorm(groups, ch), nn.SiLU(), _zero(nn.Conv2d(ch, num_channels, 3, padding=1)))
+        assert not skips, "Skip isnt proper"
+        self.out = nn.Sequential(nn.GroupNorm(groups, ch), nn.SiLU(), nn.Conv2d(ch, num_channels, 3, padding=1))
+
+
 
     @staticmethod
     def _run(layers: nn.ModuleList, h: torch.Tensor, emb: torch.Tensor) -> torch.Tensor:

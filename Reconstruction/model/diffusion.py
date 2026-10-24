@@ -16,12 +16,10 @@ training timesteps.
 
 import math
 from typing import Callable
-
 import torch
 
-# model(x_t, t) -> predicted v; the condition is bound by the caller.
+# model(x_t, t) -> predicted v;
 DenoiseFn = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
-# Called at every sampling step with (timestep, current x0 estimate).
 StepCallback = Callable[[int, torch.Tensor], None]
 
 
@@ -52,19 +50,14 @@ class GaussianDiffusion:
             max_beta (float): Beta clip of the cosine schedule.
         """
         self.timesteps: int = timesteps
-        alpha_bar: torch.Tensor = cosine_alpha_bar(timesteps, max_beta)
-        self.sqrt_alpha_bar: torch.Tensor = alpha_bar.sqrt().float()
-        self.sqrt_one_minus: torch.Tensor = (1 - alpha_bar).sqrt().float()
+        alpha_bar= cosine_alpha_bar(timesteps, max_beta)
+        self.sqrt_alpha_bar= alpha_bar.sqrt().float()
+        self.sqrt_one_minus= (1 - alpha_bar).sqrt().float()
 
     def _coef(self, values: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        """Per-sample schedule values broadcastable to (B, C, H, W).
+        """To broadcast per-sample schedule to multiply later to img (B, C, H, W).
+        for (B,)timesteps to get (B, 1, 1, 1) values
 
-        Args:
-            values (torch.Tensor): (T,) schedule table.
-            t (torch.Tensor): (B,) timesteps.
-
-        Returns:
-            torch.Tensor: (B, 1, 1, 1) values on ``t``'s device.
         """
         return values.to(t.device)[t][:, None, None, None]
 
@@ -100,7 +93,7 @@ class GaussianDiffusion:
         Args:
             x_t (torch.Tensor): Noisy data.
             t (torch.Tensor): Timesteps.
-            v (torch.Tensor): Predicted v.
+            v (torch.Tensor): Pred v.
 
         Returns:
             torch.Tensor: x0 estimate.
@@ -126,11 +119,13 @@ class GaussianDiffusion:
             torch.Tensor: (B, C, H, W) samples in [-1, 1] (approximately).
         """
         assert 1 <= steps <= self.timesteps, "steps must be in [1, T]"
-        x: torch.Tensor = torch.randn(shape, device=device, generator=generator)
+        x = torch.randn(shape, device=device, generator=generator)
         schedule: list[int] = torch.linspace(self.timesteps - 1, 0, steps).round().long().tolist()
+        # ^chooses which 50 of 1k timesteps to visit when sampling
         for i, step in enumerate(schedule):
-            t: torch.Tensor = torch.full((shape[0],), step, device=device, dtype=torch.long)
-            x0: torch.Tensor = self.x0_from_v(x, t, denoise(x, t).float())
+            t = torch.full((shape[0],), step, device=device, dtype=torch.long)
+            # During training t is random per image. During sampling every image in the batch is at the same point of the denoising process, so the same step number is repeated B times.
+            x0 = self.x0_from_v(x, t, denoise(x, t).float())
             if clip_x0:
                 x0 = x0.clamp(-1.0, 1.0)
             if on_step is not None:
@@ -138,7 +133,7 @@ class GaussianDiffusion:
             if i == len(schedule) - 1:
                 return x0
             a_t, s_t = self._coef(self.sqrt_alpha_bar, t), self._coef(self.sqrt_one_minus, t)
-            eps: torch.Tensor = (x - a_t * x0) / s_t
-            t_prev: torch.Tensor = torch.full_like(t, schedule[i + 1])
+            eps = (x - a_t * x0) / s_t
+            t_prev = torch.full_like(t, schedule[i + 1])
             x = self._coef(self.sqrt_alpha_bar, t_prev) * x0 + self._coef(self.sqrt_one_minus, t_prev) * eps
         return x
