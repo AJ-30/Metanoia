@@ -107,7 +107,7 @@ def intersection_over_union(gt: Box, prediction: Box) -> float:
         return 0.0
     return intersection / union
 
-
+#LOSS FUNCTION
 def box_loss(gt: Box, prediction: Box, image_size: int) -> BoxLoss:
     """Score one ground-truth box against one prediction.
 

@@ -425,7 +425,7 @@ class DiffusionRunner:
             shuffle=False,
         )
         return train_latent_dl, test_latent_dl
-
+    #LOSS FUNCTION
     def diffusion_loss(self, clean_latents: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute the composite noise-prediction loss on a clean latent batch.
 

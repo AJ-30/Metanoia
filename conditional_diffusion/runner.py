@@ -985,7 +985,7 @@ class ConditionalDiffusionRunner:
         target_masks: torch.Tensor = torch.stack([dataset[i][1] for i in range(take)])
         image_paths: list[Path] = [dataset.image_path(i) for i in range(take)]
         return cond_masks, target_masks, image_paths
-
+    #LOSS FUNCTION
     def diffusion_loss(
         self, clean_targets: torch.Tensor, cond: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

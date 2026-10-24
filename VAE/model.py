@@ -243,7 +243,7 @@ class VAEModel(nn.Module):
         """
         return self.decoder(z)
 
-
+#LOSS FUNCTION
 def vae_loss(
     x: torch.Tensor,
     reconstruction: torch.Tensor,

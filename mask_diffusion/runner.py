@@ -1372,6 +1372,7 @@ class MaskDiffusionRunner:
     # ------------------------------------------------------------------
     # Objective
     # ------------------------------------------------------------------
+    #LOSS FUNCTION
     def _mask_bce(
         self, logits: torch.Tensor, targets: torch.Tensor, pos_weight: float
     ) -> torch.Tensor:
@@ -1394,6 +1395,7 @@ class MaskDiffusionRunner:
             logits, targets, pos_weight=weight, reduction="mean"
         )
 
+    #LOSS FUNCTION
     def latent_mse_loss(
         self,
         target_latents: torch.Tensor,
@@ -1438,7 +1440,7 @@ class MaskDiffusionRunner:
         )
         mse: torch.Tensor = F.mse_loss(predicted_noise, noise)
         return {"loss": mse, "mse": mse}
-
+    #LOSS FUNCTION
     def pixel_bce_loss(
         self,
         target_latents: torch.Tensor,

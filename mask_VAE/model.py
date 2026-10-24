@@ -385,7 +385,7 @@ class MaskVAEModel(nn.Module):
         """
         return self.decoder(z)
 
-
+#LOSS FUNCTION
 def mask_vae_loss(
     x: torch.Tensor,
     reconstruction: torch.Tensor,
