@@ -1,0 +1,46 @@
+# Configuration for index_maker.py: the visual legend of the dataset's mask
+# colors. Every color comes from the *_color_index.json files the dataset
+# itself uses to render masks, so the legend can never drift from the pixels.
+
+[default]
+# Directory holding the two color index JSONs, next to the dataset splits.
+COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
+ARRANGEMENT_COLOR_INDEX_FILE = "furniture_color_index.json"
+
+# Where the legend PNGs and the merged JSON index are written.
+OUTPUT_DIRECTORY = "./outputs/color_index/"
+DEBUG_LOG_FILE_PATH = "./debug_logs/index_maker.log"
+
+# Horizontal legend layout. Every class is one card in a single left-to-right
+# row: swatch on top, class id/name and hex value underneath. CARD_GAP is the
+# space between neighbouring cards, LABEL_GAP the space between a swatch and
+# its text. The canvas width grows to fit all cards.
+SWATCH_SIZE = 58
+CARD_GAP = 14
+LABEL_GAP = 8
+FONT_SIZE = 20
+TITLE_FONT_SIZE = 28
+PADDING = 22
+SECTION_GAP = 30
+MIN_WIDTH = 480
+
+# Light mode: white canvas, dark text, and a mid-gray swatch border so light
+# mask colors (walls, living room) stay visible against the background.
+BACKGROUND_GRAY = 255
+TEXT_GRAY = 17
+MUTED_TEXT_GRAY = 75
+BORDER_GRAY = 160
+
+# Filenames written inside OUTPUT_DIRECTORY.
+FLOORPLAN_IMAGE_NAME = "index_floorplan.png"
+ARRANGEMENT_IMAGE_NAME = "index_arrangement.png"
+COMBINED_IMAGE_NAME = "index_combined.png"
+JSON_NAME = "color_index.json"
+README_NAME = "README.md"
+
+[debug]
+IS_DEBUG = true
+
+[prod]
+IS_DEBUG = false

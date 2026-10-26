@@ -132,6 +132,32 @@ coexist there the way the VAE stage's grids do.
 Plus `evaluator/telemetry_logs/<run_id>.csv`, one row per (sample, draw), which
 the shared dashboard discovers like any other run.
 
+### Qualitative full-pipeline report
+
+A separate, numbers-free view renders five shared validation samples for every
+component in `components.toml`:
+
+```bash
+python evaluator/visualization_full_pipeline_report.py
+# or choose a subset / another split:
+python evaluator/visualization_full_pipeline_report.py \
+    --components tv showcase --samples 5 --validation-dir /path/to/validate
+```
+
+Each component gets one four-column figure directly under
+`evaluator/outputs/full_pipeline_report/`:
+
+1. the conditioned floorplan (real furniture with the component erased);
+2. the diffusion reconstruction (generated component composited in);
+3. the same reconstruction with YOLO boxes in red and `labels.txt` GT boxes in
+   green;
+4. the real layout, component included.
+
+The five samples come from a seeded shuffle of the validation split and are
+shared by every component, so rows stay comparable. `report.json` records the
+chosen stems and per-row GT/prediction counts; the individual panels are kept
+under `panels/<component>/<stem>/`.
+
 To watch a run's figures next to the training dashboards:
 
 ```bash
@@ -191,6 +217,7 @@ the config at a run trained for that component and the label names come along.
 | `telemetry.py` | Per-sample CSV and the summary JSON |
 | `report.py` | The human-readable table, as a pure function of the summary |
 | `pipeline.py` | The streaming loop that ties it all together |
+| `visualization_full_pipeline_report.py` | Five shared validation samples x every component, four-column qualitative figure |
 | `test_evaluator.py` | Unit tests of the pure logic (`./venv/bin/python evaluator/test_evaluator.py`) |
 
 `mask_diffusion/inference.py` is the shared inference API: it loads a

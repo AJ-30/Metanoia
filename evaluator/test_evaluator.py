@@ -28,6 +28,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import torch
+from PIL import Image
 
 # Project root so ``evaluator``/``mask_diffusion`` import when run as a script.
 _ROOT_DIR: Path = Path(__file__).resolve().parent.parent
@@ -55,6 +56,12 @@ from evaluator.variants import (
     load_component_variants,
     resolve_component_variant,
 )
+from evaluator.visualization_full_pipeline_report import (
+    GridStyle,
+    build_report_grid,
+    choose_shared_samples,
+    select_component_names,
+)
 from evaluator.yolo_eval import (
     detector_class_names,
     prepare_eval_dataset,
@@ -62,6 +69,7 @@ from evaluator.yolo_eval import (
 )
 from mask_VAE.masking import MaskGroup, MaskLayout
 from mask_diffusion.runner import class_ids_to_one_hot
+from YOLO.dataset import SampleFolder
 
 
 class FakeLog:
@@ -747,6 +755,99 @@ def test_format_report_renders_numbers_and_handles_missing_metrics() -> None:
     assert "0.5000" in text  # the aggregate mAP@50
     assert "n/a" in text  # the skipped draw
     assert "matched=4" in text
+
+
+def test_select_component_names_keeps_registry_order_and_rejects_unknown() -> None:
+    """The report renders components in registry order and fails on a typo."""
+    available = ["tv", "showcase", "dining_set"]
+    assert select_component_names(available, None) == available
+    assert select_component_names(available, ["dining_set", "tv"]) == ["tv", "dining_set"]
+    try:
+        select_component_names(available, ["tv", "sofa"])
+    except ValueError as exc:
+        assert "sofa" in str(exc)
+    else:
+        raise AssertionError("An unregistered component must fail fast.")
+
+
+def test_choose_shared_samples_needs_every_component() -> None:
+    """Only samples holding every requested component can become report rows."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        contents = {
+            "a": ["TV", "Showcase"],
+            "b": ["TV"],
+            "c": ["Showcase"],
+            "d": ["TV", "Showcase"],
+        }
+        samples: list[SampleFolder] = []
+        for stem, names in contents.items():
+            sample_dir = root / stem
+            sample_dir.mkdir()
+            (sample_dir / "labels.txt").write_text(
+                "".join(f"{name} 0.5 0.5 0.1 0.1\n" for name in names),
+                encoding="utf-8",
+            )
+            samples.append(SampleFolder(src_dir=sample_dir, stem=stem))
+        chosen = choose_shared_samples(
+            samples=samples,
+            label_names_by_component={"tv": ("TV",), "showcase": ("Showcase",)},
+            count=2,
+            seed=0,
+            label_filename="labels.txt",
+        )
+        assert [sample.stem for sample in chosen] == ["a", "d"]
+        try:
+            choose_shared_samples(
+                samples=samples,
+                label_names_by_component={"tv": ("TV",), "showcase": ("Showcase",)},
+                count=3,
+                seed=0,
+                label_filename="labels.txt",
+            )
+        except ValueError as exc:
+            assert "Only 2" in str(exc)
+        else:
+            raise AssertionError("Asking for more positives than exist must fail.")
+
+
+def test_build_report_grid_sizes_cells_and_rejects_ragged_rows() -> None:
+    """The four-column grid is exactly as large as its configured bands."""
+    style = GridStyle(
+        header_height=20,
+        title_height=10,
+        row_label_width=8,
+        font_size=6,
+        title_font_size=7,
+        padding=2,
+        background=(0, 0, 0),
+        text=(255, 255, 255),
+        separator=(50, 50, 50),
+    )
+    panels = [
+        [Image.new("RGB", (10, 12), (row * 10, column * 10, 0)) for column in range(4)]
+        for row in range(2)
+    ]
+    grid = build_report_grid(
+        panels=panels,
+        headers=["one", "two", "three", "four"],
+        row_labels=["1", "2"],
+        title="unit test",
+        style=style,
+    )
+    assert grid.size == (style.row_label_width + 4 * 10, style.title_height + style.header_height + 2 * 12)
+    try:
+        build_report_grid(
+            panels=[[Image.new("RGB", (10, 12)) for _ in range(3)]],
+            headers=["one", "two", "three", "four"],
+            row_labels=["1"],
+            title="ragged",
+            style=style,
+        )
+    except ValueError as exc:
+        assert "3 panels" in str(exc)
+    else:
+        raise AssertionError("A ragged row must fail rather than silently drop a column.")
 
 
 def _run_all_tests() -> int:

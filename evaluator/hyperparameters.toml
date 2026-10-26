@@ -62,6 +62,25 @@ VIZ_SAMPLES = 24
 VIZ_RANKED_COUNT = 8
 PNG_COMPRESS_LEVEL = 1
 
+# ---- Qualitative full-pipeline report ----
+# evaluator/visualization_full_pipeline_report.py renders this many shared
+# validation samples for every selected component, as a 4-column contact sheet:
+# conditioned floorplan / diffusion reconstruction / YOLO vs GT / ground truth.
+# The samples are picked by a seeded shuffle from the validation split, keeping
+# only samples whose labels.txt contains every selected component.
+FULL_PIPELINE_SAMPLES = 5
+# Layout of the contact sheet, in pixels. The numbers live here so the report
+# style is a config edit rather than a code change.
+FULL_PIPELINE_HEADER_HEIGHT = 42
+FULL_PIPELINE_TITLE_HEIGHT = 34
+FULL_PIPELINE_ROW_LABEL_WIDTH = 30
+FULL_PIPELINE_FONT_SIZE = 14
+FULL_PIPELINE_TITLE_FONT_SIZE = 18
+FULL_PIPELINE_PADDING = 8
+FULL_PIPELINE_BACKGROUND_GRAY = 16
+FULL_PIPELINE_TEXT_GRAY = 235
+FULL_PIPELINE_SEPARATOR_GRAY = 64
+
 # Dataset label names per mask component, because the dataset's own labels.txt
 # does not use the mask color index's names (the mask says "dining_set" where
 # the labels say "Dining_table_big"). The missing component's GT boxes are read

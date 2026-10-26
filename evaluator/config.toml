@@ -35,6 +35,16 @@ TARGET_CLASS_GROUP_PREFIX = "furniture"
 # behaviour on the generated component, which is part of the answer.
 TEST_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/test"
 
+# Folder-per-sample validation split used by the qualitative full-pipeline
+# report (evaluator/visualization_full_pipeline_report.py). It is
+# generator-unseen, so the report is an honest held-out picture rather than a
+# training sample.
+VALIDATION_IMAGES_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work/validate"
+
+# Destination of the qualitative full-pipeline report. One PNG per selected
+# component plus per-sample panels and a JSON manifest are written inside.
+FULL_PIPELINE_OUTPUT_DIRECTORY = "./evaluator/outputs/full_pipeline_report/"
+
 # Mask filenames inside each sample folder (both are read by the frozen VAEs;
 # the missing component is removed by the partial VAE's layout, never by
 # editing pixels here).
