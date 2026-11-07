@@ -2,17 +2,18 @@
 
 Three kinds of figure are written, all under ``evaluator/outputs/...``:
 
-* ``eval_composite_draw_<d>_<run>.png`` - the images the detector actually saw,
-  annotated with the dataset's ground-truth box (green) and the detector's
-  prediction (red), one column per sample.
+* ``eval_composite_draw_<d>_<run>.png`` / ``eval_composite_ensemble_<run>.png``
+  - the images the detector actually saw, annotated with the dataset's
+  ground-truth box (green) and the detector's prediction (red), one column per
+  sample.
 * ``eval_compare_<run>.png`` - the side-by-side panel, five columns per sample:
   the true layout, the layout the model was conditioned on, the true component,
-  the generated component and the annotated composite. This is the figure that
-  answers "did the component land in the right place, in the right shape, in the
-  right room" without reading a single number.
-* ``eval_best_draw_<d>_<run>.png`` and ``eval_worst_draw_<d>_<run>.png`` - the
-  best and worst ranked samples by box IoU, so the tail of the distribution is
-  as visible as its mean.
+  the ensemble-generated component and the annotated ensemble composite. This
+  is the figure that answers "did the component land in the right place, in the
+  right shape, in the right room" without reading a single number.
+* ``eval_best_<result>_<run>.png`` and ``eval_worst_<result>_<run>.png`` - the
+  best and worst ranked samples by box IoU for each draw and the ensemble, so
+  the tail of the distribution is as visible as its mean.
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ from PIL import Image
 from evaluator.box_metrics import BoxLoss
 from evaluator.compositor import component_rgb
 from evaluator.dataset_gt import Box
-from evaluator.results import SampleRecord
+from evaluator.results import SampleRecord, result_slug
 from mask_diffusion.inference import MaskDiffusionSampler
 from YOLO.overlay import draw_boxes_on_image, make_montage
 
@@ -176,7 +177,7 @@ def rank_samples(
 
 def annotate_record_path(
     record: SampleRecord,
-    draw: int,
+    result_key: int,
     class_names: list[str],
     class_id: int,
     output_root: Path,
@@ -185,7 +186,7 @@ def annotate_record_path(
 
     Args:
         record (SampleRecord): Sample to annotate.
-        draw (int): Draw to annotate.
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`.
         class_names (list[str]): Detector class vocabulary.
         class_id (int): Class index of the component.
         output_root (Path): Run output root.
@@ -193,17 +194,21 @@ def annotate_record_path(
     Returns:
         Path: Path of the written annotated image.
     """
-    image_path: Path = record.image_paths.get(
-        draw, next(iter(record.image_paths.values()))
-    )
+    image_path: Path = record.image_paths[result_key]
     with Image.open(image_path) as opened:
         composite: Image.Image = opened.convert("RGB")
     annotated: Image.Image = annotate_composite(
-        composite, record.ground_truth, record.predictions.get(draw, []), class_names, class_id
+        composite,
+        record.ground_truth,
+        record.predictions[result_key],
+        class_names,
+        class_id,
     )
     annotation_dir: Path = output_root / ANNOTATED_DIRECTORY
     annotation_dir.mkdir(parents=True, exist_ok=True)
-    destination: Path = annotation_dir / f"{record.stem}__draw_{draw}.png"
+    destination: Path = (
+        annotation_dir / f"{record.stem}__{result_slug(result_key)}.png"
+    )
     annotated.save(str(destination))
     return destination
 

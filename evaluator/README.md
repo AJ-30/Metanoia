@@ -12,6 +12,13 @@ YOLO look at that image, and scoring **only the missing component**: the
 detector's class-filtered metrics, the box loss against the dataset's own
 ground-truth box, and the generated channel's mask Dice/IoU.
 
+The primary result is an **ensemble**: every sample is generated with
+`DRAWS_PER_SAMPLE` independent chains, the chains' missing-component softmax
+probabilities are averaged per pixel, and the average is thresholded once at
+`ENSEMBLE_PROBABILITY_THRESHOLD`. The individual chains are still evaluated and
+reported as diagnostics, so the spread and the ensemble can be compared in the
+same run.
+
 One **component selection** drives the whole run. `--component tv` (or
 `showcase`, `dining_set`) resolves BOTH models from `components.toml` at the
 repository root: the diffusion checkpoint trained for that component and the
@@ -53,7 +60,7 @@ none) — which is what makes the *negative* samples worth evaluating.
 
 ## 2. What the evaluated image is
 
-For each sample, one 256x256 RGB image per draw:
+For each sample, one 256x256 RGB image per result (each draw and the ensemble):
 
 1. the floorplan, rendered from its class ids;
 2. the **real furniture with the missing component remapped to background** —
@@ -67,8 +74,12 @@ looks like the training domain instead of measuring the domain shift. The
 generated component is layered last and wins every overlap, so a misplaced
 component is never hidden behind the furniture it was placed against.
 
-The component itself is the decoder's **argmax** equal to the component's
-channel — the same rule the training grids use, never a tuned threshold.
+A per-draw component is the decoder's **argmax** equal to the component's
+channel — the same rule the training grids use. The ensemble component is the
+per-pixel mean of the draws' softmax probabilities for that channel, thresholded
+at `ENSEMBLE_PROBABILITY_THRESHOLD` (default `0.5`). Both the per-draw and
+ensemble composites are written, so a disagreement between the ensemble and a
+single chain stays visible.
 
 ---
 
@@ -88,7 +99,7 @@ Useful options (each overrides the matching TOML key):
 | `--checkpoint PATH` | selected checkpoint | Manual escape hatch: judge a diffusion run not listed in the registry |
 | `--weights PATH` | selected detector | Manual escape hatch: judge a detector not listed in the registry |
 | `--cap N` | `SAMPLE_CAP` | `-1` keeps every sample |
-| `--draws N` | `DRAWS_PER_SAMPLE` | Independent diffusion draws per sample |
+| `--draws N` | `DRAWS_PER_SAMPLE` | Independent diffusion chains per sample; also the ensemble size |
 | `--seed N` | `SEED` | Base seed of the sampling and the visualization |
 | `--skip-yolo` | – | Channel metrics and figures only, no detector call |
 | `--output-dir PATH` | – | Where to put this run's artifacts |
@@ -102,9 +113,10 @@ unregistered run can be measured without editing a file.
 ### Cost, measured on this machine (MPS)
 
 A 1000-step reverse chain costs **~140 ms** at `GENERATION_CHUNK = 32`. The
-default smoke pass (250 samples x 4 draws = 1000 chains plus 1000 detector
-calls) finishes in **~10 minutes**. The full test split (10,043 x 4 = ~40k chains)
-is **~3 hours**, dominated by sampling and detector validation.
+default smoke pass (250 samples x 4 draws = 1000 chains plus 1250 detector
+calls, including the ensemble) finishes in **~12 minutes**. The full test split
+(10,043 x 4 = ~40k chains) is **~3.5 hours**, dominated by sampling and detector
+validation.
 
 `BLOCK_SIZE` (512) exists only to bound memory: one block's masks are in memory
 at a time, so the full split runs with the same code path as the smoke pass.
@@ -117,11 +129,14 @@ Written under `evaluator/outputs/eval_<run_id>/`:
 
 | Path | Content |
 |---|---|
+| `dataset_ensemble/{images,labels}/test` | The ensemble's dataset: averaged probability, thresholded once |
 | `dataset_draw_<d>/{images,labels}/test` | One dataset per draw, so each draw's detector metrics are computed over that draw's own images only |
-| `eval_composite_draw_<d>.png` | Contact sheet of the evaluated images, green GT box, red prediction |
-| `eval_best_draw_<d>.png` / `eval_worst_draw_<d>.png` | The ranked ends of the box-IoU distribution |
-| `eval_compare.png` | Draw 0's five-panel strip of a fixed seeded subset: true layout, conditioned layout, true component, generated component, annotated composite |
-| `evaluation_summary.json` | The whole report, including everything needed to reproduce the run |
+| `eval_composite_ensemble.png` | Contact sheet of the primary ensemble images |
+| `eval_composite_draw_<d>.png` | Contact sheet of the evaluated per-draw images, green GT box, red prediction |
+| `eval_best_ensemble.png` / `eval_worst_ensemble.png` | The ranked ends of the ensemble's box-IoU distribution |
+| `eval_best_draw_<d>.png` / `eval_worst_draw_<d>.png` | The ranked ends of each draw's box-IoU distribution |
+| `eval_compare.png` | The ensemble's five-panel strip of a fixed seeded subset: true layout, conditioned layout, true component, ensemble component, annotated ensemble composite |
+| `evaluation_summary.json` | The whole report: the primary `ensemble` section, `per_draw` diagnostics and everything needed to reproduce the run |
 | `evaluation_report.txt` | The same numbers as a human-readable table |
 
 The same figures are also **published** to `evaluator/outputs/` as
@@ -129,8 +144,11 @@ The same figures are also **published** to `evaluator/outputs/` as
 directory: that is how the `eval` panel finds them, and several runs' figures
 coexist there the way the VAE stage's grids do.
 
-Plus `evaluator/telemetry_logs/<run_id>.csv`, one row per (sample, draw), which
-the shared dashboard discovers like any other run.
+Plus `evaluator/telemetry_logs/<run_id>.csv`, one row per (sample, result). A
+result is a draw (`draw` = `0..N-1`) or the ensemble (`draw` = `-1`). Each row
+also carries `generated_pixels` and `probability_mean`, so the effect of
+averaging and thresholding is visible next to the per-draw numbers. The shared
+dashboard discovers the file like any other run.
 
 ### Qualitative full-pipeline report
 
@@ -148,7 +166,8 @@ Each component gets one four-column figure directly under
 `evaluator/outputs/full_pipeline_report/`:
 
 1. the conditioned floorplan (real furniture with the component erased);
-2. the diffusion reconstruction (generated component composited in);
+2. the ensemble diffusion reconstruction (the averaged-probability component
+   composited in);
 3. the same reconstruction with YOLO boxes in red and `labels.txt` GT boxes in
    green;
 4. the real layout, component included.
@@ -169,7 +188,9 @@ To watch a run's figures next to the training dashboards:
 ## 5. Configuration
 
 `config.toml` holds paths, the default component and the device;
-`hyperparameters.toml` holds every number. The **component -> models** pairing is
+`hyperparameters.toml` holds every number, including `DRAWS_PER_SAMPLE`
+(ensemble size) and `ENSEMBLE_PROBABILITY_THRESHOLD` (inclusive threshold on the
+averaged missing-component probability). The **component -> models** pairing is
 declared once, in `components.toml` at the repository root, so the evaluator and
 the frontend can never disagree about which detector belongs to which generator:
 
@@ -229,9 +250,11 @@ perturb a training run.
 
 ## 7. Reproducibility
 
-`SEED` seeds every sampler generator; the chunk holding absolute chain `k` of the
-split uses `SEED + CHUNK_SEED_STRIDE * (chain_offset + k // GENERATION_CHUNK)`,
-so `--seed` fully determines the pixels. `GENERATION_CHUNK` and `BLOCK_SIZE` fix
+`SEED` seeds every sampler generator; draw `d` uses
+`SEED + DRAW_SEED_STRIDE * d` and the chunk holding absolute chain `k` of the
+split adds `CHUNK_SEED_STRIDE * (chain_offset + k // GENERATION_CHUNK)`, so
+`--seed` fully determines the pixels and the ensemble is deterministic.
+`GENERATION_CHUNK` and `BLOCK_SIZE` fix
 how the RNG stream is cut up, so keep them fixed when comparing two runs (they
 change the noise stream, not its distribution) — the same policy the YOLO stage's
 live redraw uses.

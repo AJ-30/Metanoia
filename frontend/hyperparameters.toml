@@ -9,16 +9,20 @@
 # ---- Reproducibility ----
 # Seed of the diffusion sampler and of the visualization subset (if any).
 SEED = 1234
-DRAW_SEED_STRIDE = 100_003
 
 # ---- Generation ----
-# Default independent diffusion draws per upload, the chunk of reverse chains
+# Default independent diffusion chains per upload, the chunk of reverse chains
 # per sampler call (fixed so the RNG stream is reproducible), the samples encoded
 # per frozen-encoder pass, and the blend weight of furniture over the floorplan.
 # The alpha matches the detector's training overlays, so the image the detector
 # judges looks like the domain it was fit for.
-DEFAULT_DRAWS = 1
+#
+# All chains are ensembled: their missing-component softmax probabilities are
+# averaged per pixel and thresholded once. The per-chain panels remain visible
+# as diagnostics. The threshold is inclusive and applies to the averaged map.
+DEFAULT_DRAWS = 4
 MAX_DRAWS = 4
+ENSEMBLE_PROBABILITY_THRESHOLD = 0.5
 GENERATION_CHUNK = 8
 ENCODE_BATCH_SIZE = 64
 OVERLAY_ALPHA = 0.6

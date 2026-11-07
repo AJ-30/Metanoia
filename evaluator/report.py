@@ -43,6 +43,53 @@ def _format_statistics(statistics: dict[str, float]) -> str:
     )
 
 
+def _format_result_section(title: str, result: dict[str, Any] | None) -> list[str]:
+    """Format one result's detector, box-loss, channel and outcome numbers.
+
+    Args:
+        title (str): Section heading.
+        result (dict[str, Any] | None): A per-draw or ensemble summary, or
+            ``None`` when the section is absent.
+
+    Returns:
+        list[str]: Report lines for this result.
+    """
+    lines: list[str] = [title]
+    if not result:
+        lines.append("  n/a")
+        return lines
+    metrics: dict[str, float] | None = result.get("detector_metrics")
+    if metrics is None:
+        lines.append("  detector metrics   n/a")
+    else:
+        lines.append(
+            f"  mAP@50             {_format_metric(metrics.get('mAP50'))} | "
+            f"mAP@50-95 {_format_metric(metrics.get('mAP50_95'))} | "
+            f"precision {_format_metric(metrics.get('precision'))} | "
+            f"recall {_format_metric(metrics.get('recall'))}"
+        )
+    box_loss: dict[str, dict[str, float]] = result.get("box_loss", {})
+    lines.append(
+        f"  box IoU            {_format_statistics(box_loss.get('box_iou', {}))}"
+    )
+    lines.append(
+        f"  L1 on (cx,cy,w,h)  {_format_statistics(box_loss.get('l1_norm_xywh', {}))}"
+    )
+    lines.append(
+        f"  centre dist (px)   {_format_statistics(box_loss.get('center_distance_px', {}))}"
+    )
+    channel: dict[str, dict[str, float]] = result.get("channel_scores", {})
+    lines.append(f"  channel Dice       {_format_statistics(channel.get('dice', {}))}")
+    lines.append(f"  channel IoU        {_format_statistics(channel.get('iou', {}))}")
+    outcomes: dict[str, int] = result.get("outcomes", {})
+    lines.append(
+        f"  outcomes           gt={outcomes.get('ground_truth_boxes')} "
+        f"matched={outcomes.get('matched')} missed={outcomes.get('missed')} "
+        f"false_positives={outcomes.get('false_positives')}"
+    )
+    return lines
+
+
 def format_report(summary: dict[str, Any]) -> list[str]:
     """Build the report lines of one evaluation.
 
@@ -69,51 +116,30 @@ def format_report(summary: dict[str, Any]) -> list[str]:
         f"Detector          : {configuration.get('yolo_weights')}",
         f"Split / samples   : {configuration.get('samples_evaluated')} samples from "
         f"{configuration.get('split_dir')}",
-        f"Draws per sample  : {configuration.get('draws_per_sample')} "
+        f"Ensemble members  : {configuration.get('draws_per_sample')} "
         f"(seed {configuration.get('seed')})",
+        f"Ensemble threshold: "
+        f"{configuration.get('ensemble_probability_threshold')} "
+        "(softmax probability of the missing component)",
         "-" * RULE_WIDTH,
-        "Detector metrics for the missing component only",
+        "PRIMARY RESULT: ensemble of all draws",
         "-" * RULE_WIDTH,
-        f"{'draw':<6} {'mAP@50':<9} {'mAP@50-95':<10} {'prec':<9} {'recall':<9}",
     ]
-    for draw, draw_summary in enumerate(summary.get("per_draw", [])):
-        metrics: dict[str, float] | None = draw_summary.get("detector_metrics")
-        if metrics is None:
-            lines.append(f"{draw:<6} {'n/a':<9} {'n/a':<10} {'n/a':<9} {'n/a':<9}")
-            continue
-        lines.append(
-            f"{draw:<6} {_format_metric(metrics.get('mAP50')):<9} "
-            f"{_format_metric(metrics.get('mAP50_95')):<10} "
-            f"{_format_metric(metrics.get('precision')):<9} "
-            f"{_format_metric(metrics.get('recall')):<9}"
-        )
+    lines += _format_result_section(
+        "ensemble", summary.get("ensemble")
+    )
     lines += [
         "-" * RULE_WIDTH,
-        "Box loss: dataset ground-truth box vs the detector's prediction",
+        "PER-DRAW DIAGNOSTICS",
         "-" * RULE_WIDTH,
     ]
     for draw, draw_summary in enumerate(summary.get("per_draw", [])):
-        box_loss: dict[str, dict[str, float]] = draw_summary.get("box_loss", {})
-        lines.append(f"draw {draw}")
-        lines.append(f"  box IoU            {_format_statistics(box_loss.get('box_iou', {}))}")
-        lines.append(f"  L1 on (cx,cy,w,h)  {_format_statistics(box_loss.get('l1_norm_xywh', {}))}")
-        lines.append(
-            f"  centre dist (px)   {_format_statistics(box_loss.get('center_distance_px', {}))}"
-        )
-        channel: dict[str, dict[str, float]] = draw_summary.get("channel_scores", {})
-        lines.append(f"  channel Dice       {_format_statistics(channel.get('dice', {}))}")
-        lines.append(f"  channel IoU        {_format_statistics(channel.get('iou', {}))}")
-        outcomes: dict[str, int] = draw_summary.get("outcomes", {})
-        lines.append(
-            f"  outcomes           gt={outcomes.get('ground_truth_boxes')} "
-            f"matched={outcomes.get('matched')} missed={outcomes.get('missed')} "
-            f"false_positives={outcomes.get('false_positives')}"
-        )
+        lines += _format_result_section(f"draw {draw}", draw_summary)
     aggregate: dict[str, Any] = summary.get("aggregate", {})
     aggregate_metrics: dict[str, float] | None = aggregate.get("detector_metrics")
     lines += [
         "-" * RULE_WIDTH,
-        "Aggregate across draws",
+        "Aggregate across draws (diagnostic)",
         "-" * RULE_WIDTH,
         f"  mAP@50             {_format_metric((aggregate_metrics or {}).get('mAP50'))}",
         f"  mAP@50-95          {_format_metric((aggregate_metrics or {}).get('mAP50_95'))}",

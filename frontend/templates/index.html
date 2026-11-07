@@ -75,9 +75,10 @@
       <input type="file" id="ground_truth" name="ground_truth" accept=".txt,text/plain">
     </div>
     <div class="field">
-      <label for="draws">Diffusion draws <span class="hint">Independent samples per upload; each draw is a
-      fresh chain, so several show the variation the model can place.</span></label>
-      <input type="number" id="draws" name="draws" value="1" min="1" max="{{ max_draws }}">
+      <label for="draws">Ensemble members (diffusion draws) <span class="hint">Independent chains per
+      upload. Their missing-component probabilities are averaged and thresholded at
+      {{ ensemble_threshold }}; each chain is also shown as a diagnostic.</span></label>
+      <input type="number" id="draws" name="draws" value="{{ default_draws }}" min="1" max="{{ max_draws }}">
     </div>
     <button type="submit">Generate and detect</button>
     <p class="note">Everything runs locally on this machine ({{ device }}). Uploads and outputs stay under

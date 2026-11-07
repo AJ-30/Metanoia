@@ -3,15 +3,16 @@
 ``mask_diffusion/runner.py`` is the training runner: it builds datasets, caches
 latents and steps a loss. This module is the other half of the package - the
 part an *evaluator* needs and nothing else. It loads a self-describing training
-checkpoint and exposes exactly three operations:
+checkpoint and exposes three operations:
 
 1. :meth:`MaskDiffusionSampler.encode_conditions` - push sample folders through
    the frozen floorplan and TV-free encoders, giving the two conditioning
    latents of every sample.
 2. :meth:`MaskDiffusionSampler.normalize_conditions` - standardize them with the
    statistics the checkpoint itself carries, so sampling matches the run.
-3. :meth:`MaskDiffusionSampler.generate_masks` - run the full reverse chain for
-   as many draws as asked and decode each draw into a class-id mask.
+3. :meth:`MaskDiffusionSampler.generate_channel_outputs` - run the full reverse
+   chain for as many draws as asked and decode each draw into both a class-id
+   mask and the missing component's probability map.
 
 Why a separate module rather than a method on the runner:
 
@@ -22,15 +23,17 @@ Why a separate module rather than a method on the runner:
 * Nothing here writes, caches or trains, so importing it cannot perturb the
   training path, and the training runner does not import it back.
 
-Only the *decode* half of the frozen target VAE is used for scoring; the
-generated mask is the argmax over channels, so a pixel belongs to the missing
-component exactly when the decoder assigns that channel the highest logit - the
-same rule the training grids use, never a tuned threshold.
+Only the *decode* half of the frozen target VAE is used for scoring. A single
+draw is reduced to class ids with an argmax over channels, the same rule the
+training grids use. An ensemble instead averages the per-draw softmax
+probabilities of the missing component and thresholds that average, so four
+independent chains can vote on every pixel before the mask is built.
 """
 
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -69,6 +72,96 @@ MASK_RESAMPLE: Image.Resampling = Image.Resampling.NEAREST
 # number works; it only has to keep a chunk's seed far from a neighbouring
 # chunk's so two chunks cannot share a noise stream by accident.
 CHUNK_SEED_STRIDE: int = 1_000_003
+
+
+@dataclass(frozen=True)
+class ChannelGeneration:
+    """Both decodes of one reverse-chain batch, computed from a single pass.
+
+    Attributes:
+        ids (torch.Tensor): int64 ``(N * num_draws, S, S)`` class ids, the
+            argmax over the target decoder's channels. This is the per-draw
+            mask rule the training grids use.
+        probabilities (torch.Tensor): float32 ``(N * num_draws, S, S)`` softmax
+            probability of the missing component's channel. Ensemble callers
+            average these maps across draws before thresholding them.
+    """
+
+    ids: torch.Tensor
+    probabilities: torch.Tensor
+
+
+def average_probability_maps(
+    probabilities: torch.Tensor, num_draws: int
+) -> torch.Tensor:
+    """Average one sample's draw probability maps into a single map.
+
+    Args:
+        probabilities (torch.Tensor): ``(N * num_draws, S, S)`` probability maps
+            laid out sample-major/draw-minor, as
+            :meth:`MaskDiffusionSampler.generate_channel_outputs` returns them.
+        num_draws (int): Number of draws per sample, ``>= 1``.
+
+    Returns:
+        torch.Tensor: ``(N, S, S)`` arithmetic mean of each sample's draws.
+
+    Raises:
+        ValueError: If ``num_draws`` is below one, or the leading dimension is
+            not a multiple of it.
+    """
+    if int(num_draws) < 1:
+        raise ValueError(f"num_draws must be >= 1, got {num_draws}.")
+    if probabilities.shape[0] % int(num_draws) != 0:
+        raise ValueError(
+            f"Expected a multiple of num_draws={num_draws} probability maps, "
+            f"got {probabilities.shape[0]}."
+        )
+    spatial: tuple[int, ...] = tuple(probabilities.shape[1:])
+    reshaped: torch.Tensor = probabilities.reshape(-1, int(num_draws), *spatial)
+    return reshaped.mean(dim=1)
+
+
+def threshold_probability_maps(
+    probabilities: torch.Tensor, threshold: float
+) -> torch.Tensor:
+    """Turn missing-component probabilities into a boolean mask.
+
+    Args:
+        probabilities (torch.Tensor): ``(N, S, S)`` (or any shape) probability
+            map of the missing component.
+        threshold (float): Inclusive probability threshold, strictly between
+            zero and one.
+
+    Returns:
+        torch.Tensor: Bool tensor of the same shape, true where the probability
+            is at least ``threshold``.
+
+    Raises:
+        ValueError: If ``threshold`` is outside ``(0, 1)``.
+    """
+    if not 0.0 < float(threshold) < 1.0:
+        raise ValueError(
+            f"probability threshold must be strictly between 0 and 1, got {threshold}."
+        )
+    return probabilities >= float(threshold)
+
+
+def ensemble_channel_masks(
+    probabilities: torch.Tensor, num_draws: int, threshold: float
+) -> torch.Tensor:
+    """Average per-draw probabilities and threshold the average.
+
+    Args:
+        probabilities (torch.Tensor): ``(N * num_draws, S, S)`` probability maps
+            in sample-major/draw-minor order.
+        num_draws (int): Number of draws per sample, ``>= 1``.
+        threshold (float): Inclusive probability threshold, in ``(0, 1)``.
+
+    Returns:
+        torch.Tensor: Bool ``(N, S, S)`` ensemble mask.
+    """
+    averaged: torch.Tensor = average_probability_maps(probabilities, num_draws)
+    return threshold_probability_maps(averaged, threshold)
 
 
 def load_class_ids(mask_path: Path, image_size: int) -> torch.Tensor:
@@ -550,21 +643,26 @@ class MaskDiffusionSampler:
     # Sampling
     # ------------------------------------------------------------------
     @torch.no_grad()
-    def generate_masks(
+    def generate_channel_outputs(
         self,
         conditions: dict[str, torch.Tensor],
         num_draws: int,
         seed: int,
         chunk_size: int = 64,
         chain_offset: int = 0,
-    ) -> torch.Tensor:
-        """Run the full reverse chain for every sample and draw, then decode.
+    ) -> ChannelGeneration:
+        """Run the full reverse chain and decode ids plus missing-channel probability.
 
         The whole chain is walked (``num_timesteps`` steps, no truncation), so
         this is the honest end-to-end generation rather than the truncated
         training objective. Each chunk's RNG is seeded from ``seed`` and the
         chunk's absolute chain index, so a rerun with the same arguments
         reproduces the same pixels.
+
+        The target decoder is run once per chunk. Its logits produce both the
+        argmax class ids used by the per-draw diagnostics and the softmax
+        probability of the missing component used by the ensemble, so a caller
+        never pays for a second reverse chain to get both.
 
         Args:
             conditions (dict[str, torch.Tensor]): Output of
@@ -581,10 +679,10 @@ class MaskDiffusionSampler:
                 the block's start so two blocks never share a noise stream.
 
         Returns:
-            torch.Tensor: int64 ``(N * num_draws, S, S)`` decoded class ids in
+            ChannelGeneration: ``ids`` int64 ``(N * num_draws, S, S)`` and
+                ``probabilities`` float32 ``(N * num_draws, S, S)``, both in
                 sample-major/draw-minor order, i.e. draw ``d`` of every sample
-                is the slice ``[d::num_draws]`` - the same convention
-                ``MaskDiffusionRunner.sample_and_score`` uses.
+                is the slice ``[d::num_draws]``.
 
         Raises:
             ValueError: If ``num_draws`` or ``chunk_size`` is below one.
@@ -600,6 +698,7 @@ class MaskDiffusionSampler:
         )
         total_chains: int = floorplan.shape[0]
         decoded_ids: list[torch.Tensor] = []
+        probabilities: list[torch.Tensor] = []
         for start in range(0, total_chains, chunk_size):
             stop: int = min(start + chunk_size, total_chains)
             floor_chunk: torch.Tensor = floorplan[start:stop].to(self.device)
@@ -610,10 +709,59 @@ class MaskDiffusionSampler:
             sampled: torch.Tensor = self.model.sample_conditional(
                 floor_chunk, partial_chunk, generator
             )
-            decoded_ids.append(self.decode_to_ids(sampled).cpu())
+            logits: torch.Tensor = self.decode_to_logits(sampled)
+            decoded_ids.append(logits.argmax(dim=1).cpu())
+            # Softmax over the class axis turns the one-vs-rest logits into a
+            # distribution over classes; the missing channel's slice is the
+            # probability every ensemble member votes with.
+            probabilities.append(
+                torch.softmax(logits.float(), dim=1)[:, self.missing_channel].cpu()
+            )
         if not decoded_ids:
             raise ValueError("No chains were generated.")
-        return torch.cat(decoded_ids)
+        return ChannelGeneration(
+            ids=torch.cat(decoded_ids),
+            probabilities=torch.cat(probabilities),
+        )
+
+    @torch.no_grad()
+    def generate_masks(
+        self,
+        conditions: dict[str, torch.Tensor],
+        num_draws: int,
+        seed: int,
+        chunk_size: int = 64,
+        chain_offset: int = 0,
+    ) -> torch.Tensor:
+        """Run the full reverse chain and return decoded class ids only.
+
+        Args:
+            conditions (dict[str, torch.Tensor]): Normalized conditions.
+            num_draws (int): Independent draws per sample.
+            seed (int): Base seed, see :meth:`generate_channel_outputs`.
+            chunk_size (int): Chains per reverse-chain call.
+            chain_offset (int): Absolute chain index of the first row.
+
+        Returns:
+            torch.Tensor: int64 ``(N * num_draws, S, S)`` decoded class ids.
+        """
+        return self.generate_channel_outputs(
+            conditions, num_draws, seed, chunk_size, chain_offset
+        ).ids
+
+    @torch.no_grad()
+    def decode_to_logits(self, latents: torch.Tensor) -> torch.Tensor:
+        """Decode standardized latents into per-class logits.
+
+        Args:
+            latents (torch.Tensor): Standardized ``(B, LATENT_DIM)`` latents on
+                the model device, as returned by the reverse chain.
+
+        Returns:
+            torch.Tensor: ``(B, C, S, S)`` unnormalized logits of the target
+                decoder.
+        """
+        return self.frozen_vaes["target"].decode(self.denormalize_latents(latents))
 
     @torch.no_grad()
     def decode_to_ids(self, latents: torch.Tensor) -> torch.Tensor:
@@ -627,10 +775,7 @@ class MaskDiffusionSampler:
             torch.Tensor: int64 ``(B, S, S)`` class ids, one argmax over the
                 target decoder's channels per pixel.
         """
-        logits: torch.Tensor = self.frozen_vaes["target"].decode(
-            self.denormalize_latents(latents)
-        )
-        return logits.argmax(dim=1)
+        return self.decode_to_logits(latents).argmax(dim=1)
 
     def denormalize_latents(self, latents: torch.Tensor) -> torch.Tensor:
         """Invert target standardization before the frozen decoder is applied.
@@ -648,6 +793,32 @@ class MaskDiffusionSampler:
             latents.device
         )
 
+    @torch.no_grad()
+    def generate_channel_probabilities(
+        self,
+        conditions: dict[str, torch.Tensor],
+        num_draws: int,
+        seed: int,
+        chunk_size: int = 64,
+        chain_offset: int = 0,
+    ) -> torch.Tensor:
+        """Return the missing component's softmax probability per chain.
+
+        Args:
+            conditions (dict[str, torch.Tensor]): Normalized conditions.
+            num_draws (int): Independent draws per sample.
+            seed (int): Base seed, see :meth:`generate_channel_outputs`.
+            chunk_size (int): Chains per reverse-chain call.
+            chain_offset (int): Absolute chain index of the first row.
+
+        Returns:
+            torch.Tensor: float32 ``(N * num_draws, S, S)`` probability maps.
+        """
+        return self.generate_channel_outputs(
+            conditions, num_draws, seed, chunk_size, chain_offset
+        ).probabilities
+
+    @torch.no_grad()
     def generate_channel_masks(
         self,
         conditions: dict[str, torch.Tensor],
@@ -661,14 +832,15 @@ class MaskDiffusionSampler:
         Args:
             conditions (dict[str, torch.Tensor]): Normalized conditions.
             num_draws (int): Independent draws per sample.
-            seed (int): Base seed, see :meth:`generate_masks`.
+            seed (int): Base seed, see :meth:`generate_channel_outputs`.
             chunk_size (int): Chains per reverse-chain call.
             chain_offset (int): Absolute chain index of the first row.
 
         Returns:
             torch.Tensor: Bool ``(N * num_draws, S, S)``, true where the decoded
                 argmax equals the missing component's channel. This is the
-                generated component the evaluator composites and scores.
+                per-draw rule; an ensemble should use
+                :func:`ensemble_channel_masks` instead.
         """
         ids: torch.Tensor = self.generate_masks(
             conditions, num_draws, seed, chunk_size, chain_offset

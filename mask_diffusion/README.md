@@ -342,7 +342,7 @@ stage that judges a run through YOLO) needs to encode conditions, sample and
 decode, and it needs nothing else - so that lives in a module of its own:
 
 ```python
-from mask_diffusion.inference import MaskDiffusionSampler
+from mask_diffusion.inference import MaskDiffusionSampler, ensemble_channel_masks
 
 sampler = MaskDiffusionSampler(
     checkpoint_path="./mask_diffusion/models/mask_diffusion_<run>_epoch_<N>.pt",
@@ -353,8 +353,19 @@ sampler = MaskDiffusionSampler(
 )
 
 conditions = sampler.normalize_conditions(sampler.encode_conditions(sample_dirs))
-masks = sampler.generate_channel_masks(conditions, num_draws=4, seed=1234)
+generation = sampler.generate_channel_outputs(conditions, num_draws=4, seed=1234)
+# Per-draw argmax masks, and the softmax probability of the missing component:
+draw_masks = generation.ids == sampler.missing_channel
+ensemble = ensemble_channel_masks(
+    generation.probabilities, num_draws=4, threshold=0.5
+)
 ```
+
+`generate_channel_outputs` decodes once per chunk and returns both outputs, so an
+evaluation never pays for a second reverse chain just to get probabilities.
+`ensemble_channel_masks` averages the four probability maps per pixel and then
+thresholds the average; the per-draw argmax masks remain available for
+diagnostics.
 
 `MaskDiffusionSampler` loads the artifacts the checkpoint itself records - the
 denoiser's architecture and weights, the latent statistics, the resolved

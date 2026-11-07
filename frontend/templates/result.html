@@ -57,8 +57,9 @@
   <p><a href="/?component={{ component }}">&larr; upload another</a></p>
   <h1>Generated {{ component_label }} &mdash; detector output{% if ground_truth_uploaded %} and ground-truth comparison{% endif %}</h1>
   <p class="sub">
-    Run <span class="tag">{{ request_id }}</span> · {{ draws }} draw(s) ·
-    generated pixels in draw 0: {{ generated_pixels }} · {{ elapsed_seconds|round(1) }}s ·
+    Run <span class="tag">{{ request_id }}</span> · {{ draws }} chain(s) ensembled ·
+    averaged probability threshold {{ ensemble_threshold }} ·
+    generated pixels in the ensemble: {{ generated_pixels }} · {{ elapsed_seconds|round(1) }}s ·
     seed {{ seed }}
     {% if ground_truth_uploaded %}· {{ ground_truth_boxes }} uploaded ground-truth box(es){% endif %}
   </p>
@@ -66,7 +67,7 @@
   {% if ground_truth_uploaded %}
   <p class="legend">
     <span><span class="swatch gt"></span>green = uploaded ground truth</span>
-    <span><span class="swatch pred"></span>red = this draw's YOLO predictions</span>
+    <span><span class="swatch pred"></span>red = this result's YOLO predictions</span>
     <span>matched at IoU &ge; {{ match_iou }}</span>
     <span>confidence threshold {{ conf }}</span>
   </p>
@@ -77,7 +78,11 @@
   {%- endmacro %}
 
   {% for draw in detections %}
-  <h2>Draw {{ draw.draw }}</h2>
+  {% if draw.is_ensemble %}
+  <h2>Ensemble ({{ draw.members }} chains)</h2>
+  {% else %}
+  <h2>Draw {{ draw.draw }} (diagnostic)</h2>
+  {% endif %}
   <div class="row">
     <div class="cell">
       <img src="/outputs/{{ request_id }}/{{ panels.floorplan }}" alt="Uploaded floorplan">
@@ -88,24 +93,24 @@
       <div class="cap">2 · layout the generator was conditioned on</div>
     </div>
     <div class="cell">
-      <img src="/outputs/{{ request_id }}/{{ panels['component_draw_%d'|format(draw.draw)] }}"
+      <img src="/outputs/{{ request_id }}/{{ panels['component_' ~ draw.panel_suffix] }}"
            alt="Generated {{ component }}">
       <div class="cap">3 · generated {{ component }} (its own channel)</div>
     </div>
     <div class="cell">
-      <img src="/outputs/{{ request_id }}/{{ panels['composite_draw_%d'|format(draw.draw)] }}"
+      <img src="/outputs/{{ request_id }}/{{ panels['composite_' ~ draw.panel_suffix] }}"
            alt="Composite">
       <div class="cap">4 · composite before detection</div>
     </div>
     {% if ground_truth_uploaded %}
     <div class="cell">
-      <img src="/outputs/{{ request_id }}/{{ panels['ground_truth_draw_%d'|format(draw.draw)] }}"
+      <img src="/outputs/{{ request_id }}/{{ panels['ground_truth_' ~ draw.panel_suffix] }}"
            alt="Ground-truth overlay">
       <div class="cap">5 · ground truth only (green overlay)</div>
     </div>
     {% endif %}
     <div class="cell">
-      <img src="/outputs/{{ request_id }}/{{ panels['boxes_draw_%d'|format(draw.draw)] }}"
+      <img src="/outputs/{{ request_id }}/{{ panels['boxes_' ~ draw.panel_suffix] }}"
            alt="YOLO detections{% if ground_truth_uploaded %} and ground truth{% endif %}">
       <div class="cap">{% if ground_truth_uploaded %}6 · ground truth (green) vs prediction (red){% else %}5 · what YOLO drew (red boxes, label + confidence){% endif %}</div>
     </div>
@@ -225,7 +230,7 @@
   </div>
   {% endif %}
 
-  <h3>All predictions in this draw</h3>
+  <h3>All predictions in this result</h3>
   <table>
     <thead><tr><th>Detected</th><th>Confidence</th><th>center (cx, cy)</th><th>size (w, h)</th></tr></thead>
     <tbody>
@@ -238,7 +243,7 @@
       </tr>
       {% else %}
       <tr><td colspan="4" class="empty">No {{ component_label }} above the confidence threshold
-        ({{ conf }}) &mdash; the detector did not find the generated component in this draw.</td></tr>
+        ({{ conf }}) &mdash; the detector did not find the generated component in this result.</td></tr>
       {% endfor %}
     </tbody>
   </table>

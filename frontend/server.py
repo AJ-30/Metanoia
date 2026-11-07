@@ -130,6 +130,10 @@ def create_app(mode: str = "debug") -> Flask:
             components=components,
             selected_component=selected,
             max_draws=int(hyperparams.MAX_DRAWS),
+            default_draws=int(hyperparams.DEFAULT_DRAWS),
+            ensemble_threshold=float(
+                hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD
+            ),
             device=str(stage_config.DEVICE),
             error=request.args.get("error"),
         )
@@ -232,6 +236,7 @@ def create_app(mode: str = "debug") -> Flask:
             component=payload["component"],
             component_label=payload["component_label"],
             draws=payload["draws"],
+            ensemble_threshold=payload["ensemble_probability_threshold"],
             generated_pixels=payload["generated_pixels"],
             elapsed_seconds=payload["elapsed_seconds"],
             ground_truth_uploaded=payload["ground_truth_uploaded"],

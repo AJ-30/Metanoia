@@ -7,10 +7,15 @@ floor-plan class-id mask of a plan that is missing it, and the page shows
 1. the floorplan you uploaded, rendered in the layout's colours;
 2. the layout the generator was conditioned on (your furniture, with the missing
    component folded into the background exactly as the model was trained);
-3. the component the diffusion generated, in its own colour, on its own;
+3. the ensemble component the diffusion generated, in its own colour, on its own;
 4. that component placed into your layout;
 5. **what YOLO makes of it** — the same composite with the detector's bounding
    boxes drawn, plus a table of class, confidence and box coordinates.
+
+The primary result is an ensemble: `DEFAULT_DRAWS` independent chains are
+generated, their missing-component softmax probabilities are averaged per pixel,
+and the average is thresholded at `ENSEMBLE_PROBABILITY_THRESHOLD`. Every chain
+is also shown as a per-draw diagnostic section.
 
 If you also upload the layout's ground-truth YOLO `labels.txt`, the page draws
 the ground truth in **green** and the predictions in **red**, adds a ground-truth
@@ -63,19 +68,23 @@ range instead of silently clamping it onto a neighbouring class. A malformed
 label file gets the same treatment: the line number and the problem are shown on
 the form, and the diffusion chain never starts.
 
-**Diffusion draws**: `1` is the default; up to `MAX_DRAWS` (4) renders one panel
-set per draw, so you can see the variation the model has learned. Each draw is a
-full 1000-step reverse chain, which is why the count is bounded.
+**Ensemble members (diffusion draws)**: `4` is the default; up to `MAX_DRAWS`
+(4) independent chains are averaged into the primary result. Each chain is a
+full 1000-step reverse chain, which is why the count is bounded, and every chain
+still gets its own diagnostic panel set below the ensemble.
 
 ## 3. Reading the result page
 
-* The first four panels are the floorplan, the conditioned layout, the generated
-  component and the untouched composite.
+* The page starts with the **ensemble** result, then repeats the same panel
+  layout for every draw as a diagnostic. The first four panels are the
+  floorplan, the conditioned layout, the generated component and the untouched
+  composite.
 * With ground-truth labels, panel 5 is the composite with **green** ground-truth
   boxes only, and panel 6 is the same composite with ground truth in green and
   the detector's predictions in **red**. Without labels there is no panel 5 and
   panel 6 shows red predictions only.
-* The metrics block is computed per draw on the 256×256 composite. A prediction
+* The metrics block is computed per result on the 256×256 composite; the
+  ensemble's metrics come first, and each draw's metrics follow. A prediction
   claims a ground-truth box when their IoU is at least `MATCH_IOU_THRESHOLD`
   (`frontend/hyperparameters.toml`, `0.5` by default); predictions are taken in
   confidence order and each box can be claimed once. TP is a match, FP is an
@@ -101,7 +110,7 @@ full 1000-step reverse chain, which is why the count is bounded.
 |---|---|
 | `server.py` | Flask routes: form, upload handler, image servers, run pruning |
 | `settings.py` | Per-component context building and caching (one load per component) |
-| `pipeline.py` | Upload → validate → encode → sample → decode → composite → detect → compare |
+| `pipeline.py` | Upload → validate → encode → sample → average probabilities → threshold → composite → detect → compare |
 | `comparison.py` | Parse uploaded YOLO labels, match them to predictions, compute IoU/rates/localization |
 | `../components.toml` | Component → diffusion checkpoint + `missing_yolo` detector, shared with the evaluator |
 | `templates/index.html` | The upload form |
@@ -117,8 +126,8 @@ this stage owns are the upload handling and the two pages.
 ## 5. Configuration
 
 `config.toml` picks the default component, the directories and the device;
-`hyperparameters.toml` picks the numbers (draws, chunk, alpha, confidence, size
-caps, match IoU, label-file guards, cached runs). The component -> models pairing
+`hyperparameters.toml` picks the numbers (draws, ensemble threshold, chunk,
+alpha, confidence, size caps, match IoU, label-file guards, cached runs). The component -> models pairing
 is **not** declared here: `components.toml` at the repository root is the single
 source the evaluator and the frontend both read, so the two stages can never
 disagree about which generator and detector belong together. To add a component,

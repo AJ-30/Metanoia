@@ -12,8 +12,10 @@ sample, every column is one stage of the pipeline:
 
 1. **conditioned floorplan overlay** - the real furniture with the missing
    component erased, i.e. exactly what the model was conditioned on;
-2. **diffusion reconstruction** - the same scene with the generated component
-   composited in, i.e. the image the detector is asked to judge;
+2. **diffusion reconstruction** - the same scene with the ensemble-generated
+   component composited in, i.e. the image the detector is asked to judge. The
+   ensemble averages the missing-component probability of
+   `DRAWS_PER_SAMPLE` chains and thresholds the average;
 3. **YOLO vs ground truth** - the detector's boxes in red and the dataset's
    ``labels.txt`` boxes in green, drawn on the reconstruction;
 4. **ground truth** - the real layout with the missing component still present.
@@ -85,7 +87,12 @@ from evaluator.yolo_eval import (  # noqa: E402
 from helpers.config import load_config  # noqa: E402
 from helpers.hyperparams import load_hyperparams  # noqa: E402
 from helpers.logger import setup_logger  # noqa: E402
-from mask_diffusion.inference import MaskDiffusionSampler, default_device  # noqa: E402
+from mask_diffusion.inference import (  # noqa: E402
+    ChannelGeneration,
+    MaskDiffusionSampler,
+    default_device,
+    ensemble_channel_masks,
+)
 from mask_diffusion.runner import set_reproducibility_seed  # noqa: E402
 from YOLO.dataset import SampleFolder, list_sample_folders  # noqa: E402
 
@@ -199,7 +206,8 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Render the qualitative full-pipeline report: conditioned layout, "
-            "diffusion reconstruction, YOLO-vs-GT boxes and ground truth."
+            "ensemble diffusion reconstruction, YOLO-vs-GT boxes and ground "
+            "truth."
         )
     )
     parser.add_argument(
@@ -461,8 +469,9 @@ class ComponentReportRenderer:
     """Render one component's contact sheet from a frozen sampler and detector.
 
     The renderer owns no training state: it encodes the five sample folders,
-    walks one reverse chain, composites the generated component, asks the
-    detector, and writes the figure plus the individual panels.
+    walks the requested reverse chains, ensembles their missing-component
+    probabilities, composites the generated component, asks the detector, and
+    writes the figure plus the individual panels.
 
     Args:
         sampler (MaskDiffusionSampler): Frozen component generator.
@@ -836,8 +845,9 @@ def write_readme(output_root: Path, summary: dict[str, Any]) -> Path:
         "",
         "1. **Missing component (conditioned floorplan)** - real furniture with",
         "   the missing component erased; what the diffusion model was given.",
-        "2. **Diffusion reconstruction** - the same scene with the generated",
-        "   component composited in; the image YOLO was asked to judge.",
+        "2. **Ensemble diffusion reconstruction** - the same scene with the",
+        "   ensemble-generated component composited in; the image YOLO was asked",
+        "   to judge.",
         "3. **YOLO (red) vs GT (green) labels.txt boxes** - detector boxes in",
         "   red, dataset ground-truth boxes in green.",
         "4. **Ground truth** - the real layout, missing component included.",
@@ -847,6 +857,9 @@ def write_readme(output_root: Path, summary: dict[str, Any]) -> Path:
         "`labels.txt` contains every component being rendered.",
         "",
         f"- Seed: `{summary['seed']}`",
+        f"- Ensemble members: `{summary['ensemble_members']}`",
+        f"- Ensemble probability threshold: "
+        f"`{summary['ensemble_probability_threshold']}`",
         f"- Samples per component: `{summary['samples_per_component']}`",
         f"- Validation split: `{summary['validation_dir']}`",
         "",
@@ -915,12 +928,18 @@ def render_component(
             sample_dirs, int(hyperparams.ENCODE_BATCH_SIZE)
         )
     )
-    generated_masks: torch.Tensor = sampler.generate_channel_masks(
+    ensemble_members: int = int(hyperparams.DRAWS_PER_SAMPLE)
+    generation: ChannelGeneration = sampler.generate_channel_outputs(
         conditions,
-        num_draws=1,
+        num_draws=ensemble_members,
         seed=int(hyperparams.SEED),
         chunk_size=int(hyperparams.GENERATION_CHUNK),
         chain_offset=0,
+    )
+    generated_masks: torch.Tensor = ensemble_channel_masks(
+        generation.probabilities,
+        ensemble_members,
+        float(hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD),
     )
     renderer = ComponentReportRenderer(
         sampler=sampler,
@@ -1022,6 +1041,10 @@ def run_report(
 
     summary: dict[str, Any] = {
         "seed": int(hyperparams.SEED),
+        "ensemble_members": int(hyperparams.DRAWS_PER_SAMPLE),
+        "ensemble_probability_threshold": float(
+            hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD
+        ),
         "samples_per_component": len(chosen),
         "validation_dir": str(config.VALIDATION_IMAGES_DIR),
         "elapsed_seconds": time.time() - started,

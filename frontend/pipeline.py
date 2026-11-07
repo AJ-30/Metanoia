@@ -5,8 +5,10 @@ travels, so nothing about the interface can quietly change the result:
 
 1. the two uploads are validated as class-id masks of the right range and are
    re-saved under the exact filenames the frozen encoders read;
-2. the sampler encodes both conditions, samples the missing component and decodes
-   it into a class-id mask (argmax over channels, no tuned threshold);
+2. the sampler encodes both conditions, samples the missing component with every
+   requested chain and decodes each chain into a class-id mask; the primary mask
+   is the per-pixel average of the chains' missing-component softmax
+   probabilities, thresholded once;
 3. the composite is built - floorplan, real furniture minus the missing
    component, generated component on top - and the detector is run on it;
 4. an optional uploaded ``labels.txt`` is matched against the detector's boxes,
@@ -49,17 +51,21 @@ from frontend.comparison import (
 )
 from mask_diffusion.inference import (
     ACCEPTED_MASK_IMAGE_MODES,
+    ChannelGeneration,
     MaskDiffusionSampler,
+    average_probability_maps,
     load_class_ids,
+    threshold_probability_maps,
 )
 
 # Filenames of the panels the result page shows.
 FLOORPLAN_PANEL: str = "floorplan.png"
 CONDITIONED_PANEL: str = "conditioned.png"
-COMPONENT_PANEL: str = "component_draw_{draw}.png"
-COMPOSITE_PANEL: str = "composite_draw_{draw}.png"
-GT_OVERLAY_PANEL: str = "composite_draw_{draw}_ground_truth.png"
-ANNOTATED_PANEL: str = "composite_draw_{draw}_boxes.png"
+COMPONENT_PANEL: str = "component_{suffix}.png"
+COMPOSITE_PANEL: str = "composite_{suffix}.png"
+GT_OVERLAY_PANEL: str = "composite_{suffix}_ground_truth.png"
+ANNOTATED_PANEL: str = "composite_{suffix}_boxes.png"
+ENSEMBLE_SUFFIX: str = "ensemble"
 
 # Class id of the furniture background, i.e. an empty layout.
 BLANK_CLASS_ID: int = 0
@@ -167,17 +173,18 @@ def stage_upload(
         floorplan_path (Path): Uploaded floorplan segmentation mask.
         furniture_path (Path | None): Uploaded furniture segmentation mask, or
             ``None`` to generate the component into an empty layout.
-        draws (int | None): Number of independent diffusion chains, or ``None``
-            to use the stage default. Clamped to ``1..MAX_DRAWS``.
+        draws (int | None): Number of independent diffusion chains to ensemble,
+            or ``None`` to use the stage default. Clamped to
+            ``1..MAX_DRAWS``.
         ground_truth_path (Path | None): Optional uploaded YOLO ``labels.txt``
             describing the component in the composite, or ``None`` when the
             user did not upload one. The file is validated before any costly
             generation starts.
 
     Returns:
-        dict[str, Any]: The result payload: panel filenames, the per-draw
-        detections and comparisons, the component identity, timings and the
-        generated size.
+        dict[str, Any]: The result payload: panel filenames, the ensemble and
+        per-draw detections/comparisons, the component identity, timings, the
+        ensemble threshold and the ensemble-generated size.
 
     Raises:
         ValueError: If a mask is not a class-id mask in the expected range, or
@@ -212,12 +219,19 @@ def stage_upload(
     conditions: dict[str, Any] = sampler.normalize_conditions(
         sampler.encode_conditions([sample_dir], int(hyperparams.ENCODE_BATCH_SIZE))
     )
-    masks: Any = sampler.generate_channel_masks(
+    generation: ChannelGeneration = sampler.generate_channel_outputs(
         conditions,
         num_draws=draws,
         seed=int(hyperparams.SEED),
         chunk_size=int(hyperparams.GENERATION_CHUNK),
         chain_offset=0,
+    )
+    draw_masks: torch.Tensor = generation.ids == sampler.missing_channel
+    ensemble_probability: torch.Tensor = average_probability_maps(
+        generation.probabilities, draws
+    )
+    ensemble_mask: torch.Tensor = threshold_probability_maps(
+        ensemble_probability, float(hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD)
     )
 
     output_root: Path = Path(str(context.config.OUTPUT_DIRECTORY)) / request_id
@@ -250,83 +264,39 @@ def stage_upload(
     )
     panels["conditioned"] = CONDITIONED_PANEL
 
-    detections: list[dict[str, Any]] = []
+    # The ensemble is the primary result: one mask built from the average
+    # missing-component probability of every chain. The per-draw panels stay as
+    # diagnostics, so the page still shows what each individual chain produced.
+    detections: list[dict[str, Any]] = [
+        _render_result(
+            context=context,
+            output_root=output_root,
+            conditions=conditions,
+            generated=ensemble_mask[0:1],
+            suffix=ENSEMBLE_SUFFIX,
+            panels=panels,
+            ground_truth=ground_truth,
+            ground_truth_path=ground_truth_path,
+            is_ensemble=True,
+            draw=None,
+            members=draws,
+        )
+    ]
     for draw in range(draws):
-        generated = masks[draw : draw + 1]
-        # Panel 3: the component on its own, in its own colour.
-        panel_3: str = COMPONENT_PANEL.format(draw=draw)
-        render_component_image(generated, sampler).save(
-            str(output_root / panel_3)
-        )
-        panels[f"component_draw_{draw}"] = panel_3
-
-        # Panel 4: the composite the detector judges, then the same image with
-        # the uploaded ground truth only, then ground truth and predictions.
-        composite: Image.Image = build_composite(
-            conditions["floorplan_ids"][0:1],
-            conditions["furniture_ids"][0:1],
-            generated,
-            sampler,
-            float(hyperparams.OVERLAY_ALPHA),
-            float(hyperparams.OVERLAY_ALPHA),
-        )
-        panel_4: str = COMPOSITE_PANEL.format(draw=draw)
-        panel_4_boxes: str = ANNOTATED_PANEL.format(draw=draw)
-        composite.convert("RGB").save(str(output_root / panel_4))
-        panels[f"composite_draw_{draw}"] = panel_4
-        found: list[tuple[float, float, float, float, int, float]] = (
-            predict_component_boxes(
-                model=context.model,
-                image_path=output_root / panel_4,
-                confidence=float(hyperparams.YOLO_CONF),
-                image_size=int(hyperparams.YOLO_IMGSZ),
-                max_detections=int(hyperparams.YOLO_MAX_BOXES),
-                class_id=ontology.yolo_class_id,
-            )
-        )
-        comparison: DetectionComparison | None = None
-        if ground_truth_path is not None:
-            panel_4_gt: str = GT_OVERLAY_PANEL.format(draw=draw)
-            annotate_composite(
-                composite,
-                ground_truth,
-                [],
-                context.class_names,
-                ontology.yolo_class_id,
-            ).save(str(output_root / panel_4_gt))
-            panels[f"ground_truth_draw_{draw}"] = panel_4_gt
-            comparison = compare_boxes(
-                ground_truth,
-                pixel_boxes_to_predictions(
-                    found, ontology.yolo_class_id, image_size
-                ),
-                iou_threshold=float(hyperparams.MATCH_IOU_THRESHOLD),
-                image_size=image_size,
-            )
-        annotate_composite(
-            composite,
-            ground_truth,
-            found,
-            context.class_names,
-            ontology.yolo_class_id,
-        ).save(str(output_root / panel_4_boxes))
-        panels[f"boxes_draw_{draw}"] = panel_4_boxes
         detections.append(
-            {
-                "draw": draw,
-                "found": [
-                    {
-                        "class": context.class_names[int(box[4])],
-                        "confidence": float(box[5]),
-                        "cx": (float(box[0]) + float(box[2])) / 2.0 / image_size,
-                        "cy": (float(box[1]) + float(box[3])) / 2.0 / image_size,
-                        "w": (float(box[2]) - float(box[0])) / image_size,
-                        "h": (float(box[3]) - float(box[1])) / image_size,
-                    }
-                    for box in found
-                ],
-                "comparison": comparison,
-            }
+            _render_result(
+                context=context,
+                output_root=output_root,
+                conditions=conditions,
+                generated=draw_masks[draw : draw + 1],
+                suffix=f"draw_{draw}",
+                panels=panels,
+                ground_truth=ground_truth,
+                ground_truth_path=ground_truth_path,
+                is_ensemble=False,
+                draw=draw,
+                members=None,
+            )
         )
 
     return {
@@ -336,11 +306,124 @@ def stage_upload(
         "component": ontology.name,
         "component_label": context.class_names[ontology.yolo_class_id],
         "draws": draws,
+        "ensemble_probability_threshold": float(
+            hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD
+        ),
         "elapsed_seconds": time.time() - started,
         "furniture_uploaded": furniture_path is not None,
         "ground_truth_uploaded": ground_truth_path is not None,
         "ground_truth_boxes": len(ground_truth),
-        "generated_pixels": int(masks[0].sum()),
+        "generated_pixels": int(ensemble_mask[0].sum()),
+    }
+
+
+def _render_result(
+    context: Any,
+    output_root: Path,
+    conditions: dict[str, Any],
+    generated: torch.Tensor,
+    suffix: str,
+    panels: dict[str, str],
+    ground_truth: list[Box],
+    ground_truth_path: Path | None,
+    is_ensemble: bool,
+    draw: int | None,
+    members: int | None,
+) -> dict[str, Any]:
+    """Render, detect and score one result (a draw or the ensemble).
+
+    Args:
+        context (Any): The cached frontend context.
+        output_root (Path): Request output directory.
+        conditions (dict[str, Any]): Normalized conditions of the upload.
+        generated (torch.Tensor): ``(1, H, W)`` component mask to composite.
+        suffix (str): Panel filename suffix, ``"ensemble"`` or ``"draw_<d>"``.
+        panels (dict[str, str]): Panel filename map to extend in place.
+        ground_truth (list[Box]): Parsed uploaded ground-truth boxes.
+        ground_truth_path (Path | None): Uploaded labels path, or ``None``.
+        is_ensemble (bool): Whether this result is the ensemble.
+        draw (int | None): Draw index, or ``None`` for the ensemble.
+        members (int | None): Number of ensemble members, or ``None``.
+
+    Returns:
+        dict[str, Any]: Detection payload for the result page.
+    """
+    sampler: MaskDiffusionSampler = context.sampler
+    hyperparams: SimpleNamespace = context.hyperparams
+    ontology: ComponentOntology = context.ontology
+    image_size: int = sampler.image_size
+
+    # Panel 3: the component on its own, in its own colour.
+    panel_3: str = COMPONENT_PANEL.format(suffix=suffix)
+    render_component_image(generated, sampler).save(str(output_root / panel_3))
+    panels[f"component_{suffix}"] = panel_3
+
+    # Panel 4: the composite the detector judges, then the same image with the
+    # uploaded ground truth only, then ground truth and predictions.
+    composite: Image.Image = build_composite(
+        conditions["floorplan_ids"][0:1],
+        conditions["furniture_ids"][0:1],
+        generated,
+        sampler,
+        float(hyperparams.OVERLAY_ALPHA),
+        float(hyperparams.OVERLAY_ALPHA),
+    )
+    panel_4: str = COMPOSITE_PANEL.format(suffix=suffix)
+    panel_4_boxes: str = ANNOTATED_PANEL.format(suffix=suffix)
+    composite.convert("RGB").save(str(output_root / panel_4))
+    panels[f"composite_{suffix}"] = panel_4
+    found: list[tuple[float, float, float, float, int, float]] = (
+        predict_component_boxes(
+            model=context.model,
+            image_path=output_root / panel_4,
+            confidence=float(hyperparams.YOLO_CONF),
+            image_size=int(hyperparams.YOLO_IMGSZ),
+            max_detections=int(hyperparams.YOLO_MAX_BOXES),
+            class_id=ontology.yolo_class_id,
+        )
+    )
+    comparison: DetectionComparison | None = None
+    if ground_truth_path is not None:
+        panel_4_gt: str = GT_OVERLAY_PANEL.format(suffix=suffix)
+        annotate_composite(
+            composite,
+            ground_truth,
+            [],
+            context.class_names,
+            ontology.yolo_class_id,
+        ).save(str(output_root / panel_4_gt))
+        panels[f"ground_truth_{suffix}"] = panel_4_gt
+        comparison = compare_boxes(
+            ground_truth,
+            pixel_boxes_to_predictions(found, ontology.yolo_class_id, image_size),
+            iou_threshold=float(hyperparams.MATCH_IOU_THRESHOLD),
+            image_size=image_size,
+        )
+    annotate_composite(
+        composite,
+        ground_truth,
+        found,
+        context.class_names,
+        ontology.yolo_class_id,
+    ).save(str(output_root / panel_4_boxes))
+    panels[f"boxes_{suffix}"] = panel_4_boxes
+    return {
+        "draw": draw,
+        "is_ensemble": is_ensemble,
+        "panel_suffix": suffix,
+        "members": members,
+        "found": [
+            {
+                "class": context.class_names[int(box[4])],
+                "confidence": float(box[5]),
+                "cx": (float(box[0]) + float(box[2])) / 2.0 / image_size,
+                "cy": (float(box[1]) + float(box[3])) / 2.0 / image_size,
+                "w": (float(box[2]) - float(box[0])) / image_size,
+                "h": (float(box[3]) - float(box[1])) / image_size,
+            }
+            for box in found
+        ],
+        "comparison": comparison,
     }
 
 

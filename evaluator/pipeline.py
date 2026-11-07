@@ -8,13 +8,15 @@ linear and explicit here:
 2. **index** the test split (every sample, negatives included, so false
    positives are measured and not assumed away);
 3. **stream** the split in blocks: encode both conditioning latents once per
-   block, then per draw run the full reverse chain, decode it, build the erased
-   ground truth plus the generated component composite, write the image and the
-   label file, and let the detector see it;
-4. **score** every (sample, draw) - the dataset's ground-truth box against the
-   detector's box, and the generated channel against the true channel;
-5. **validate** the detector over the whole evaluated split, per draw, restricted
-   to the missing component's class;
+   block, then per draw run the full reverse chain, decode it into a class-id
+   mask and a missing-component probability map, and build the erased ground
+   truth plus the generated component composite; the probability maps are
+   averaged across draws and thresholded into the primary ensemble composite;
+4. **score** every (sample, result) - the dataset's ground-truth box against the
+   detector's box, and the generated channel against the true channel - for each
+   draw and for the ensemble;
+5. **validate** the detector over the whole evaluated split, per draw and for the
+   ensemble, restricted to the missing component's class;
 6. **visualize** and **report**.
 
 Only one block's masks are ever in memory, so the full 10k test split runs with
@@ -47,7 +49,13 @@ from evaluator.compositor import (
 from evaluator.dataset_gt import Box, boxes_to_yolo_lines, read_component_boxes
 from evaluator.ontology import ComponentOntology, resolve_component_ontology
 from evaluator.report import format_report
-from evaluator.results import DrawAccumulator, SampleRecord, aggregate_per_draw
+from evaluator.results import (
+    ENSEMBLE_RESULT,
+    DrawAccumulator,
+    SampleRecord,
+    aggregate_per_draw,
+    result_slug,
+)
 from evaluator.settings import load_detector_ontology
 from evaluator.telemetry import SampleTelemetry, write_report_table, write_summary
 from evaluator.visualize import (
@@ -70,7 +78,11 @@ from evaluator.yolo_eval import (
     write_eval_image,
     write_eval_labels,
 )
-from mask_diffusion.inference import MaskDiffusionSampler, default_device
+from mask_diffusion.inference import (
+    MaskDiffusionSampler,
+    default_device,
+    threshold_probability_maps,
+)
 from mask_diffusion.runner import set_reproducibility_seed
 from YOLO.dataset import SampleFolder, list_sample_folders
 
@@ -78,6 +90,27 @@ from YOLO.dataset import SampleFolder, list_sample_folders
 COMPARE_DIRECTORY: str = "compare"
 # Directory holding the annotated copies of the evaluated images.
 ANNOTATED_DIRECTORY: str = "annotated"
+
+
+@dataclass(frozen=True)
+class _EvalDatasets:
+    """Ultralytics datasets written by one run.
+
+    Attributes:
+        image_dirs (list[Path]): Evaluated images, one directory per draw.
+        label_dirs (list[Path]): Matching label files, one directory per draw.
+        yaml_paths (list[str]): ``data.yaml`` path per draw.
+        ensemble_image_dir (Path): Evaluated images of the ensemble result.
+        ensemble_label_dir (Path): Matching label files of the ensemble result.
+        ensemble_yaml_path (str): ``data.yaml`` path of the ensemble result.
+    """
+
+    image_dirs: list[Path]
+    label_dirs: list[Path]
+    yaml_paths: list[str]
+    ensemble_image_dir: Path
+    ensemble_label_dir: Path
+    ensemble_yaml_path: str
 
 
 @dataclass
@@ -95,8 +128,11 @@ class _BlockState:
             own images only.
         label_dirs (list[Path]): Destination of the evaluated labels, one per
             draw.
+        ensemble_image_dir (Path): Destination of the ensemble's evaluated images.
+        ensemble_label_dir (Path): Destination of the ensemble's labels.
         telemetry (SampleTelemetry): Per-sample CSV writer.
-        accumulators (list[DrawAccumulator]): One accumulator per draw.
+        accumulators (dict[int, DrawAccumulator]): One accumulator per draw,
+            plus :data:`ENSEMBLE_RESULT` for the ensemble.
         records (dict[str, SampleRecord]): Per-sample records for visualization.
         output_root (Path): Run output root.
         label_filename (str): Dataset label filename inside each sample folder.
@@ -112,8 +148,10 @@ class _BlockState:
     model: Any
     image_dirs: list[Path]
     label_dirs: list[Path]
+    ensemble_image_dir: Path
+    ensemble_label_dir: Path
     telemetry: SampleTelemetry
-    accumulators: list[DrawAccumulator]
+    accumulators: dict[int, DrawAccumulator]
     records: dict[str, SampleRecord]
     output_root: Path
     label_filename: str
@@ -141,6 +179,7 @@ def run_evaluation(
             ``evaluation_summary.json``.
     """
     started: float = time.time()
+    _validate_ensemble_settings(hyperparams)
     device = default_device(str(config.DEVICE), log)
     set_reproducibility_seed(int(hyperparams.SEED))
 
@@ -198,21 +237,24 @@ def run_evaluation(
     samples: list[SampleFolder] = _index_samples(config, hyperparams)
     output_root: Path = _output_root(config, args)
     draws: int = int(hyperparams.DRAWS_PER_SAMPLE)
-    image_dirs, label_dirs, data_yaml_paths = _prepare_draw_datasets(
-        output_root, draws, class_names
-    )
+    datasets: _EvalDatasets = _prepare_datasets(output_root, draws, class_names)
     telemetry: SampleTelemetry = SampleTelemetry(
         str(config.TELEMETRY_LOG_DIRECTORY), config
     )
-    accumulators: list[DrawAccumulator] = [DrawAccumulator() for _ in range(draws)]
+    accumulators: dict[int, DrawAccumulator] = {
+        draw: DrawAccumulator() for draw in range(draws)
+    }
+    accumulators[ENSEMBLE_RESULT] = DrawAccumulator()
     block_state: _BlockState = _BlockState(
         samples=samples,
         sampler=sampler,
         ontology=ontology,
         hyperparams=hyperparams,
         model=model,
-        image_dirs=image_dirs,
-        label_dirs=label_dirs,
+        image_dirs=datasets.image_dirs,
+        label_dirs=datasets.label_dirs,
+        ensemble_image_dir=datasets.ensemble_image_dir,
+        ensemble_label_dir=datasets.ensemble_label_dir,
         telemetry=telemetry,
         accumulators=accumulators,
         records={},
@@ -231,9 +273,9 @@ def run_evaluation(
 
     _run_blocks(block_state, log)
 
-    detection: list[dict[str, float] | None] = _validate_detector(
+    detection, ensemble_detection = _validate_detector(
         model=model,
-        data_yaml_paths=data_yaml_paths,
+        datasets=datasets,
         ontology=ontology,
         hyperparams=hyperparams,
         device_str=str(config.DEVICE),
@@ -259,6 +301,7 @@ def run_evaluation(
         class_names=class_names,
         accumulators=accumulators,
         detection=detection,
+        ensemble_detection=ensemble_detection,
         sample_count=len(samples),
         output_root=output_root,
         figures=figures,
@@ -331,22 +374,44 @@ def _index_samples(
     )
 
 
-def _prepare_draw_datasets(
-    output_root: Path, draws: int, class_names: list[str]
-) -> tuple[list[Path], list[Path], list[str]]:
-    """Prepare one Ultralytics dataset per draw.
+def _validate_ensemble_settings(hyperparams: SimpleNamespace) -> None:
+    """Fail before model loading when the ensemble configuration is unusable.
 
-    Each draw's images and labels live in their own ``<root>/dataset_draw_<d>``
-    and are cleared first, so detector validation of draw 0 can never see draw 1.
+    Args:
+        hyperparams (SimpleNamespace): Stage knobs read from the TOML.
+
+    Raises:
+        ValueError: If there is no draw to ensemble, or the threshold cannot
+            split a probability map into a mask.
+    """
+    draws: int = int(hyperparams.DRAWS_PER_SAMPLE)
+    if draws < 1:
+        raise ValueError(f"DRAWS_PER_SAMPLE must be >= 1, got {draws}.")
+    threshold: float = float(hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD)
+    if not 0.0 < threshold < 1.0:
+        raise ValueError(
+            "ENSEMBLE_PROBABILITY_THRESHOLD must be strictly between 0 and 1, "
+            f"got {threshold}."
+        )
+
+
+def _prepare_datasets(
+    output_root: Path, draws: int, class_names: list[str]
+) -> _EvalDatasets:
+    """Prepare one Ultralytics dataset per draw plus one for the ensemble.
+
+    Each result's images and labels live in their own ``<root>/dataset_*``
+    directory and are cleared first, so detector validation of draw 0 can never
+    see draw 1 and the ensemble cannot see a single chain's images.
 
     Args:
         output_root (Path): Run output root.
-        draws (int): Number of draws to prepare a dataset for.
+        draws (int): Number of per-draw datasets to prepare.
         class_names (list[str]): Ordered detector vocabulary.
 
     Returns:
-        tuple[list[Path], list[Path], list[str]]: Image directories, label
-            directories and ``data.yaml`` paths, one entry per draw.
+        _EvalDatasets: Per-draw and ensemble image/label directories and
+            ``data.yaml`` paths.
     """
     image_dirs: list[Path] = []
     label_dirs: list[Path] = []
@@ -358,7 +423,17 @@ def _prepare_draw_datasets(
         image_dirs.append(image_dir)
         label_dirs.append(label_dir)
         yaml_paths.append(yaml_path)
-    return image_dirs, label_dirs, yaml_paths
+    ensemble_image_dir, ensemble_label_dir, ensemble_yaml_path = prepare_eval_dataset(
+        output_root / "dataset_ensemble", class_names
+    )
+    return _EvalDatasets(
+        image_dirs=image_dirs,
+        label_dirs=label_dirs,
+        yaml_paths=yaml_paths,
+        ensemble_image_dir=ensemble_image_dir,
+        ensemble_label_dir=ensemble_label_dir,
+        ensemble_yaml_path=ensemble_yaml_path,
+    )
 
 
 def _output_root(config: SimpleNamespace, args: SimpleNamespace) -> Path:
@@ -386,7 +461,7 @@ def _output_root(config: SimpleNamespace, args: SimpleNamespace) -> Path:
 # Block streaming
 # ---------------------------------------------------------------------------
 def _run_blocks(block_state: _BlockState, log: SimpleNamespace) -> None:
-    """Stream the split in blocks, scoring every (sample, draw) pair.
+    """Stream the split in blocks, scoring every (sample, result) pair.
 
     Args:
         block_state (_BlockState): Shared state of the block loop.
@@ -395,7 +470,10 @@ def _run_blocks(block_state: _BlockState, log: SimpleNamespace) -> None:
     block_size: int = max(1, int(block_state.hyperparams.BLOCK_SIZE))
     draws: int = int(block_state.hyperparams.DRAWS_PER_SAMPLE)
     total: int = len(block_state.samples)
-    log.info(f"Evaluating {total} test samples x {draws} draws (block {block_size}).")
+    log.info(
+        f"Evaluating {total} test samples x {draws} draws plus the ensemble "
+        f"(block {block_size})."
+    )
     for start in range(0, total, block_size):
         stop: int = min(start + block_size, total)
         _evaluate_block(block_state, start, stop)
@@ -405,6 +483,11 @@ def _run_blocks(block_state: _BlockState, log: SimpleNamespace) -> None:
 def _evaluate_block(block_state: _BlockState, start: int, stop: int) -> None:
     """Encode, generate, composite, detect and score one block of samples.
 
+    Each draw is generated once and decoded into both the per-draw argmax mask
+    and the missing-component probability map. The probability maps are summed
+    across draws, averaged, and thresholded into the ensemble mask, so the
+    expensive reverse chains are never repeated for the ensemble.
+
     Args:
         block_state (_BlockState): Shared state of the block loop.
         start (int): First sample index of the block.
@@ -412,41 +495,75 @@ def _evaluate_block(block_state: _BlockState, start: int, stop: int) -> None:
     """
     sampler: MaskDiffusionSampler = block_state.sampler
     hyperparams: SimpleNamespace = block_state.hyperparams
+    draws: int = int(hyperparams.DRAWS_PER_SAMPLE)
     block_dirs: list[Path] = [sample.src_dir for sample in block_state.samples[start:stop]]
     conditions: dict[str, Any] = sampler.normalize_conditions(
         sampler.encode_conditions(block_dirs, int(hyperparams.ENCODE_BATCH_SIZE))
     )
-    for draw in range(int(hyperparams.DRAWS_PER_SAMPLE)):
+    ensemble_probability_sum: Any = None
+    for draw in range(draws):
         # One chain per sample. The sampler seeds every chunk from this seed and
         # from the chain offset, so a block boundary never changes which noise
         # lands on which sample.
-        masks: Any = sampler.generate_channel_masks(
+        outputs: Any = sampler.generate_channel_outputs(
             conditions,
             num_draws=1,
             seed=int(hyperparams.SEED) + draw * int(hyperparams.DRAW_SEED_STRIDE),
             chunk_size=int(hyperparams.GENERATION_CHUNK),
             chain_offset=start,
         )
-        _score_draw(block_state, start, stop, conditions, masks, draw)
+        draw_mask: Any = outputs.ids == sampler.missing_channel
+        _score_result(
+            block_state,
+            start,
+            stop,
+            conditions,
+            masks=draw_mask,
+            probabilities=outputs.probabilities,
+            result_key=draw,
+        )
+        ensemble_probability_sum = (
+            outputs.probabilities
+            if ensemble_probability_sum is None
+            else ensemble_probability_sum + outputs.probabilities
+        )
+    if ensemble_probability_sum is None:
+        raise ValueError("DRAWS_PER_SAMPLE must be >= 1 to build an ensemble.")
+    ensemble_probability: Any = ensemble_probability_sum / draws
+    ensemble_mask: Any = threshold_probability_maps(
+        ensemble_probability, float(hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD)
+    )
+    _score_result(
+        block_state,
+        start,
+        stop,
+        conditions,
+        masks=ensemble_mask,
+        probabilities=ensemble_probability,
+        result_key=ENSEMBLE_RESULT,
+    )
 
 
-def _score_draw(
+def _score_result(
     block_state: _BlockState,
     start: int,
     stop: int,
     conditions: dict[str, Any],
     masks: Any,
-    draw: int,
+    probabilities: Any,
+    result_key: int,
 ) -> None:
-    """Build, detect and score every sample of one draw.
+    """Build, detect and score every sample of one result (draw or ensemble).
 
     Args:
         block_state (_BlockState): Shared state of the block loop.
         start (int): First sample index of the block.
         stop (int): Index past the last sample of the block.
         conditions (dict[str, Any]): Normalized conditions of the block.
-        masks (Any): Generated component masks of the block, ``(n, H, W)`` bool.
-        draw (int): Draw index these masks came from.
+        masks (Any): Component masks of the block, ``(n, H, W)`` bool.
+        probabilities (Any): Missing-component probability maps of the block,
+            ``(n, H, W)`` float.
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT` for the ensemble.
     """
     hyperparams: SimpleNamespace = block_state.hyperparams
     sampler: MaskDiffusionSampler = block_state.sampler
@@ -466,7 +583,7 @@ def _score_draw(
             float(hyperparams.GENERATED_OVERLAY_ALPHA),
         )
         image_path: Path = _write_evaluated_image(
-            block_state, sample, draw, composite, ground_truth
+            block_state, sample, result_key, composite, ground_truth
         )
         predicted_pixels: list[PixelBox] = _predict_component(block_state, image_path)
         predictions: list[PredictedBox] = pixel_boxes_to_predictions(
@@ -484,15 +601,17 @@ def _score_draw(
         _record_sample(
             block_state,
             sample=sample,
-            draw=draw,
+            result_key=result_key,
             ground_truth=ground_truth,
             outcome=outcome,
             scores=scores,
             image_path=image_path,
             predictions=predictions,
             image_size=image_size,
+            generated_pixels=int(generated.sum()),
+            probability_mean=float(probabilities[offset].mean()),
         )
-        if sample.stem in block_state.viz_stems and draw == 0:
+        if sample.stem in block_state.viz_stems and result_key == ENSEMBLE_RESULT:
             _write_comparison_strip(
                 block_state,
                 sample=sample,
@@ -500,34 +619,53 @@ def _score_draw(
                 offset=offset,
                 generated=generated,
                 predicted_pixels=predicted_pixels,
+                image_path=image_path,
             )
+
+
+def _result_directories(
+    block_state: _BlockState, result_key: int
+) -> tuple[Path, Path]:
+    """Pick the image and label directory of one result.
+
+    Args:
+        block_state (_BlockState): Shared state of the block loop.
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`.
+
+    Returns:
+        tuple[Path, Path]: Image directory and label directory.
+    """
+    if result_key == ENSEMBLE_RESULT:
+        return block_state.ensemble_image_dir, block_state.ensemble_label_dir
+    return block_state.image_dirs[result_key], block_state.label_dirs[result_key]
 
 
 def _write_evaluated_image(
     block_state: _BlockState,
     sample: SampleFolder,
-    draw: int,
+    result_key: int,
     composite: Any,
     ground_truth: list[Box],
 ) -> Path:
     """Write one evaluated image and its label file.
 
-    The image name carries the draw, so every draw of a sample stays addressable
-    and each label file matches its image one to one.
+    The image name carries the result key, so every draw and the ensemble stay
+    addressable and each label file matches its image one to one.
 
     Args:
         block_state (_BlockState): Shared state of the block loop.
         sample (SampleFolder): Sample being written.
-        draw (int): Draw index.
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`.
         composite (Any): The composite image to write.
         ground_truth (list[Box]): Dataset ground-truth boxes of the component.
 
     Returns:
         Path: Path of the written image.
     """
-    stem: str = f"{sample.stem}__draw_{draw}"
-    image_path: Path = block_state.image_dirs[draw] / f"{stem}.png"
-    label_path: Path = block_state.label_dirs[draw] / f"{stem}.txt"
+    image_dir, label_dir = _result_directories(block_state, result_key)
+    stem: str = f"{sample.stem}__{result_slug(result_key)}"
+    image_path: Path = image_dir / f"{stem}.png"
+    label_path: Path = label_dir / f"{stem}.txt"
     write_eval_image(
         composite, image_path, int(block_state.hyperparams.PNG_COMPRESS_LEVEL)
     )
@@ -560,26 +698,30 @@ def _predict_component(block_state: _BlockState, image_path: Path) -> list[Pixel
 def _record_sample(
     block_state: _BlockState,
     sample: SampleFolder,
-    draw: int,
+    result_key: int,
     ground_truth: list[Box],
     outcome: MatchOutcome,
     scores: tuple[float, float],
     image_path: Path,
     predictions: list[PredictedBox],
     image_size: int,
+    generated_pixels: int,
+    probability_mean: float,
 ) -> None:
-    """Fold one (sample, draw) measurement into the telemetry and the record.
+    """Fold one (sample, result) measurement into telemetry and the record.
 
     Args:
         block_state (_BlockState): Shared state of the block loop.
         sample (SampleFolder): Sample being recorded.
-        draw (int): Draw index.
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`.
         ground_truth (list[Box]): Dataset ground-truth boxes.
         outcome (MatchOutcome): Matched/missed/false-positive outcome.
         scores (tuple[float, float]): Channel ``(dice, iou)``.
         image_path (Path): Written composite image.
         predictions (list[PredictedBox]): Detector predictions.
         image_size (int): Render domain side length.
+        generated_pixels (int): Number of pixels in the generated mask.
+        probability_mean (float): Mean missing-component probability.
     """
     matched: list[BoxLoss] = [
         match.loss for match in outcome.matches if match.loss is not None
@@ -590,10 +732,10 @@ def _record_sample(
     best: BoxLoss | None = (
         max(matched, key=lambda loss: loss.iou) if matched else None
     )
-    block_state.accumulators[draw].add(ground_truth, outcome, scores)
+    block_state.accumulators[result_key].add(ground_truth, outcome, scores)
     block_state.telemetry.log(
         stem=sample.stem,
-        draw=draw,
+        draw=result_key,
         gt_boxes=len(ground_truth),
         pred_boxes=len(predictions),
         matched_boxes=len(matched),
@@ -604,14 +746,16 @@ def _record_sample(
         best_center_distance=best.center_distance if best is not None else 0.0,
         channel_dice=scores[0],
         channel_iou=scores[1],
+        generated_pixels=generated_pixels,
+        probability_mean=probability_mean,
     )
     record: SampleRecord = block_state.records.setdefault(
         sample.stem, SampleRecord(stem=sample.stem)
     )
     record.ground_truth = ground_truth
-    record.image_paths[draw] = image_path
-    record.predictions[draw] = _to_pixel_predictions(predictions, image_size)
-    record.losses[draw] = matched
+    record.image_paths[result_key] = image_path
+    record.predictions[result_key] = _to_pixel_predictions(predictions, image_size)
+    record.losses[result_key] = matched
 
 
 def _to_pixel_predictions(
@@ -641,6 +785,7 @@ def _write_comparison_strip(
     offset: int,
     generated: Any,
     predicted_pixels: list[PixelBox],
+    image_path: Path,
 ) -> None:
     """Write one sample's five-panel comparison strip.
 
@@ -651,12 +796,13 @@ def _write_comparison_strip(
         offset (int): Sample offset inside the block.
         generated (Any): Generated component mask of this sample.
         predicted_pixels (list[PixelBox]): Predictions for the annotated panel.
+        image_path (Path): The ensemble composite the strip annotates.
     """
     sampler: MaskDiffusionSampler = block_state.sampler
     hyperparams: SimpleNamespace = block_state.hyperparams
     floorplan_ids = conditions["floorplan_ids"][offset : offset + 1]
     furniture_ids = conditions["furniture_ids"][offset : offset + 1]
-    with Image.open(block_state.image_dirs[0] / f"{sample.stem}__draw_0.png") as opened:
+    with Image.open(image_path) as opened:
         composite: Image.Image = opened.convert("RGB")
     ground_truth: list[Box] = read_component_boxes(
         sample.src_dir, block_state.label_filename, block_state.ontology.label_names
@@ -694,22 +840,22 @@ def _write_comparison_strip(
 
 def _validate_detector(
     model: Any,
-    data_yaml_paths: list[str],
+    datasets: _EvalDatasets,
     ontology: ComponentOntology,
     hyperparams: SimpleNamespace,
     device_str: str,
     log: SimpleNamespace,
     skip: bool,
-) -> list[dict[str, float] | None]:
-    """Validate the detector per draw over that draw's images, one class only.
+) -> tuple[list[dict[str, float] | None], dict[str, float] | None]:
+    """Validate the detector per draw and on the ensemble, one class only.
 
-    Every draw owns a dataset directory. Sharing one would validate the union of
-    the draws and make every draw's metrics identical, which is precisely the
+    Every result owns a dataset directory. Sharing one would validate the union
+    of the draws and make every draw's metrics identical, which is precisely the
     spread this stage exists to measure.
 
     Args:
         model (Any): Detector under test.
-        data_yaml_paths (list[str]): One ``data.yaml`` per draw.
+        datasets (_EvalDatasets): Per-draw and ensemble datasets.
         ontology (ComponentOntology): The missing component.
         hyperparams (SimpleNamespace): Stage knobs.
         device_str (str): Device string for Ultralytics.
@@ -717,16 +863,18 @@ def _validate_detector(
         skip (bool): When true, no validation runs (channel metrics only).
 
     Returns:
-        list[dict[str, float] | None]: One metrics dict per draw, ``None`` when
+        tuple[list[dict[str, float] | None], dict[str, float] | None]: One
+            metrics dict per draw plus the ensemble's metrics, each ``None`` when
             validation was skipped.
     """
+    draws: int = int(hyperparams.DRAWS_PER_SAMPLE)
     if skip:
         log.warning("--skip-yolo given: no detector metrics are computed.")
-        return [None] * int(hyperparams.DRAWS_PER_SAMPLE)
-    return [
+        return [None] * draws, None
+    per_draw: list[dict[str, float] | None] = [
         run_detector_validation(
             model=model,
-            data_yaml_path=data_yaml_paths[draw],
+            data_yaml_path=datasets.yaml_paths[draw],
             device_str=device_str,
             image_size=int(hyperparams.YOLO_IMGSZ),
             batch_size=int(hyperparams.YOLO_BATCH),
@@ -734,22 +882,34 @@ def _validate_detector(
             log=log,
             label=f"missing component '{ontology.name}', draw {draw}",
         )
-        for draw in range(int(hyperparams.DRAWS_PER_SAMPLE))
+        for draw in range(draws)
     ]
+    ensemble: dict[str, float] = run_detector_validation(
+        model=model,
+        data_yaml_path=datasets.ensemble_yaml_path,
+        device_str=device_str,
+        image_size=int(hyperparams.YOLO_IMGSZ),
+        batch_size=int(hyperparams.YOLO_BATCH),
+        class_id=ontology.yolo_class_id,
+        log=log,
+        label=f"missing component '{ontology.name}', ensemble",
+    )
+    return per_draw, ensemble
 
 
 def _build_figures(block_state: _BlockState, class_names: list[str]) -> list[str]:
     """Build every visualization the run writes.
 
-    Three kinds of figure are produced, all per draw where the draw matters:
+    Three kinds of figure are produced for every result (each draw and the
+    ensemble):
 
-    * ``eval_composite_draw_<d>.png`` - the evaluated images with the
+    * ``eval_composite_<result>.png`` - the evaluated images with the
       ground-truth box in green and the prediction in red;
-    * ``eval_best_draw_<d>`` / ``eval_worst_draw_<d>`` - the ranked ends of the
+    * ``eval_best_<result>`` / ``eval_worst_<result>`` - the ranked ends of the
       box-IoU distribution;
     * ``eval_compare`` - the five-panel strip of the fixed visualization subset,
-      which shows the conditioning, the true component, the generated component
-      and the composite together.
+      which shows the conditioning, the true component, the ensemble-generated
+      component and the ensemble composite together.
 
     Args:
         block_state (_BlockState): Shared state of the block loop.
@@ -763,21 +923,31 @@ def _build_figures(block_state: _BlockState, class_names: list[str]) -> list[str
     columns: int = int(hyperparams.MONTAGE_COLS)
     class_id: int = block_state.ontology.yolo_class_id
     figures: list[str] = []
-    for draw in range(int(hyperparams.DRAWS_PER_SAMPLE)):
+    result_keys: list[int] = [
+        ENSEMBLE_RESULT,
+        *range(int(hyperparams.DRAWS_PER_SAMPLE)),
+    ]
+    for result_key in result_keys:
+        slug: str = result_slug(result_key)
         annotated: list[Path] = [
             annotate_record_path(
-                block_state.records[stem], draw, class_names, class_id, output_root
+                block_state.records[stem],
+                result_key,
+                class_names,
+                class_id,
+                output_root,
             )
             for stem in sorted(block_state.records)
             if stem in block_state.viz_stems
         ]
         montage: Path | None = build_annotated_montage(
-            annotated, output_root / f"eval_composite_draw_{draw}.png", columns
+            annotated, output_root / f"eval_composite_{slug}.png", columns
         )
         if montage is not None:
             figures.append(relative_path(montage, output_root))
         best_stems, worst_stems = rank_samples(
-            _losses_by_stem(block_state, draw), int(hyperparams.VIZ_RANKED_COUNT)
+            _losses_by_stem(block_state, result_key),
+            int(hyperparams.VIZ_RANKED_COUNT),
         )
         ranked: tuple[tuple[str, list[str]], ...] = (
             ("best", best_stems),
@@ -786,12 +956,16 @@ def _build_figures(block_state: _BlockState, class_names: list[str]) -> list[str
         for name, stems in ranked:
             ranked_paths: list[Path] = [
                 annotate_record_path(
-                    block_state.records[stem], draw, class_names, class_id, output_root
+                    block_state.records[stem],
+                    result_key,
+                    class_names,
+                    class_id,
+                    output_root,
                 )
                 for stem in stems
             ]
             ranked_montage: Path | None = build_annotated_montage(
-                ranked_paths, output_root / f"eval_{name}_draw_{draw}.png", columns
+                ranked_paths, output_root / f"eval_{name}_{slug}.png", columns
             )
             if ranked_montage is not None:
                 figures.append(relative_path(ranked_montage, output_root))
@@ -846,19 +1020,21 @@ def _publish_figures(
     return published
 
 
-def _losses_by_stem(block_state: _BlockState, draw: int) -> dict[str, list[BoxLoss]]:
-    """Collect each sample's matched-box losses for one draw.
+def _losses_by_stem(
+    block_state: _BlockState, result_key: int
+) -> dict[str, list[BoxLoss]]:
+    """Collect each sample's matched-box losses for one result.
 
     Args:
         block_state (_BlockState): Shared state of the block loop.
-        draw (int): Draw to rank by.
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`, to rank by.
 
     Returns:
         dict[str, list[BoxLoss]]: Per-sample matched losses; samples without a
             match hold an empty list, which sorts them as worst.
     """
     return {
-        stem: record.losses.get(draw, [])
+        stem: record.losses.get(result_key, [])
         for stem, record in block_state.records.items()
     }
 
@@ -868,8 +1044,9 @@ def _build_summary(
     hyperparams: SimpleNamespace,
     ontology: ComponentOntology,
     class_names: list[str],
-    accumulators: list[DrawAccumulator],
+    accumulators: dict[int, DrawAccumulator],
     detection: list[dict[str, float] | None],
+    ensemble_detection: dict[str, float] | None,
     sample_count: int,
     output_root: Path,
     figures: list[str],
@@ -884,8 +1061,10 @@ def _build_summary(
         hyperparams (SimpleNamespace): Stage knobs.
         ontology (ComponentOntology): The missing component, resolved.
         class_names (list[str]): Detector class vocabulary.
-        accumulators (list[DrawAccumulator]): Per-draw accumulators.
+        accumulators (dict[int, DrawAccumulator]): Per-draw accumulators plus
+            :data:`ENSEMBLE_RESULT`.
         detection (list[dict[str, float] | None]): Per-draw detector metrics.
+        ensemble_detection (dict[str, float] | None): Ensemble detector metrics.
         sample_count (int): Number of evaluated samples.
         output_root (Path): Run output root.
         figures (list[str]): Written figure paths, relative to ``output_root``.
@@ -898,8 +1077,8 @@ def _build_summary(
         dict[str, Any]: The full summary document.
     """
     per_draw: list[dict[str, Any]] = [
-        accumulator.summary(detection[draw])
-        for draw, accumulator in enumerate(accumulators)
+        accumulators[draw].summary(detection[draw])
+        for draw in range(int(hyperparams.DRAWS_PER_SAMPLE))
     ]
     return {
         "run_id": str(config.runtime.RUN_ID),
@@ -912,6 +1091,9 @@ def _build_summary(
             "device": str(config.DEVICE),
             "samples_evaluated": sample_count,
             "draws_per_sample": int(hyperparams.DRAWS_PER_SAMPLE),
+            "ensemble_probability_threshold": float(
+                hyperparams.ENSEMBLE_PROBABILITY_THRESHOLD
+            ),
             "seed": int(hyperparams.SEED),
             "block_size": int(hyperparams.BLOCK_SIZE),
             "composite_overlay_alpha": float(hyperparams.COMPOSITE_OVERLAY_ALPHA),
@@ -928,6 +1110,7 @@ def _build_summary(
             "detector_class_name": class_names[ontology.yolo_class_id],
             "dataset_label_names": list(ontology.label_names),
         },
+        "ensemble": accumulators[ENSEMBLE_RESULT].summary(ensemble_detection),
         "per_draw": per_draw,
         "aggregate": aggregate_per_draw(per_draw),
         "output_root": str(output_root),

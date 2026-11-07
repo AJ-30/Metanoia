@@ -20,9 +20,13 @@ DRAW_SEED_STRIDE = 100_003
 # sample. 250 is the smoke-pass default that proves the pipeline end to end;
 # run with SAMPLE_CAP = -1 (or --cap -1) for the full test-split report.
 SAMPLE_CAP = -1
-# Independent diffusion draws per sample, each with its own noise, so the
-# localization loss is reported per draw and as a spread.
+# Independent diffusion chains per sample. All chains are averaged into one
+# missing-component softmax probability map and thresholded for the primary
+# ensemble result; the individual chains are still reported as diagnostics.
 DRAWS_PER_SAMPLE = 4
+# Inclusive threshold on the averaged missing-component probability. A pixel is
+# part of the ensemble mask when its averaged probability is at least this value.
+ENSEMBLE_PROBABILITY_THRESHOLD = 0.5
 
 # ---- Mask diffusion blocking ----
 # Samples encoded / generated / rendered per block. Blocks exist so the full

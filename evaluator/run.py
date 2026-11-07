@@ -88,7 +88,10 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         "--draws",
         type=int,
         default=None,
-        help="Independent diffusion draws per sample; overrides DRAWS_PER_SAMPLE.",
+        help=(
+            "Independent diffusion chains per sample (ensemble members); "
+            "overrides DRAWS_PER_SAMPLE."
+        ),
     )
     parser.add_argument(
         "--seed",

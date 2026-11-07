@@ -69,9 +69,10 @@ LAYOUT_FILE_SUFFIX: str = ".json"
 # Plain prefix lists keep this server agnostic to run ids.
 #
 # "eval" is the missing-component evaluator's kind: its figures are named
-# "eval_composite_draw_<d>_*.png", "eval_best_draw_<d>", "eval_worst_draw_<d>"
-# and "eval_compare". Adding this one entry is all it takes: every other panel,
-# route and behaviour below is unchanged.
+# "eval_composite_<result>_*.png", "eval_best_<result>", "eval_worst_<result>"
+# and "eval_compare", where <result> is a draw index or the ensemble. Adding
+# this one entry is all it takes: every other panel, route and behaviour below
+# is unchanged.
 IMAGE_KIND_PREFIXES: dict[str, list[str]] = {
     "reconstruction": ["reconstruction_epoch_"],
     "generation": ["generation_epoch_"],

@@ -1,15 +1,18 @@
-"""Telemetry for the evaluator: one row per sample/draw plus the final summary.
+"""Telemetry for the evaluator: one row per sample/result plus the final summary.
 
 Two artifacts are written:
 
-* ``evaluator/telemetry_logs/<run_id>.csv`` - one row per (sample, draw), holding
-  the ground-truth box count, the detector's prediction count, the matched /
-  missed / false-positive counts, the localization losses of the best-matched
-  box and the channel Dice/IoU. The dashboard discovers this file like any other
+* ``evaluator/telemetry_logs/<run_id>.csv`` - one row per (sample, result),
+  where a result is either a draw (``draw`` = 0..N-1) or the ensemble
+  (``draw`` = -1), holding the ground-truth box count, the detector's
+  prediction count, the matched / missed / false-positive counts, the
+  localization losses of the best-matched box, the channel Dice/IoU and the
+  probability/mask statistics. The dashboard discovers this file like any other
   run's telemetry, so the per-sample numbers are plottable without extra wiring.
 * ``<output>/eval_<run_id>/evaluation_summary.json`` - the aggregate report: the
-  per-draw detector metrics for the missing component, the box-loss
-  distributions, the channel scores and everything needed to reproduce the run.
+  primary ensemble's detector metrics for the missing component, the per-draw
+  diagnostics, the box-loss distributions, the channel scores and everything
+  needed to reproduce the run.
 """
 
 from __future__ import annotations
@@ -37,6 +40,8 @@ TELEMETRY_FIELDNAMES: tuple[str, ...] = (
     "best_center_distance",
     "channel_dice",
     "channel_iou",
+    "generated_pixels",
+    "probability_mean",
 )
 
 # Suffix of the summary file. The dashboard reads the montages by their
@@ -45,7 +50,7 @@ SUMMARY_FILENAME: str = "evaluation_summary.json"
 
 
 class SampleTelemetry:
-    """Appends one row per evaluated (sample, draw) pair to the run CSV.
+    """Appends one row per evaluated (sample, result) pair to the run CSV.
 
     Args:
         directory (str): Telemetry directory (``TELEMETRY_LOG_DIRECTORY``).

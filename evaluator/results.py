@@ -1,12 +1,12 @@
 """Accumulators for the evaluator: per-draw aggregates and per-sample records.
 
 The pipeline streams sample blocks, so the running totals cannot be derived from
-a stored list of rows at the end: they are accumulated as each (sample, draw) is
-measured. Two shapes are kept:
+a stored list of rows at the end: they are accumulated as each (sample, result)
+is measured. Two shapes are kept:
 
-* :class:`DrawAccumulator` - one per draw; it collects the loss distributions,
-  the outcome counts and the channel scores, and turns them into the summary
-  dictionary the report is built from.
+* :class:`DrawAccumulator` - one per result (each draw and the ensemble); it
+  collects the loss distributions, the outcome counts and the channel scores,
+  and turns them into the summary dictionary the report is built from.
 * :class:`SampleRecord` - one per sample; it remembers where the evaluated
   images were written and what the detector predicted, which is everything the
   visualization needs after the loop has moved on.
@@ -22,10 +22,27 @@ from evaluator.box_metrics import BoxLoss, MatchOutcome, PredictedBox, summarize
 from evaluator.dataset_gt import Box
 from evaluator.yolo_eval import PixelBox
 
+# Result key of the ensemble. Per-draw results use their draw index (0..N-1), so
+# -1 cannot collide with one and the existing dict/list shapes can hold both the
+# diagnostics and the primary ensemble result.
+ENSEMBLE_RESULT: int = -1
+
+
+def result_slug(result_key: int) -> str:
+    """Readable filename suffix of one evaluated result.
+
+    Args:
+        result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`.
+
+    Returns:
+        str: ``"draw_<d>"`` for a draw, ``"ensemble"`` for the ensemble.
+    """
+    return "ensemble" if result_key == ENSEMBLE_RESULT else f"draw_{result_key}"
+
 
 @dataclass
 class DrawAccumulator:
-    """Running totals of one diffusion draw.
+    """Running totals of one evaluated result (a draw or the ensemble).
 
     Attributes:
         box_ious (list[float]): IoU of every matched box.
@@ -179,11 +196,12 @@ class SampleRecord:
     Attributes:
         stem (str): Sample folder name, also the image file stem.
         ground_truth (list[Box]): Dataset ground-truth boxes of the component.
-        image_paths (dict[int, Path]): Evaluated composite per draw.
+        image_paths (dict[int, Path]): Evaluated composite per result key; the
+            ensemble uses :data:`ENSEMBLE_RESULT` (``-1``).
         predictions (dict[int, list[PredictedBox]]): Detector predictions for
-            the component, per draw.
+            the component, per result key.
         losses (dict[int, list[BoxLoss]]): Localization losses of matched
-            boxes, per draw.
+            boxes, per result key.
     """
 
     stem: str

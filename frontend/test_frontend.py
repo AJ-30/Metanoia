@@ -484,6 +484,10 @@ def test_result_template_renders_both_comparison_branches() -> None:
         "panels": {
             "floorplan": "floorplan.png",
             "conditioned": "conditioned.png",
+            "component_ensemble": "component_ensemble.png",
+            "composite_ensemble": "composite_ensemble.png",
+            "ground_truth_ensemble": "ground_truth_ensemble.png",
+            "boxes_ensemble": "boxes_ensemble.png",
             "component_draw_0": "component.png",
             "composite_draw_0": "composite.png",
             "ground_truth_draw_0": "ground_truth.png",
@@ -491,7 +495,8 @@ def test_result_template_renders_both_comparison_branches() -> None:
         },
         "component": "tv",
         "component_label": "TV",
-        "draws": 1,
+        "draws": 4,
+        "ensemble_threshold": 0.5,
         "generated_pixels": 10,
         "elapsed_seconds": 1.0,
         "seed": 1234,
@@ -504,19 +509,55 @@ def test_result_template_renders_both_comparison_branches() -> None:
     with app.app_context():
         with_labels = render_template(
             "result.html",
-            detections=[{"draw": 0, "found": [], "comparison": comparison}],
+            detections=[
+                {
+                    "draw": None,
+                    "is_ensemble": True,
+                    "panel_suffix": "ensemble",
+                    "members": 4,
+                    "found": [],
+                    "comparison": comparison,
+                },
+                {
+                    "draw": 0,
+                    "is_ensemble": False,
+                    "panel_suffix": "draw_0",
+                    "members": None,
+                    "found": [],
+                    "comparison": comparison,
+                },
+            ],
             ground_truth_uploaded=True,
             ground_truth_boxes=1,
             **common,
         )
         without_labels = render_template(
             "result.html",
-            detections=[{"draw": 0, "found": [], "comparison": None}],
+            detections=[
+                {
+                    "draw": None,
+                    "is_ensemble": True,
+                    "panel_suffix": "ensemble",
+                    "members": 4,
+                    "found": [],
+                    "comparison": None,
+                },
+                {
+                    "draw": 0,
+                    "is_ensemble": False,
+                    "panel_suffix": "draw_0",
+                    "members": None,
+                    "found": [],
+                    "comparison": None,
+                },
+            ],
             ground_truth_uploaded=False,
             ground_truth_boxes=0,
             **common,
         )
     assert "Detection metrics" in with_labels
+    assert "Ensemble (4 chains)" in with_labels
+    assert "Draw 0 (diagnostic)" in with_labels
     assert "ground truth only (green overlay)" in with_labels
     assert "Mean matched IoU" in with_labels
     assert "nothing to score" in without_labels

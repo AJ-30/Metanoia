@@ -49,7 +49,12 @@ from evaluator.compositor import erase_component_channel
 from evaluator.dataset_gt import boxes_to_yolo_lines, parse_label_line, read_component_boxes
 from evaluator.ontology import resolve_component_ontology, resolve_yolo_class_id
 from evaluator.report import format_report
-from evaluator.results import DrawAccumulator, aggregate_per_draw
+from evaluator.results import (
+    ENSEMBLE_RESULT,
+    DrawAccumulator,
+    aggregate_per_draw,
+    result_slug,
+)
 from evaluator.variants import (
     apply_component_variant,
     component_names,
@@ -68,6 +73,11 @@ from evaluator.yolo_eval import (
     validate_detector_names,
 )
 from mask_VAE.masking import MaskGroup, MaskLayout
+from mask_diffusion.inference import (
+    average_probability_maps,
+    ensemble_channel_masks,
+    threshold_probability_maps,
+)
 from mask_diffusion.runner import class_ids_to_one_hot
 from YOLO.dataset import SampleFolder
 
@@ -469,6 +479,72 @@ def test_channel_scores_half_overlap_matches_the_analytic_values() -> None:
     assert abs(iou_score - 1.0 / 3.0) < 1e-9
 
 
+def test_ensemble_averages_probability_maps_before_thresholding() -> None:
+    """Four chains vote per pixel; the average, not each chain, is thresholded."""
+    probabilities = torch.tensor(
+        [
+            [[0.9, 0.2], [0.6, 0.4]],
+            [[0.7, 0.4], [0.4, 0.6]],
+            [[0.8, 0.6], [0.4, 0.4]],
+            [[0.6, 0.8], [0.6, 0.6]],
+        ],
+        dtype=torch.float32,
+    )
+    averaged = average_probability_maps(probabilities, 4)
+    expected = torch.tensor([[[0.75, 0.50], [0.50, 0.50]]])
+    assert torch.allclose(averaged, expected)
+    mask = ensemble_channel_masks(probabilities, 4, 0.5)
+    assert mask.tolist() == [[[True, True], [True, True]]]
+
+
+def test_ensemble_averages_each_sample_separately() -> None:
+    """Sample-major/draw-minor maps never mix one sample's draws with another."""
+    probabilities = torch.tensor(
+        [
+            [[0.8, 0.8]],
+            [[0.4, 0.4]],
+            [[0.2, 0.2]],
+            [[0.6, 0.6]],
+        ],
+        dtype=torch.float32,
+    )
+    averaged = average_probability_maps(probabilities, 2)
+    expected = torch.tensor([[[0.6, 0.6]], [[0.4, 0.4]]])
+    assert torch.allclose(averaged, expected)
+
+
+def test_ensemble_helpers_reject_invalid_arguments() -> None:
+    """A bad draw count or threshold fails instead of silently changing the mask."""
+    probabilities = torch.zeros((4, 2, 2))
+    for bad_draws in (0, -1):
+        try:
+            average_probability_maps(probabilities, bad_draws)
+        except ValueError:
+            pass
+        else:  # pragma: no cover - failure path
+            raise AssertionError("a non-positive draw count was accepted")
+    try:
+        average_probability_maps(probabilities[:3], 2)
+    except ValueError:
+        pass
+    else:  # pragma: no cover - failure path
+        raise AssertionError("a non-divisible map count was accepted")
+    for bad_threshold in (0.0, 1.0, 1.5, -0.1):
+        try:
+            threshold_probability_maps(probabilities, bad_threshold)
+        except ValueError:
+            pass
+        else:  # pragma: no cover - failure path
+            raise AssertionError("an out-of-range threshold was accepted")
+
+
+def test_result_slug_distinguishes_draws_from_the_ensemble() -> None:
+    """Figure and dataset stems use one unambiguous suffix per result."""
+    assert result_slug(0) == "draw_0"
+    assert result_slug(3) == "draw_3"
+    assert result_slug(ENSEMBLE_RESULT) == "ensemble"
+
+
 # ---------------------------------------------------------------------------
 # Aggregation
 # ---------------------------------------------------------------------------
@@ -727,6 +803,7 @@ def test_format_report_renders_numbers_and_handles_missing_metrics() -> None:
             "split_dir": "/split",
             "samples_evaluated": 100,
             "draws_per_sample": 2,
+            "ensemble_probability_threshold": 0.5,
             "seed": 1234,
         },
         "missing_component": {
@@ -736,6 +813,7 @@ def test_format_report_renders_numbers_and_handles_missing_metrics() -> None:
             "detector_class_name": "TV",
             "dataset_label_names": ["TV"],
         },
+        "ensemble": _draw_summary(5, 0, 1),
         "per_draw": [
             _draw_summary(4, 1, 2),
             {
@@ -752,9 +830,12 @@ def test_format_report_renders_numbers_and_handles_missing_metrics() -> None:
     text = "\n".join(format_report(summary))
     assert "MISSING-COMPONENT EVALUATION REPORT" in text
     assert "tv" in text and "detector class 8 'TV'" in text
+    assert "PRIMARY RESULT: ensemble of all draws" in text
+    assert "PER-DRAW DIAGNOSTICS" in text
     assert "0.5000" in text  # the aggregate mAP@50
     assert "n/a" in text  # the skipped draw
-    assert "matched=4" in text
+    assert "matched=5" in text  # the ensemble's outcome line
+    assert "matched=4" in text  # a per-draw outcome line
 
 
 def test_select_component_names_keeps_registry_order_and_rejects_unknown() -> None:
