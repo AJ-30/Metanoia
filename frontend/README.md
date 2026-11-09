@@ -29,6 +29,10 @@ component. The per-component detectors are single-class, so the component is
 class id `0` in the drawn boxes. Paths and the default selection live in
 `frontend/config.toml`; every number lives in `frontend/hyperparameters.toml`.
 
+The page also links to a separate **inpainting mode** (`/inpaint`): erase pixels
+of the three component classes with a brush, then run all three component models
+one at a time and merge their reconstructions. See section 4.
+
 ---
 
 ## 1. Running it
@@ -48,8 +52,9 @@ python frontend/server.py --mode debug --host 127.0.0.1 --port 8087
 The first upload of a component builds its context — the three frozen mask
 VAEs, that component's diffusion denoiser and its detector — which takes a few
 seconds. Each component's context is cached separately, so switching back to a
-component that was already used is instant and the server never keeps unused
-models in memory. `Ctrl-C` stops it. Nothing is trained, and nothing outside
+component that was already used is instant. Inpainting loads all three component
+contexts because it runs every model; that is the memory cost of the merged
+mode. `Ctrl-C` stops it. Nothing is trained, and nothing outside
 `frontend/uploads` and `frontend/outputs` is written.
 
 ## 2. What to upload
@@ -104,17 +109,61 @@ still gets its own diagnostic panel set below the ensemble.
 * “generated pixels” is the size of the generated component mask; a layout where
   the model produced nothing shows `0` and the detector will have nothing to find.
 
-## 4. Package layout
+## 4. Inpainting mode
+
+`/inpaint` is a separate route with its own editor; it does not change the
+single-component upload flow. Upload the floor-plan mask and the original
+furniture mask; the page normalizes the furniture mask to the model's square
+class-id domain. The canvas then shows the layout through the furniture palette:
+
+* pick a brush size and drag over **TV**, **showcase** or **dining-set** pixels;
+* erased pixels become background class `0` and are shown in translucent red;
+* **Undo** restores the previous stroke and **Clear erasures** restores the
+  uploaded mask;
+* furniture outside the three component classes cannot be erased, and the
+  server re-checks that rule before any model runs.
+
+On submit, all three component models run **one at a time**. Each component
+uses the same ensemble as the normal page: `DEFAULT_DRAWS` chains, averaged
+missing-component softmax probabilities, one threshold at
+`ENSEMBLE_PROBABILITY_THRESHOLD`. The model never receives the erase mask; it
+only sees the edited furniture mask with erased pixels at background.
+
+The result page shows the input layout, the erase overlay, each component's
+generated mask and merged mask, each component's composite and detector boxes,
+a small per-draw diagnostic strip for every component, then one merged layout
+with all three detectors. The merge rule is
+
+```
+final_component = remaining_original OR generated
+```
+
+With `INPAINT_PROTECT_ORIGINAL = true` (the default), generated pixels may only
+fill background, so a generated TV cannot overwrite a sofa that survived the
+erasure. When two generated components claim the same background pixel, the
+component with the higher ensemble probability wins; a tie keeps the first
+component in `components.toml` order. Set `INPAINT_PROTECT_ORIGINAL = false` to
+follow the literal union rule and let generated pixels claim any pixel that is
+not that component's remaining original.
+
+Inpainting does not upload or score ground-truth labels; the result page reports
+per-component generated/preserved pixel counts and the detectors' boxes on both
+the per-component and merged composites.
+
+## 5. Package layout
 
 | File | Responsibility |
 |---|---|
-| `server.py` | Flask routes: form, upload handler, image servers, run pruning |
+| `server.py` | Flask routes: form, upload handler, inpainting editor/run, image servers, run pruning |
 | `settings.py` | Per-component context building and caching (one load per component) |
-| `pipeline.py` | Upload → validate → encode → sample → average probabilities → threshold → composite → detect → compare |
+| `pipeline.py` | Upload → validate → encode → sample → average probabilities → threshold → composite → detect → compare; plus the three-component inpainting pipeline |
+| `inpainting.py` | Pure inpainting rules: legal-edit validation, palette loading, component merge and overlap resolution |
 | `comparison.py` | Parse uploaded YOLO labels, match them to predictions, compute IoU/rates/localization |
 | `../components.toml` | Component → diffusion checkpoint + `missing_yolo` detector, shared with the evaluator |
-| `templates/index.html` | The upload form |
+| `templates/index.html` | The single-component upload form |
 | `templates/result.html` | The panels, ground-truth comparison, metrics and detection table |
+| `templates/inpaint.html` | The canvas editor, brush controls and palette |
+| `templates/inpaint_result.html` | Per-component reconstructions and the merged layout |
 | `test_frontend.py` | Unit tests of the pure logic (`./venv/bin/python frontend/test_frontend.py`) |
 
 Everything the stage knows about generation and detection is imported, not
@@ -123,11 +172,12 @@ reimplemented: `mask_diffusion/inference.py` (encode, sample, decode),
 (the detector call) and `evaluator/visualize.py` (box drawing). The only things
 this stage owns are the upload handling and the two pages.
 
-## 5. Configuration
+## 6. Configuration
 
 `config.toml` picks the default component, the directories and the device;
 `hyperparameters.toml` picks the numbers (draws, ensemble threshold, chunk,
-alpha, confidence, size caps, match IoU, label-file guards, cached runs). The component -> models pairing
+alpha, confidence, size caps, match IoU, label-file guards, cached runs, and the
+inpainting canvas/brush/overlay/merge settings). The component -> models pairing
 is **not** declared here: `components.toml` at the repository root is the single
 source the evaluator and the frontend both read, so the two stages can never
 disagree about which generator and detector belong together. To add a component,

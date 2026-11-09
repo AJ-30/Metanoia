@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inpaint furniture · erase and reconstruct</title>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --border:#262b3a; --text:#e6e9ef; --muted:#98a2b3; --accent:#5eead4; --danger:#f87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 18px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:16px; margin:26px 0 10px; color:var(--accent); }
+  p.sub { margin:0 0 22px; color:var(--muted); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; }
+  .field { margin-bottom:18px; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  .hint { color:var(--muted); font-weight:400; font-size:13px; margin-top:4px; display:block; }
+  input[type=file] { display:block; width:100%; color:var(--muted); }
+  input[type=number] { width:120px; background:#0b0d13; color:var(--text);
+                       border:1px solid var(--border); border-radius:6px; padding:8px; }
+  input[type=range] { width:240px; vertical-align:middle; }
+  button { background:var(--accent); color:#06231d; border:0; border-radius:8px;
+           padding:10px 22px; font-weight:700; cursor:pointer; font-size:15px; }
+  button.secondary { background:#0b0d13; color:var(--text); border:1px solid var(--border); }
+  button:hover { filter:brightness(1.08); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .error { color:#fca5a5; background:#3b1d1d; border:1px solid #7f1d1d;
+           border-radius:8px; padding:12px 14px; margin-bottom:16px; }
+  .note { color:var(--muted); font-size:13px; margin-top:10px; }
+  .editor-grid { display:grid; grid-template-columns: minmax(260px, 512px) 1fr; gap:18px; align-items:start; }
+  @media (max-width: 800px) { .editor-grid { grid-template-columns: 1fr; } }
+  #editor { width:100%; max-width:512px; aspect-ratio:1/1; display:block;
+            background:#0b0d13; border:1px solid var(--border); border-radius:8px;
+            image-rendering:pixelated; cursor:crosshair; touch-action:none; }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+  .toolbar .value { color:var(--accent); font-weight:700; min-width:2.5em; display:inline-block; }
+  .legend { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .legend .item { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; }
+  .swatch { width:14px; height:14px; border-radius:3px; border:1px solid #0006; }
+  .status { color:var(--muted); font-size:13px; margin-top:8px; min-height:1.4em; }
+  .status.bad { color:var(--danger); }
+  code { background:#0b0d13; border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/" style="color:var(--accent); text-decoration:none; font-weight:600;">&larr; standard generation</a></p>
+  <h1>Inpaint the three furniture components</h1>
+  <p class="sub">Upload the floor-plan mask and the original furniture mask, then erase parts of the
+  component classes the registry declares: <strong>{% for name in components %}{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>.
+  The edited mask is the only furniture layout the models see: erased pixels are background class
+  <code>0</code>, and the model is not told where you erased. All component models run one at a time and
+  their generated masks are merged into the edited layout.</p>
+
+  {% if error %}<div class="error"><strong>Could not run that:</strong> {{ error }}</div>{% endif %}
+
+  <form class="card" action="/inpaint" method="post" enctype="multipart/form-data" id="inpaint-form">
+    <div class="field">
+      <label for="floorplan">Floor-plan segmentation mask <span class="hint">Required · single-channel class-id PNG
+      (mode <code>L</code> or <code>P</code>). It is nearest-neighbour resized to the model's native square
+      size.</span></label>
+      <input type="file" id="floorplan" name="floorplan" accept="image/png,.png" required>
+    </div>
+
+    <div class="field">
+      <label for="furniture">Furniture segmentation mask <span class="hint">Required · the layout to edit.
+      Any class id in the palette is accepted, but the brush only erases the three component classes.</span></label>
+      <input type="file" id="furniture" name="furniture" accept="image/png,.png" required>
+      <div class="status" id="preview-status">Choose a furniture mask to start editing.</div>
+    </div>
+
+    <div class="editor-grid">
+      <div>
+        <canvas id="editor" width="{{ canvas_size }}" height="{{ canvas_size }}"
+                aria-label="Furniture mask editor"></canvas>
+        <div class="toolbar">
+          <label for="brush" style="margin:0;">Brush</label>
+          <input type="range" id="brush" min="{{ brush_min }}" max="{{ brush_max }}"
+                 value="{{ brush_default }}" step="1">
+          <span class="value" id="brush-value">{{ brush_default }}</span>
+          <button type="button" class="secondary" id="undo">Undo</button>
+          <button type="button" class="secondary" id="reset">Clear erasures</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div>
+        <p class="note" style="margin-top:0;">Erased pixels are shown in translucent red. Painting over
+        furniture that is not one of the three components does nothing, so a sofa or a side table cannot
+        be removed by accident.</p>
+        <div class="field">
+          <label for="draws">Ensemble members per component <span class="hint">Each component runs this many
+          independent diffusion chains; their missing-component probabilities are averaged and thresholded at
+          {{ ensemble_threshold }}. The default is {{ default_draws }}.</span></label>
+          <input type="number" id="draws" name="draws" value="{{ default_draws }}" min="1" max="{{ max_draws }}">
+        </div>
+        <input type="hidden" id="edited_ids" name="edited_ids" value="">
+        <button type="submit" id="submit" disabled>Reconstruct and merge</button>
+        <p class="note">Everything runs locally on this machine ({{ device }}). The three component models
+        run sequentially, so this takes longer than a single-component upload.</p>
+      </div>
+    </div>
+  </form>
+</main>
+
+<script>
+  // The server has already validated and resized the furniture upload to the
+  // model's square domain. The canvas keeps one byte per pixel: the class id.
+  const CANVAS_SIZE = {{ canvas_size }};
+  const ERASABLE = new Set({{ erasable_channels|tojson }});
+  const PALETTE = {{ palette|tojson }};
+  const ERASE_ALPHA = {{ erase_overlay_alpha }};
+  const UNDO_LIMIT = {{ undo_limit }};
+
+  const editor = document.getElementById('editor');
+  const context = editor.getContext('2d');
+  const brush = document.getElementById('brush');
+  const brushValue = document.getElementById('brush-value');
+  const previewStatus = document.getElementById('preview-status');
+  const furnitureInput = document.getElementById('furniture');
+  const form = document.getElementById('inpaint-form');
+  const submitButton = document.getElementById('submit');
+  const editedInput = document.getElementById('edited_ids');
+
+  // Palette lookup by class id, used only for the on-screen rendering. The ids
+  // in sourceIds/editedIds are the values the server actually receives.
+  const paletteById = new Map();
+  for (const entry of PALETTE) {
+    paletteById.set(Number(entry.id), entry.rgb);
+  }
+
+  let sourceIds = null;   // normalized upload, never mutated
+  let editedIds = null;   // current class ids, erased pixels are 0
+  let erased = null;      // 1 where the brush removed a pixel
+  let history = [];
+  let drawing = false;
+  let lastPoint = null;
+
+  function paletteColor(classId) {
+    const rgb = paletteById.get(Number(classId));
+    return rgb || [255, 0, 255];
+  }
+
+  function renderPreview() {
+    if (!editedIds) {
+      context.fillStyle = '#0b0d13';
+      context.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      return;
+    }
+    const image = context.createImageData(CANVAS_SIZE, CANVAS_SIZE);
+    for (let index = 0; index < editedIds.length; index += 1) {
+      const classId = editedIds[index];
+      const color = paletteColor(classId);
+      let r = color[0];
+      let g = color[1];
+      let b = color[2];
+      if (erased[index]) {
+        // Semi-transparent red over the underlying palette colour. The alpha is
+        // the same value the result page uses for its server-side erase panel.
+        r = Math.round(r * (1 - ERASE_ALPHA) + 255 * ERASE_ALPHA);
+        g = Math.round(g * (1 - ERASE_ALPHA) + 0 * ERASE_ALPHA);
+        b = Math.round(b * (1 - ERASE_ALPHA) + 0 * ERASE_ALPHA);
+      }
+      const offset = index * 4;
+      image.data[offset] = r;
+      image.data[offset + 1] = g;
+      image.data[offset + 2] = b;
+      image.data[offset + 3] = 255;
+    }
+    context.putImageData(image, 0, 0);
+  }
+
+  function resetEditorState(ids) {
+    sourceIds = ids.slice();
+    editedIds = ids.slice();
+    erased = new Uint8Array(ids.length);
+    history = [];
+    renderPreview();
+    previewStatus.textContent = 'Ready. Erase the component pixels you want the models to reconstruct.';
+    previewStatus.classList.remove('bad');
+    submitButton.disabled = false;
+  }
+
+  function clearEditorState() {
+    // Clear before a new upload is validated so a submit cannot race ahead and
+    // send the previous canvas against the new furniture file.
+    sourceIds = null;
+    editedIds = null;
+    erased = null;
+    history = [];
+    renderPreview();
+  }
+
+  function setPreviewError(message) {
+    clearEditorState();
+    previewStatus.textContent = message;
+    previewStatus.classList.add('bad');
+    submitButton.disabled = true;
+  }
+
+  async function loadPreview(file) {
+    clearEditorState();
+    previewStatus.textContent = 'Reading and validating the furniture mask…';
+    previewStatus.classList.remove('bad');
+    submitButton.disabled = true;
+    const data = new FormData();
+    data.append('furniture', file);
+    try {
+      const response = await fetch('/inpaint/preview', { method: 'POST', body: data });
+      if (!response.ok) {
+        setPreviewError(await response.text());
+        return;
+      }
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+      const offscreen = document.createElement('canvas');
+      offscreen.width = CANVAS_SIZE;
+      offscreen.height = CANVAS_SIZE;
+      const offscreenContext = offscreen.getContext('2d');
+      offscreenContext.drawImage(bitmap, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      const pixels = offscreenContext.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE).data;
+      const ids = new Uint8Array(CANVAS_SIZE * CANVAS_SIZE);
+      for (let index = 0; index < ids.length; index += 1) {
+        ids[index] = pixels[index * 4]; // mode-L PNG: red channel is the id
+      }
+      resetEditorState(ids);
+    } catch (error) {
+      setPreviewError('Could not read that furniture mask: ' + error.message);
+    }
+  }
+
+  function canvasPoint(event) {
+    const rect = editor.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * editor.width / rect.width;
+    const y = (event.clientY - rect.top) * editor.height / rect.height;
+    return { x: x, y: y };
+  }
+
+  function pushHistory() {
+    history.push({ ids: editedIds.slice(), erased: erased.slice() });
+    if (history.length > UNDO_LIMIT) {
+      history.shift();
+    }
+  }
+
+  function eraseAt(x, y) {
+    if (!sourceIds) {
+      return false;
+    }
+    const radius = Number(brush.value);
+    const radiusSquared = radius * radius;
+    const minX = Math.max(0, Math.floor(x - radius));
+    const maxX = Math.min(CANVAS_SIZE - 1, Math.ceil(x + radius));
+    const minY = Math.max(0, Math.floor(y - radius));
+    const maxY = Math.min(CANVAS_SIZE - 1, Math.ceil(y + radius));
+    let changed = false;
+    for (let py = minY; py <= maxY; py += 1) {
+      for (let px = minX; px <= maxX; px += 1) {
+        const dx = px - x;
+        const dy = py - y;
+        if (dx * dx + dy * dy > radiusSquared) {
+          continue;
+        }
+        const index = py * CANVAS_SIZE + px;
+        // Only the three component classes can be erased. The server repeats
+        // this check, so a tampered request cannot remove a sofa.
+        if (!ERASABLE.has(sourceIds[index])) {
+          continue;
+        }
+        editedIds[index] = 0;
+        erased[index] = 1;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  function eraseLine(from, to) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.hypot(dx, dy);
+    const step = Math.max(1, Number(brush.value) * 0.4);
+    const steps = Math.max(1, Math.ceil(distance / step));
+    let changed = false;
+    for (let index = 0; index <= steps; index += 1) {
+      const t = index / steps;
+      changed = eraseAt(from.x + dx * t, from.y + dy * t) || changed;
+    }
+    return changed;
+  }
+
+  editor.addEventListener('pointerdown', (event) => {
+    if (!editedIds) {
+      return;
+    }
+    drawing = true;
+    editor.setPointerCapture(event.pointerId);
+    pushHistory();
+    lastPoint = canvasPoint(event);
+    if (eraseAt(lastPoint.x, lastPoint.y)) {
+      renderPreview();
+    }
+  });
+
+  editor.addEventListener('pointermove', (event) => {
+    if (!drawing || !editedIds) {
+      return;
+    }
+    const point = canvasPoint(event);
+    if (eraseLine(lastPoint, point)) {
+      renderPreview();
+    }
+    lastPoint = point;
+  });
+
+  function stopDrawing() {
+    drawing = false;
+    lastPoint = null;
+  }
+  editor.addEventListener('pointerup', stopDrawing);
+  editor.addEventListener('pointercancel', stopDrawing);
+  editor.addEventListener('pointerleave', stopDrawing);
+
+  document.getElementById('undo').addEventListener('click', () => {
+    if (!history.length) {
+      return;
+    }
+    const previous = history.pop();
+    editedIds = previous.ids;
+    erased = previous.erased;
+    renderPreview();
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    if (!sourceIds) {
+      return;
+    }
+    pushHistory();
+    editedIds = sourceIds.slice();
+    erased = new Uint8Array(sourceIds.length);
+    renderPreview();
+  });
+
+  brush.addEventListener('input', () => {
+    brushValue.textContent = brush.value;
+  });
+
+  furnitureInput.addEventListener('change', () => {
+    const file = furnitureInput.files && furnitureInput.files[0];
+    if (file) {
+      loadPreview(file);
+    }
+  });
+
+  function bytesToBase64(bytes) {
+    let binary = '';
+    const chunk = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunk) {
+      binary += String.fromCharCode.apply(
+        null, bytes.subarray(index, index + chunk)
+      );
+    }
+    return btoa(binary);
+  }
+
+  form.addEventListener('submit', (event) => {
+    if (!editedIds) {
+      event.preventDefault();
+      previewStatus.textContent = 'Choose and validate a furniture mask first.';
+      previewStatus.classList.add('bad');
+      return;
+    }
+    editedInput.value = bytesToBase64(editedIds);
+  });
+
+  // Palette legend: only the classes the brush can erase are shown, because
+  // they are the only ones the user can act on.
+  const legend = document.getElementById('legend');
+  for (const entry of PALETTE) {
+    if (!ERASABLE.has(Number(entry.id))) {
+      continue;
+    }
+    const item = document.createElement('span');
+    item.className = 'item';
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
+    swatch.style.background = entry.hex;
+    item.appendChild(swatch);
+    item.appendChild(document.createTextNode(entry.name));
+    legend.appendChild(item);
+  }
+
+  renderPreview();
+</script>
+</body>
+</html>

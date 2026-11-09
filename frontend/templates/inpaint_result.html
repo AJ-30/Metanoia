@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inpainted furniture · merged component reconstructions</title>
+<style>
+  :root { --bg:#0f1117; --panel:#171a23; --border:#262b3a; --text:#e6e9ef; --muted:#98a2b3; --accent:#5eead4; --pred:#f87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  main { max-width: 1320px; margin: 0 auto; padding: 28px 18px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:17px; margin:30px 0 10px; color:var(--accent); }
+  h3 { font-size:14px; margin:20px 0 8px; color:var(--text); }
+  p.sub { margin:0 0 20px; color:var(--muted); }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+  .cell { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px; }
+  .cell img { display:block; width:256px; height:256px; image-rendering:pixelated;
+              border-radius:6px; background:#0b0d13; }
+  .cell .cap { color:var(--muted); font-size:13px; margin-top:8px; max-width:256px; }
+  .draw-strip { display:flex; gap:10px; flex-wrap:wrap; }
+  .draw-strip .cell { padding:8px; }
+  .draw-strip .cell img { width:112px; height:112px; }
+  .draw-strip .cell .cap { max-width:112px; font-size:12px; }
+  table { border-collapse:collapse; width:100%; background:var(--panel);
+          border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--border); font-size:14px; }
+  th { color:var(--muted); font-weight:600; }
+  tr:last-child td { border-bottom:0; }
+  .tag { display:inline-block; background:#0b0d13; border:1px solid var(--border);
+         border-radius:999px; padding:2px 10px; font-size:13px; }
+  a, .back { color:var(--accent); text-decoration:none; font-weight:600; }
+  .meta { color:var(--muted); font-size:13px; margin:6px 0 0; }
+  .empty { color:var(--muted); }
+  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+                 gap:10px; margin:10px 0 4px; }
+  .metric { background:var(--panel); border:1px solid var(--border); border-radius:9px;
+            padding:10px 12px; }
+  .metric .k { display:block; color:var(--muted); font-size:12px; text-transform:uppercase;
+               letter-spacing:.03em; }
+  .metric .v { display:block; font-size:20px; font-weight:700; margin-top:2px; }
+  .status { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--accent);
+            border-radius:8px; padding:10px 14px; margin:14px 0 0; }
+  .status strong { color:var(--accent); }
+  .scroll { overflow-x:auto; }
+  code { background:#0b0d13; border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; color:var(--muted); font-size:13px; margin:0 0 16px; }
+  .swatch { display:inline-block; width:12px; height:12px; border-radius:2px;
+            vertical-align:-1px; margin-right:6px; }
+  .swatch.pred { background:var(--pred); }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/inpaint">&larr; inpaint another layout</a> &middot; <a href="/">standard generation</a></p>
+  <h1>Inpainted furniture &mdash; three components reconstructed and merged</h1>
+  <p class="sub">
+    Run <span class="tag">{{ request_id }}</span> · {{ draws }} chain(s) per component ·
+    averaged probability threshold {{ ensemble_threshold }} ·
+    {{ elapsed_seconds|round(1) }}s · seed {{ seed }} ·
+    merged on the {{ image_size }}&times;{{ image_size }} render domain.
+    {% if protect_original %}
+    Original furniture is protected: generated pixels only fill background.
+    {% else %}
+    Literal union merge: generated pixels may claim any non-original-target pixel.
+    {% endif %}
+  </p>
+
+  <p class="legend">
+    <span><span class="swatch pred"></span>red = detector boxes on the merged composite</span>
+    <span>confidence threshold {{ conf }}</span>
+  </p>
+
+  {% macro metric(label, value) -%}
+  <div class="metric"><span class="k">{{ label }}</span><span class="v">{{ value }}</span></div>
+  {%- endmacro %}
+
+  <h2>Inputs and erasure</h2>
+  <div class="row">
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.floorplan }}" alt="Uploaded floorplan">
+      <div class="cap">1 · floorplan you uploaded</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.original_furniture }}" alt="Original furniture">
+      <div class="cap">2 · original furniture before erasing</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.edited_furniture }}" alt="Edited furniture">
+      <div class="cap">3 · edited furniture, erased pixels are background</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.erase_overlay }}" alt="Erase overlay">
+      <div class="cap">4 · erased pixels (translucent red)</div>
+    </div>
+  </div>
+
+  {% for c in components %}
+  <h2>{{ c.label }} <span class="tag">{{ c.name }}</span></h2>
+  <div class="row">
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ c.panels.generated }}"
+           alt="Generated {{ c.label }}">
+      <div class="cap">generated {{ c.label }} (ensemble, its own channel)</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ c.panels.final }}"
+           alt="Merged {{ c.label }}">
+      <div class="cap">this component after the merge rule: remaining original plus generated</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ c.panels.composite }}"
+           alt="{{ c.label }} composite">
+      <div class="cap">composite before detection</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ c.panels.boxes }}"
+           alt="{{ c.label }} detector boxes">
+      <div class="cap">what the {{ c.label }} detector drew</div>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    {{ metric('Generated pixels', c.generated_pixels) }}
+    {{ metric('Preserved original pixels', c.preserved_pixels) }}
+    {{ metric('Final component pixels', c.final_pixels) }}
+    {{ metric('Detections', c.found|length) }}
+  </div>
+
+  {% if c.draws %}
+  <h3>Per-draw diagnostics ({{ c.draws|length }} chains)</h3>
+  <div class="draw-strip">
+    {% for draw in c.draws %}
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ draw.panel }}"
+           alt="Draw {{ draw.index }} of {{ c.label }}">
+      <div class="cap">draw {{ draw.index }} · {{ draw.generated_pixels }} generated px</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <h3>{{ c.label }} predictions</h3>
+  <table>
+    <thead><tr><th>Detected</th><th>Confidence</th><th>center (cx, cy)</th><th>size (w, h)</th></tr></thead>
+    <tbody>
+      {% for box in c.found %}
+      <tr>
+        <td>{{ box.class }}</td>
+        <td>{{ '%.3f'|format(box.confidence) }}</td>
+        <td>{{ '%.4f'|format(box.cx) }}, {{ '%.4f'|format(box.cy) }}</td>
+        <td>{{ '%.4f'|format(box.w) }}, {{ '%.4f'|format(box.h) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">No {{ c.label }} above the confidence threshold
+        ({{ conf }}) in this component's composite.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+
+  <h2>Merged layout</h2>
+  <div class="row">
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.merged_furniture }}"
+           alt="Merged furniture layout">
+      <div class="cap">merged furniture class ids (all three generated components)</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.merged_composite }}"
+           alt="Merged composite">
+      <div class="cap">merged composite before detection</div>
+    </div>
+    <div class="cell">
+      <img src="/outputs/{{ request_id }}/{{ panels.merged_boxes }}"
+           alt="Merged composite with all detector boxes">
+      <div class="cap">every component detector run on the merged composite</div>
+    </div>
+  </div>
+
+  <div class="status">
+    <strong>Merge rule</strong> &mdash; for each component,
+    <code>final = remaining_original &cup; (generated &setminus; remaining_original)</code>.
+    With original-furniture protection, generated pixels are restricted to background, so the three
+    models cannot overwrite furniture that survived the erasure. When two generated components claim the
+    same background pixel, the higher ensemble probability wins.
+  </div>
+
+  <h3>All predictions on the merged composite</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Component</th><th>Detected</th><th>Confidence</th><th>center (cx, cy)</th><th>size (w, h)</th></tr></thead>
+      <tbody>
+        {% for box in merged_found %}
+        <tr>
+          <td>{{ box.component }}</td>
+          <td>{{ box.class }}</td>
+          <td>{{ '%.3f'|format(box.confidence) }}</td>
+          <td>{{ '%.4f'|format(box.cx) }}, {{ '%.4f'|format(box.cy) }}</td>
+          <td>{{ '%.4f'|format(box.w) }}, {{ '%.4f'|format(box.h) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty">No component above the confidence threshold
+          ({{ conf }}) on the merged composite.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="meta">The model never receives the erase mask: the edited furniture mask is staged exactly as
+  the encoders read it, with erased pixels at background class <code>0</code>. Per-component panels show
+  each model's own ensemble result; the merged panels show the single layout built from all three.</p>
+</main>
+</body>
+</html>

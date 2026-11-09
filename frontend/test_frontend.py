@@ -20,11 +20,15 @@ sees instead of the result:
    lines and class-less lines, empty file as a negative, another numeric
    class/out-of-range/zero-area rejected), and the comparison must count
    TP/FP/FN, IoU and confidence correctly.
+8. Inpainting must only erase the three component classes, must merge generated
+   pixels deterministically, must resolve overlaps by ensemble probability, and
+   must render both the editor and result pages.
 
 Run with: ``./venv/bin/python frontend/test_frontend.py``
 (or ``pytest frontend/test_frontend.py`` when pytest is installed).
 """
 
+import base64
 import sys
 import tempfile
 from pathlib import Path
@@ -50,6 +54,13 @@ from frontend.comparison import (
     compare_boxes,
     read_ground_truth_labels,
 )
+from frontend.inpainting import (  # noqa: E402
+    erasable_channels_from_palette,
+    load_furniture_palette,
+    merge_component_mask,
+    merge_inpainted_components,
+    validate_inpaint_edit,
+)
 from frontend.pipeline import (  # noqa: E402
     _clamp_draws,
     build_blank_mask,
@@ -59,7 +70,9 @@ from frontend.pipeline import (  # noqa: E402
 from frontend.server import (  # noqa: E402
     GROUND_TRUTH_FIELD,
     GROUND_TRUTH_LABELS_FILENAME,
+    INPAINT_EDITED_FIELD,
     UPLOAD_MASKS,
+    _decode_edited_ids,
     _prune_old_runs,
     create_app,
     format_metric,
@@ -561,6 +574,257 @@ def test_result_template_renders_both_comparison_branches() -> None:
     assert "ground truth only (green overlay)" in with_labels
     assert "Mean matched IoU" in with_labels
     assert "nothing to score" in without_labels
+
+
+def test_validate_inpaint_edit_accepts_erasing_component_pixels() -> None:
+    """Erasing a TV/showcase/dining-set pixel to background is a legal edit."""
+    original = torch.tensor(
+        [
+            [2, 5, 3, 1],
+            [0, 2, 5, 3],
+            [1, 0, 2, 0],
+            [0, 0, 0, 0],
+        ],
+        dtype=torch.int64,
+    )
+    edited = original.clone()
+    edited[0, 0] = 0  # erase TV
+    edited[0, 1] = 0  # erase showcase
+    edited[0, 2] = 0  # erase dining set
+    validate_inpaint_edit(original, edited, {2, 3, 5})
+    # A no-op edit is also legal.
+    validate_inpaint_edit(original, original.clone(), {2, 3, 5})
+
+
+def test_validate_inpaint_edit_rejects_protected_changes() -> None:
+    """A sofa cannot be erased and a component cannot be relabelled."""
+    original = torch.tensor([[1, 2, 5]], dtype=torch.int64)
+    erased_sofa = torch.tensor([[0, 2, 5]], dtype=torch.int64)
+    relabelled_tv = torch.tensor([[1, 1, 5]], dtype=torch.int64)
+    for edited in (erased_sofa, relabelled_tv):
+        try:
+            validate_inpaint_edit(original, edited, {2, 3, 5})
+        except ValueError as exc:
+            assert "may only erase" in str(exc)
+        else:  # pragma: no cover - failure path
+            raise AssertionError("a protected pixel change was accepted")
+
+
+def test_merge_component_mask_protects_original_furniture() -> None:
+    """Generated pixels fill background but never overwrite another class."""
+    base = torch.tensor(
+        [
+            [2, 0, 1],
+            [0, 0, 0],
+        ],
+        dtype=torch.int64,
+    )
+    generated = torch.tensor(
+        [
+            [True, True, True],
+            [False, False, True],
+        ]
+    )
+    protected = merge_component_mask(base, 2, generated, protect_original=True)
+    assert protected.tolist() == [
+        [True, True, False],
+        [False, False, True],
+    ]
+    literal = merge_component_mask(base, 2, generated, protect_original=False)
+    assert literal.tolist() == [
+        [True, True, True],
+        [False, False, True],
+    ]
+
+
+def test_merge_inpainted_components_uses_probability_on_overlap() -> None:
+    """A background pixel goes to the generated component with the higher vote."""
+    base = torch.tensor(
+        [
+            [0, 0, 0],
+            [0, 1, 0],
+        ],
+        dtype=torch.int64,
+    )
+    tv = torch.tensor(
+        [
+            [True, True, False],
+            [False, False, True],
+        ]
+    )
+    showcase = torch.tensor(
+        [
+            [True, False, False],
+            [True, False, True],
+        ]
+    )
+    tv_probability = torch.tensor(
+        [
+            [0.9, 0.9, 0.0],
+            [0.0, 0.0, 0.2],
+        ]
+    )
+    showcase_probability = torch.tensor(
+        [
+            [0.1, 0.0, 0.0],
+            [0.8, 0.0, 0.3],
+        ]
+    )
+    merged = merge_inpainted_components(
+        base,
+        {"tv": 2, "showcase": 5},
+        {2: tv, 5: showcase},
+        {2: tv_probability, 5: showcase_probability},
+        protect_original=True,
+    )
+    # (0,0) is an overlap: TV's 0.9 wins. (0,1) is TV only. (0,2) and (1,0)
+    # are showcase only. (1,1) is an original sofa, so it survives even though
+    # showcase generated there.
+    assert merged.tolist() == [
+        [2, 2, 0],
+        [5, 1, 5],
+    ]
+
+
+def test_merge_inpainted_components_literal_union_can_overwrite() -> None:
+    """Without protection, a generated component may claim another class."""
+    base = torch.tensor([[1, 0]], dtype=torch.int64)
+    tv = torch.tensor([[True, False]])
+    showcase = torch.tensor([[True, False]])
+    merged = merge_inpainted_components(
+        base,
+        {"tv": 2, "showcase": 5},
+        {2: tv, 5: showcase},
+        {
+            2: torch.tensor([[0.9, 0.0]]),
+            5: torch.tensor([[0.8, 0.0]]),
+        },
+        protect_original=False,
+    )
+    # The sofa at (0, 0) is not TV's own channel, so the literal union lets the
+    # higher-probability TV reconstruction replace it.
+    assert merged.tolist() == [[2, 0]]
+
+
+def test_load_furniture_palette_and_erasable_channels() -> None:
+    """The palette is sorted by id and maps registry names to class ids."""
+    text = (
+        '{"0": {"name": "background", "color": "#000000"}, '
+        '"5": {"name": "showcase", "color": "#34d399"}, '
+        '"2": {"name": "tv", "color": "#a78bfa"}, '
+        '"3": {"name": "dining_set", "color": "#fb923c"}}'
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "furniture_color_index.json"
+        path.write_text(text, encoding="utf-8")
+        palette = load_furniture_palette(path)
+    assert [entry["id"] for entry in palette] == [0, 2, 3, 5]
+    assert palette[1]["rgb"] == (167, 139, 250)
+    assert erasable_channels_from_palette(
+        palette, ["tv", "showcase", "dining_set"]
+    ) == {2, 3, 5}
+
+
+def test_decode_edited_ids_roundtrip_and_rejects_bad_payloads() -> None:
+    """The browser's raw bytes become the exact class-id tensor."""
+    size = 4
+    ids = torch.arange(size * size, dtype=torch.uint8).reshape(size, size)
+    encoded = base64.b64encode(ids.numpy().tobytes()).decode("ascii")
+    decoded = _decode_edited_ids(encoded, size)
+    assert torch.equal(decoded, ids.to(torch.int64))
+    for bad in ("", "not base64", base64.b64encode(b"\x00\x01").decode("ascii")):
+        try:
+            _decode_edited_ids(bad, size)
+        except ValueError:
+            pass
+        else:  # pragma: no cover - failure path
+            raise AssertionError("a malformed edited mask was accepted")
+
+
+def test_inpaint_templates_render() -> None:
+    """Both inpainting pages render with the payload the routes provide."""
+    app = create_app("debug")
+    palette = [
+        {"id": 0, "name": "background", "rgb": [0, 0, 0], "hex": "#000000"},
+        {"id": 2, "name": "tv", "rgb": [167, 139, 250], "hex": "#a78bfa"},
+        {"id": 3, "name": "dining_set", "rgb": [251, 146, 60], "hex": "#fb923c"},
+        {"id": 5, "name": "showcase", "rgb": [52, 211, 153], "hex": "#34d399"},
+    ]
+    with app.app_context():
+        editor = render_template(
+            "inpaint.html",
+            components=["tv", "showcase", "dining_set"],
+            canvas_size=256,
+            palette=palette,
+            erasable_channels=[2, 3, 5],
+            brush_min=2,
+            brush_max=48,
+            brush_default=12,
+            erase_overlay_alpha=0.55,
+            undo_limit=30,
+            max_draws=4,
+            default_draws=4,
+            ensemble_threshold=0.5,
+            device="cpu",
+            error=None,
+        )
+        result = render_template(
+            "inpaint_result.html",
+            request_id="inpaint_test",
+            panels={
+                "floorplan": "floorplan.png",
+                "original_furniture": "original.png",
+                "edited_furniture": "edited.png",
+                "erase_overlay": "erase.png",
+                "merged_furniture": "merged.png",
+                "merged_composite": "merged_composite.png",
+                "merged_boxes": "merged_boxes.png",
+            },
+            components=[
+                {
+                    "name": "tv",
+                    "label": "TV",
+                    "channel": 2,
+                    "panels": {
+                        "generated": "tv_generated.png",
+                        "final": "tv_final.png",
+                        "composite": "tv_composite.png",
+                        "boxes": "tv_boxes.png",
+                    },
+                    "generated_pixels": 10,
+                    "preserved_pixels": 2,
+                    "final_pixels": 12,
+                    "draws": [
+                        {
+                            "index": 0,
+                            "panel": "tv_draw_0.png",
+                            "generated_pixels": 9,
+                        }
+                    ],
+                    "found": [],
+                }
+            ],
+            merged_found=[],
+            draws=4,
+            ensemble_threshold=0.5,
+            elapsed_seconds=1.0,
+            image_size=256,
+            protect_original=True,
+            seed=1234,
+            conf=0.25,
+        )
+    assert "Reconstruct and merge" in editor
+    assert "const ERASABLE" in editor
+    assert "Merged layout" in result
+    assert "Merge rule" in result
+    assert "Per-draw diagnostics" in result
+    assert "Original furniture is protected" in result
+
+
+def test_inpaint_edited_field_is_not_a_mask_field() -> None:
+    """The base64 edit field cannot collide with an uploaded mask field."""
+    assert INPAINT_EDITED_FIELD not in UPLOAD_MASKS
+    assert INPAINT_EDITED_FIELD not in set(UPLOAD_MASKS.values())
 
 
 def test_ground_truth_upload_constants_are_distinct() -> None:

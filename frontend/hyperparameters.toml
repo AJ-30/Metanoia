@@ -27,6 +27,22 @@ GENERATION_CHUNK = 8
 ENCODE_BATCH_SIZE = 64
 OVERLAY_ALPHA = 0.6
 
+# ---- Inpainting editor ----
+# The canvas is the model's square render domain, so the browser edits exactly
+# the pixels the encoder will see. The brush size is a radius in canvas pixels.
+# Erased pixels are shown in a translucent red layer at this opacity. When
+# INPAINT_PROTECT_ORIGINAL is true, a generated component may only fill
+# background pixels; the three component models therefore cannot overwrite
+# furniture that survived the erasure. Set it to false to follow the literal
+# union rule and let generated pixels claim any non-original-target pixel.
+INPAINT_CANVAS_SIZE = 256
+INPAINT_BRUSH_MIN = 2
+INPAINT_BRUSH_MAX = 48
+INPAINT_BRUSH_DEFAULT = 12
+INPAINT_ERASE_OVERLAY_ALPHA = 0.55
+INPAINT_UNDO_LIMIT = 30
+INPAINT_PROTECT_ORIGINAL = true
+
 # ---- Detector call ----
 # Confidence threshold, inference size and the cap on drawn boxes.
 YOLO_CONF = 0.25
