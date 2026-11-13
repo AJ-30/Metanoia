@@ -45,6 +45,27 @@ entry the panel is simply empty and every other dashboard is unaffected.
 
 Run `./run_eval.sh` first (see `evaluator/README.md`) to produce the figures.
 
+`run_validation_comparison.sh` runs the evaluator for every missing component
+(`tv`, `showcase`, `dining_set`) over the full validation split and writes one
+overlap comparison table. It rebuilds the table after each component and keeps
+`runs.json`, so `--skip-existing` resumes an interrupted multi-hour batch.
+
+```bash
+./run_scripts/run_validation_comparison.sh --skip-existing
+# table: evaluator/outputs/validation_comparison/overlap_comparison.html
+```
+
+The validation split has 19,920 samples and each component uses 4 draws, so the
+full three-component batch is a multi-hour run. The script keeps the machine
+awake with `caffeinate` on macOS and writes a partial table after every
+component.
+
+To rebuild the table from completed runs without evaluating again:
+
+```bash
+./run_scripts/run_validation_comparison.sh --table-only
+```
+
 `run_frontend.sh` (at the repository root) starts the upload interface: a page
 where a floor-plan class-id mask is uploaded, the configured mask_diffusion run
 generates the missing component and the trained detector's bounding boxes are

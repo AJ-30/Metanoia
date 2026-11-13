@@ -1,22 +1,26 @@
 """Ground-truth versus prediction scoring for one frontend upload.
 
 The upload page can optionally take a YOLO ``labels.txt`` for the layout the
-component was generated into. This module owns the two things that upload then
-needs and nothing else:
+component was generated into. This module owns the label-reading and scoring
+pieces that upload then needs and nothing else:
 
-* :func:`read_ground_truth_labels` - validate a user-supplied label file and
-  turn its normalized ``cx cy w h`` lines into :class:`evaluator.dataset_gt.Box`
-  values. The file may use the full YOLO form ``cls cx cy w h``, the dataset's
-  own named form ``Name cx cy w h`` (e.g. ``TV cx cy w h``), or the shorter
-  ``cx cy w h``; a blank file is a legitimate negative sample.
-* :func:`compare_boxes` - pair ground-truth boxes with the detector's boxes
+* :func:`read_ground_truth_layout` - validate a user-supplied label file and
+  turn its normalized ``cx cy w h`` lines into the target component's boxes and
+  the other named furniture boxes. The file may use the full YOLO form
+  ``cls cx cy w h``, the dataset's own named form ``Name cx cy w h`` (e.g.
+  ``TV cx cy w h``), or the shorter ``cx cy w h``; a blank file is a legitimate
+  negative sample.
+* :func:`read_ground_truth_labels` - the target-only compatibility wrapper
+  around the layout reader.
+* :func:`compare_boxes` - pair target ground truth with the detector's boxes
   using the evaluator's greedy IoU matching, then turn the pairing into the
-  counts, rates and localization distributions the result page shows.
+  counts, rates, localization distributions and the overlap-with-other-furniture
+  metric the result page shows.
 
-The arithmetic is imported from :mod:`evaluator.box_metrics` so the frontend
-scores an upload exactly the way the evaluator scores a dataset split. Nothing
-here loads a model, touches torch or writes a file, which keeps the comparison
-unit-testable without a GPU.
+The arithmetic is imported from :mod:`evaluator.box_metrics` and
+:mod:`evaluator.overlap_metrics` so the frontend scores an upload exactly the way
+the evaluator scores a dataset split. Nothing here loads a model, touches torch
+or writes a file, which keeps the comparison unit-testable without a GPU.
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ from evaluator.box_metrics import (
     match_boxes,
 )
 from evaluator.dataset_gt import Box
+from evaluator.overlap_metrics import overlap_for_final_prediction
 
 # Accepted label-line widths: with a leading class field (a numeric YOLO class
 # id or the dataset's component name) or without one (a single-class detector
@@ -120,12 +125,32 @@ class FalsePositive:
 
 
 @dataclass(frozen=True)
+class GroundTruthLayout:
+    """The two groups of boxes read from one uploaded label file.
+
+    Attributes:
+        target_boxes (tuple[Box, ...]): Boxes of the component the detector was
+            asked to find. These are scored by :func:`compare_boxes`.
+        other_boxes (tuple[Box, ...]): Boxes of every other named object in the
+            layout. These are used only by the overlap metric, which asks
+            whether the generated component was placed on top of existing
+            furniture.
+    """
+
+    target_boxes: tuple[Box, ...]
+    other_boxes: tuple[Box, ...]
+
+
+@dataclass(frozen=True)
 class DetectionComparison:
     """Everything the result page reports about one draw's boxes.
 
     Attributes:
         iou_threshold (float): Minimum IoU that counts as a match.
-        ground_truth_boxes (int): Boxes read from the uploaded labels.
+        ground_truth_boxes (int): Target-component boxes read from the uploaded
+            labels.
+        other_ground_truth_boxes (int): Other named furniture boxes in the same
+            label file, used by the overlap metric.
         predicted_boxes (int): Boxes the detector returned above its threshold.
         matched_boxes (int): Ground-truth boxes claimed by a prediction (TP).
         false_positive_boxes (int): Predictions that claimed nothing (FP).
@@ -138,6 +163,9 @@ class DetectionComparison:
             GT and predicted boxes; unmatched boxes contribute zero.
         best_iou (float | None): Highest IoU over every GT/prediction pair,
             including pairs below the match threshold.
+        overlap (float | None): Fraction of the highest-confidence target
+            prediction covered by other ground-truth furniture. ``0`` is best;
+            ``None`` when the detector predicted no target box.
         matched_iou (MetricSummary | None): IoU distribution of matched pairs.
         center_distance_px (MetricSummary | None): Matched centre distances in
             render pixels.
@@ -154,6 +182,7 @@ class DetectionComparison:
 
     iou_threshold: float
     ground_truth_boxes: int
+    other_ground_truth_boxes: int
     predicted_boxes: int
     matched_boxes: int
     false_positive_boxes: int
@@ -164,6 +193,7 @@ class DetectionComparison:
     jaccard: float | None
     mean_iou_over_union: float | None
     best_iou: float | None
+    overlap: float | None
     matched_iou: MetricSummary | None
     center_distance_px: MetricSummary | None
     center_distance_normalized: MetricSummary | None
@@ -267,8 +297,8 @@ def _class_field_belongs_to_component(
     own label names. A numeric id must be exactly ``class_id``; a name must be
     one of ``label_names``. A non-numeric name that is not this component is a
     line for another piece of furniture in the same dataset ``labels.txt``, so
-    it is skipped the way :func:`evaluator.dataset_gt.parse_label_line` skips
-    it, rather than failing the whole upload.
+    it is not scored as the target; the layout reader keeps it for the overlap
+    metric rather than failing the whole upload.
 
     Args:
         raw (str): First field of the label line.
@@ -280,7 +310,8 @@ def _class_field_belongs_to_component(
 
     Returns:
         bool: ``True`` when the line belongs to the selected component,
-            ``False`` when it names another component and should be skipped.
+            ``False`` when it names another component and is kept as
+            other-furniture ground truth.
 
     Raises:
         ValueError: If a numeric field is not a valid integer class id, or is a
@@ -337,12 +368,12 @@ def _parse_box(values: Sequence[float], line_number: int) -> Box:
     return Box(cx=values[0], cy=values[1], w=values[2], h=values[3])
 
 
-def read_ground_truth_labels(
+def read_ground_truth_layout(
     path: Path,
     class_id: int,
     max_boxes: int,
     label_names: Sequence[str] = (),
-) -> list[Box]:
+) -> GroundTruthLayout:
     """Read and validate one uploaded YOLO or dataset label file.
 
     Accepted lines are ``cls cx cy w h`` (the normal YOLO form, with a numeric
@@ -352,8 +383,9 @@ def read_ground_truth_labels(
     is absent, which is a negative sample rather than an error.
 
     When ``label_names`` is supplied, named lines for another furniture class
-    are skipped exactly as the evaluator skips them, so a raw dataset
-    ``labels.txt`` listing every object can be uploaded unchanged.
+    are kept in :attr:`GroundTruthLayout.other_boxes` instead of being dropped,
+    so a raw dataset ``labels.txt`` listing every object can be uploaded
+    unchanged and the overlap metric can see the rest of the layout.
 
     Args:
         path (Path): Uploaded label file, UTF-8 text.
@@ -361,15 +393,17 @@ def read_ground_truth_labels(
             line with another class id is refused instead of being silently
             dropped, because that almost always means the wrong component's
             labels were uploaded.
-        max_boxes (int): Upper bound on accepted boxes, so one upload cannot
-            turn the page into an unbounded table.
+        max_boxes (int): Upper bound on accepted boxes (target plus other), so
+            one upload cannot turn the page into an unbounded computation.
         label_names (Sequence[str]): Dataset label names of the selected
             component, e.g. ``("TV",)``. A line whose first field is one of
-            these is a box of this component; a line naming any other component
-            is skipped. Empty means only numeric class ids are understood.
+            these is a target box; a line naming any other component is an
+            other-furniture box. Empty means only numeric class ids are
+            understood, so there are no other-furniture boxes.
 
     Returns:
-        list[Box]: The file's boxes in file order.
+        GroundTruthLayout: The target-component boxes and the other named
+            furniture boxes, both in file order.
 
     Raises:
         FileNotFoundError: If ``path`` is not a regular file.
@@ -389,7 +423,8 @@ def read_ground_truth_labels(
             "plain-text labels.txt, not an image or a binary file."
         ) from exc
 
-    boxes: list[Box] = []
+    target_boxes: list[Box] = []
+    other_boxes: list[Box] = []
     for line_number, raw in enumerate(text.splitlines(), start=1):
         if not raw.strip():
             continue
@@ -398,18 +433,24 @@ def read_ground_truth_labels(
             belongs: bool = _class_field_belongs_to_component(
                 parts[0], line_number, class_id, label_names
             )
-            if not belongs:
-                # Another object in the dataset's labels.txt, not the component.
-                continue
             values: list[float] = [
                 _parse_number(part, line_number, name)
                 for part, name in zip(parts[1:], ("cx", "cy", "w", "h"), strict=True)
             ]
+            box: Box = _parse_box(values, line_number)
+            if belongs:
+                target_boxes.append(box)
+            else:
+                # A named line for another object in the dataset's labels.txt.
+                # It is not scored as the target, but the overlap metric needs
+                # it to know what the generated component must not sit on.
+                other_boxes.append(box)
         elif len(parts) == _LABEL_FIELDS_WITHOUT_CLASS:
             values = [
                 _parse_number(part, line_number, name)
                 for part, name in zip(parts, ("cx", "cy", "w", "h"), strict=True)
             ]
+            target_boxes.append(_parse_box(values, line_number))
         else:
             raise ValueError(
                 f"Ground-truth labels, line {line_number}: expected "
@@ -417,14 +458,51 @@ def read_ground_truth_labels(
                 f"{_LABEL_FIELDS_WITHOUT_CLASS} fields (cx cy w h), got "
                 f"{len(parts)}: {raw!r}."
             )
-        boxes.append(_parse_box(values, line_number))
-        if len(boxes) > max_boxes:
+        if len(target_boxes) + len(other_boxes) > max_boxes:
             raise ValueError(
                 f"Ground-truth labels hold more than {max_boxes} boxes, the "
                 "upload limit. Split the labels or raise "
                 "MAX_GROUND_TRUTH_BOXES in frontend/hyperparameters.toml."
             )
-    return boxes
+    return GroundTruthLayout(
+        target_boxes=tuple(target_boxes),
+        other_boxes=tuple(other_boxes),
+    )
+
+
+def read_ground_truth_labels(
+    path: Path,
+    class_id: int,
+    max_boxes: int,
+    label_names: Sequence[str] = (),
+) -> list[Box]:
+    """Read only the target component's boxes from one uploaded label file.
+
+    This is the compatibility wrapper around :func:`read_ground_truth_layout`
+    for callers that score the target component and do not need the other
+    furniture. The parsing and validation are identical.
+
+    Args:
+        path (Path): Uploaded label file, UTF-8 text.
+        class_id (int): The only numeric class id this upload scores.
+        max_boxes (int): Upper bound on accepted boxes (target plus other).
+        label_names (Sequence[str]): Dataset label names of the selected
+            component. Empty means only numeric class ids are understood.
+
+    Returns:
+        list[Box]: The target component's boxes in file order.
+
+    Raises:
+        FileNotFoundError: If ``path`` is not a regular file.
+        ValueError: If the file is malformed or exceeds ``max_boxes``.
+    """
+    layout: GroundTruthLayout = read_ground_truth_layout(
+        path,
+        class_id=class_id,
+        max_boxes=max_boxes,
+        label_names=label_names,
+    )
+    return list(layout.target_boxes)
 
 
 def _summarize(values: Sequence[float]) -> MetricSummary | None:
@@ -511,6 +589,8 @@ def compare_boxes(
     predictions: Sequence[PredictedBox],
     iou_threshold: float,
     image_size: int,
+    *,
+    other_ground_truth: Sequence[Box] = (),
 ) -> DetectionComparison:
     """Pair uploaded ground truth with one draw's predictions and score them.
 
@@ -520,16 +600,19 @@ def compare_boxes(
     precision/recall mean the same thing as the offline report's.
 
     Args:
-        ground_truth (Sequence[Box]): Uploaded ground-truth boxes, normalized.
-            Empty is valid and describes a negative layout.
+        ground_truth (Sequence[Box]): Uploaded target-component ground-truth
+            boxes, normalized. Empty is valid and describes a negative layout.
         predictions (Sequence[PredictedBox]): Detector boxes, normalized.
         iou_threshold (float): Minimum IoU for a prediction to claim a box.
         image_size (int): Side length of the square render the boxes live in,
             used to report centre distances in pixels.
+        other_ground_truth (Sequence[Box]): Uploaded boxes of the other named
+            furniture in the layout, used only by the overlap metric. Empty
+            means there is no other furniture to collide with.
 
     Returns:
-        DetectionComparison: Counts, rates, distributions and the per-box
-        pairing.
+        DetectionComparison: Counts, rates, distributions, the overlap metric
+            and the per-box pairing.
 
     Raises:
         ValueError: If the IoU threshold is outside ``0..1`` or ``image_size``
@@ -608,6 +691,9 @@ def compare_boxes(
         ),
         default=None,
     )
+    overlap: float | None = overlap_for_final_prediction(
+        prediction_list, list(other_ground_truth)
+    )
     matched_boxes: int = len(matched_ious)
     false_positive_boxes: int = len(false_positives)
     ground_truth_boxes: int = len(ground_truth_list)
@@ -621,6 +707,7 @@ def compare_boxes(
     return DetectionComparison(
         iou_threshold=float(iou_threshold),
         ground_truth_boxes=ground_truth_boxes,
+        other_ground_truth_boxes=len(other_ground_truth),
         predicted_boxes=len(prediction_list),
         matched_boxes=matched_boxes,
         false_positive_boxes=false_positive_boxes,
@@ -631,6 +718,7 @@ def compare_boxes(
         jaccard=_ratio(matched_boxes, union_boxes),
         mean_iou_over_union=_ratio(sum(matched_ious), union_boxes),
         best_iou=best_iou,
+        overlap=overlap,
         matched_iou=_summarize(matched_ious),
         center_distance_px=_summarize(center_distances_px),
         center_distance_normalized=_summarize(

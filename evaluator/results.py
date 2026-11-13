@@ -5,8 +5,9 @@ a stored list of rows at the end: they are accumulated as each (sample, result)
 is measured. Two shapes are kept:
 
 * :class:`DrawAccumulator` - one per result (each draw and the ensemble); it
-  collects the loss distributions, the outcome counts and the channel scores,
-  and turns them into the summary dictionary the report is built from.
+  collects the loss distributions, the outcome counts, the channel scores and
+  the overlap with other ground-truth furniture, and turns them into the
+  summary dictionary the report is built from.
 * :class:`SampleRecord` - one per sample; it remembers where the evaluated
   images were written and what the detector predicted, which is everything the
   visualization needs after the loop has moved on.
@@ -52,6 +53,8 @@ class DrawAccumulator:
             matched box.
         channel_dice (list[float]): Mask Dice of every sample.
         channel_iou (list[float]): Mask IoU of every sample.
+        overlaps (list[float]): Fraction of each final target box covered by
+            other ground-truth furniture; lower is better.
         ground_truth_boxes (int): Ground-truth boxes seen.
         matched (int): Ground-truth boxes a prediction reached.
         missed (int): Ground-truth boxes nothing reached.
@@ -63,13 +66,18 @@ class DrawAccumulator:
     center_distances: list[float] = field(default_factory=list)
     channel_dice: list[float] = field(default_factory=list)
     channel_iou: list[float] = field(default_factory=list)
+    overlaps: list[float] = field(default_factory=list)
     ground_truth_boxes: int = 0
     matched: int = 0
     missed: int = 0
     false_positives: int = 0
 
     def add(
-        self, ground_truth: list[Box], outcome: MatchOutcome, channel_scores: tuple[float, float]
+        self,
+        ground_truth: list[Box],
+        outcome: MatchOutcome,
+        channel_scores: tuple[float, float],
+        overlap: float | None,
     ) -> None:
         """Fold one sample's measurement into the running totals.
 
@@ -79,6 +87,11 @@ class DrawAccumulator:
                 outcome for this draw.
             channel_scores (tuple[float, float]): ``(dice, iou)`` of the
                 generated channel for this sample and draw.
+            overlap (float | None): Fraction of the highest-confidence target
+                prediction covered by other ground-truth furniture, or ``None``
+                when the detector predicted no target box. ``None`` is skipped
+                rather than counted as zero, so a miss cannot look like a
+                perfectly placed component.
         """
         self.ground_truth_boxes += len(ground_truth)
         self.missed += sum(1 for match in outcome.matches if match.loss is None)
@@ -92,6 +105,8 @@ class DrawAccumulator:
         self.false_positives += len(outcome.false_positives)
         self.channel_dice.append(channel_scores[0])
         self.channel_iou.append(channel_scores[1])
+        if overlap is not None:
+            self.overlaps.append(float(overlap))
 
     def summary(self, detection: dict[str, float] | None) -> dict[str, Any]:
         """Turn the running totals into the report dictionary.
@@ -114,6 +129,15 @@ class DrawAccumulator:
             "channel_scores": {
                 "dice": summarize(self.channel_dice),
                 "iou": summarize(self.channel_iou),
+            },
+            "overlap": {
+                # The count is kept beside the distribution so a report can
+                # distinguish "no target box was predicted" from "every
+                # prediction had zero overlap". summarize() alone cannot.
+                "fraction": {
+                    **summarize(self.overlaps),
+                    "count": float(len(self.overlaps)),
+                },
             },
             "outcomes": {
                 "ground_truth_boxes": self.ground_truth_boxes,
@@ -184,6 +208,7 @@ def aggregate_per_draw(per_draw: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "box_loss": average_statistics(per_draw, "box_loss"),
         "channel_scores": average_statistics(per_draw, "channel_scores"),
+        "overlap": average_statistics(per_draw, "overlap"),
         "detector_metrics": detector_means or None,
         "outcomes": totals,
     }

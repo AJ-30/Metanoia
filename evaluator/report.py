@@ -43,8 +43,41 @@ def _format_statistics(statistics: dict[str, float]) -> str:
     )
 
 
+def _format_overlap(overlap: dict[str, Any]) -> str:
+    """Format the overlap distribution, or ``n/a`` when no box was predicted.
+
+    Args:
+        overlap (dict[str, Any]): The result's ``overlap`` section, holding a
+            ``fraction`` distribution and its sample count.
+
+    Returns:
+        str: The formatted distribution, or ``n/a`` when the detector returned
+            no target box in any sample of this result.
+    """
+    fraction: dict[str, float] = overlap.get("fraction", {})
+    if float(fraction.get("count", 0.0)) <= 0.0:
+        return "n/a"
+    return _format_statistics(fraction)
+
+
+def _overlap_mean(aggregate: dict[str, Any]) -> float | None:
+    """Return the across-draw mean overlap, or ``None`` when it is undefined.
+
+    Args:
+        aggregate (dict[str, Any]): The summary's aggregate section.
+
+    Returns:
+        float | None: Mean overlap fraction when at least one result predicted a
+            target box, otherwise ``None`` so the report prints ``n/a``.
+    """
+    fraction: dict[str, float] = aggregate.get("overlap", {}).get("fraction", {}) or {}
+    if float(fraction.get("count", 0.0)) <= 0.0:
+        return None
+    return float(fraction.get("mean", 0.0))
+
+
 def _format_result_section(title: str, result: dict[str, Any] | None) -> list[str]:
-    """Format one result's detector, box-loss, channel and outcome numbers.
+    """Format one result's detector, box-loss, overlap, channel and outcome numbers.
 
     Args:
         title (str): Section heading.
@@ -78,6 +111,8 @@ def _format_result_section(title: str, result: dict[str, Any] | None) -> list[st
     lines.append(
         f"  centre dist (px)   {_format_statistics(box_loss.get('center_distance_px', {}))}"
     )
+    overlap: dict[str, Any] = result.get("overlap", {})
+    lines.append(f"  overlap (other GT) {_format_overlap(overlap)}")
     channel: dict[str, dict[str, float]] = result.get("channel_scores", {})
     lines.append(f"  channel Dice       {_format_statistics(channel.get('dice', {}))}")
     lines.append(f"  channel IoU        {_format_statistics(channel.get('iou', {}))}")
@@ -144,6 +179,7 @@ def format_report(summary: dict[str, Any]) -> list[str]:
         f"  mAP@50             {_format_metric((aggregate_metrics or {}).get('mAP50'))}",
         f"  mAP@50-95          {_format_metric((aggregate_metrics or {}).get('mAP50_95'))}",
         f"  box IoU mean       {_format_metric((aggregate.get('box_loss', {}).get('box_iou', {}) or {}).get('mean'))}",
+        f"  overlap mean       {_format_metric(_overlap_mean(aggregate))}",
         f"  channel Dice mean  {_format_metric((aggregate.get('channel_scores', {}).get('dice', {}) or {}).get('mean'))}",
         f"  elapsed            {summary.get('elapsed_seconds', 0.0):.1f}s",
         f"  output root        {summary.get('output_root')}",

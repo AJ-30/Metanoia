@@ -6,13 +6,14 @@ Two artifacts are written:
   where a result is either a draw (``draw`` = 0..N-1) or the ensemble
   (``draw`` = -1), holding the ground-truth box count, the detector's
   prediction count, the matched / missed / false-positive counts, the
-  localization losses of the best-matched box, the channel Dice/IoU and the
-  probability/mask statistics. The dashboard discovers this file like any other
+  localization losses of the best-matched box, the overlap with other
+  ground-truth furniture, the channel Dice/IoU and the probability/mask
+  statistics. The dashboard discovers this file like any other
   run's telemetry, so the per-sample numbers are plottable without extra wiring.
 * ``<output>/eval_<run_id>/evaluation_summary.json`` - the aggregate report: the
   primary ensemble's detector metrics for the missing component, the per-draw
-  diagnostics, the box-loss distributions, the channel scores and everything
-  needed to reproduce the run.
+  diagnostics, the box-loss distributions, the overlap with other furniture, the
+  channel scores and everything needed to reproduce the run.
 """
 
 from __future__ import annotations
@@ -31,10 +32,12 @@ TELEMETRY_FIELDNAMES: tuple[str, ...] = (
     "stem",
     "draw",
     "gt_boxes",
+    "other_gt_boxes",
     "pred_boxes",
     "matched_boxes",
     "missed_boxes",
     "false_positives",
+    "overlap",
     "best_iou",
     "best_l1_norm",
     "best_center_distance",

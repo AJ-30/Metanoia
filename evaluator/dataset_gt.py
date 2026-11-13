@@ -1,11 +1,13 @@
-"""Ground-truth boxes for the missing component, read from the dataset itself.
+"""Ground-truth boxes read from the dataset itself.
 
 The dataset ships one ``labels.txt`` per sample folder, holding the layout's own
-bounding boxes in normalized ``cx cy w h`` form. These are the boxes the
-evaluator scores against: they come from the source layout rather than from any
-region-growing over a segmentation mask, so a generated component is judged
-against what the dataset says the component is, not against a thresholded mask
-that shares the model's own failure modes.
+bounding boxes in normalized ``cx cy w h`` form. The missing component's boxes
+are what the evaluator scores against: they come from the source layout rather
+than from any region-growing over a segmentation mask, so a generated component
+is judged against what the dataset says the component is, not against a
+thresholded mask that shares the model's own failure modes. The same file also
+names the rest of the layout, which is what the overlap metric uses to check
+that the generated component was not placed on top of existing furniture.
 
 The coordinates are normalized against the square ``IMAGE_SIZE`` render domain
 (the same affine map the masks are resized with), which is what the rest of the
@@ -65,6 +67,58 @@ class Box:
         return f"{class_id} {self.cx:.6f} {self.cy:.6f} {self.w:.6f} {self.h:.6f}"
 
 
+@dataclass(frozen=True)
+class NamedBox:
+    """One normalized box together with its dataset label name.
+
+    Attributes:
+        name (str): First field of the dataset label line, e.g. ``"TV"`` or
+            ``"Sofa"``.
+        box (Box): The normalized box on that line.
+    """
+
+    name: str
+    box: Box
+
+
+def parse_named_label_line(raw: str) -> NamedBox | None:
+    """Parse one ``<Name> <cx> <cy> <w> <h>`` dataset line.
+
+    Unlike :func:`parse_label_line`, this keeps every named object, not only the
+    missing component. The overlap metric needs the rest of the layout to know
+    what the generated component must not sit on.
+
+    Args:
+        raw (str): One line of ``labels.txt``.
+
+    Returns:
+        NamedBox | None: The name and box, or ``None`` for a blank line.
+
+    Raises:
+        ValueError: If the line does not hold exactly five fields, has a
+            non-numeric coordinate, or has a coordinate outside ``0..1``.
+    """
+    parts: list[str] = raw.split()
+    if not parts:
+        return None
+    if len(parts) != 5:
+        raise ValueError(
+            f"Label line {raw!r} does not hold exactly 5 fields "
+            "(name cx cy w h)."
+        )
+    try:
+        cx, cy, width, height = (float(value) for value in parts[1:5])
+    except ValueError as exc:
+        raise ValueError(f"Label line {raw!r} is not numeric: {exc}") from exc
+    for value, label in ((cx, "cx"), (cy, "cy"), (width, "w"), (height, "h")):
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                f"Label line {raw!r} has {label}={value} outside the normalized "
+                "range 0..1; the dataset's label format is not understood."
+            )
+    return NamedBox(name=parts[0], box=Box(cx=cx, cy=cy, w=width, h=height))
+
+
 def parse_label_line(raw: str, label_names: tuple[str, ...]) -> Box | None:
     """Parse one dataset label line, keeping only the named component.
 
@@ -86,23 +140,14 @@ def parse_label_line(raw: str, label_names: tuple[str, ...]) -> Box | None:
     if not parts:
         return None
     if parts[0] not in label_names:
+        # Keep the old read path tolerant of other furniture lines: only lines
+        # naming the missing component are validated here. The overlap reader
+        # uses parse_named_label_line and validates the whole layout.
         return None
-    if len(parts) != 5:
-        raise ValueError(
-            f"Label line {raw!r} names the missing component but does not hold "
-            "exactly 5 numbers (name cx cy w h)."
-        )
-    try:
-        cx, cy, width, height = (float(value) for value in parts[1:5])
-    except ValueError as exc:
-        raise ValueError(f"Label line {raw!r} is not numeric: {exc}") from exc
-    for value, label in ((cx, "cx"), (cy, "cy"), (width, "w"), (height, "h")):
-        if not 0.0 <= value <= 1.0:
-            raise ValueError(
-                f"Label line {raw!r} has {label}={value} outside the normalized "
-                "range 0..1; the dataset's label format is not understood."
-            )
-    return Box(cx=cx, cy=cy, w=width, h=height)
+    named: NamedBox | None = parse_named_label_line(raw)
+    if named is None:  # pragma: no cover - non-blank lines always return a box
+        return None
+    return named.box
 
 
 def read_component_boxes(
@@ -133,6 +178,44 @@ def read_component_boxes(
         box: Box | None = parse_label_line(raw, label_names)
         if box is not None:
             boxes.append(box)
+    return boxes
+
+
+def read_other_component_boxes(
+    sample_dir: Path, label_filename: str, label_names: tuple[str, ...]
+) -> list[Box]:
+    """Read every named box that is not the missing component.
+
+    The overlap metric needs the rest of the layout: the furniture a generated
+    component must not be placed on top of. The dataset's ``labels.txt`` lists
+    every object by name, so those are exactly the lines whose first field is
+    not one of ``label_names``.
+
+    Args:
+        sample_dir (Path): Sample folder holding the dataset's label file.
+        label_filename (str): Label filename inside the folder, e.g.
+            ``labels.txt``.
+        label_names (tuple[str, ...]): Dataset label names of the missing
+            component, excluded from the result.
+
+    Returns:
+        list[Box]: Other furniture boxes in file order. Empty when the sample
+            has no other furniture.
+
+    Raises:
+        FileNotFoundError: If the sample folder has no label file at all.
+        ValueError: If any named line is malformed, including a line for another
+            component. The overlap metric must not silently drop a collision
+            candidate because its line was malformed.
+    """
+    label_path: Path = sample_dir / label_filename
+    if not label_path.is_file():
+        raise FileNotFoundError(f"Sample {sample_dir} has no {label_filename}.")
+    boxes: list[Box] = []
+    for raw in label_path.read_text(encoding="utf-8").splitlines():
+        named: NamedBox | None = parse_named_label_line(raw)
+        if named is not None and named.name not in label_names:
+            boxes.append(named.box)
     return boxes
 
 

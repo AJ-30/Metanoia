@@ -52,8 +52,9 @@ from evaluator.visualize import annotate_composite, render_component_image
 from evaluator.yolo_eval import predict_component_boxes
 from frontend.comparison import (
     DetectionComparison,
+    GroundTruthLayout,
     compare_boxes,
-    read_ground_truth_labels,
+    read_ground_truth_layout,
 )
 from frontend.inpainting import (
     merge_component_mask,
@@ -242,17 +243,21 @@ def stage_upload(
         int(hyperparams.MAX_DRAWS),
     )
     # Parse the optional labels before encoding: a bad label file should fail in
-    # a second, not after a full diffusion chain has already run.
-    ground_truth: list[Box] = (
-        read_ground_truth_labels(
+    # a second, not after a full diffusion chain has already run. The layout
+    # keeps the target boxes for scoring and the other named furniture for the
+    # overlap metric.
+    layout: GroundTruthLayout = (
+        read_ground_truth_layout(
             ground_truth_path,
             class_id=ontology.yolo_class_id,
             max_boxes=int(hyperparams.MAX_GROUND_TRUTH_BOXES),
             label_names=ontology.label_names,
         )
         if ground_truth_path is not None
-        else []
+        else GroundTruthLayout(target_boxes=(), other_boxes=())
     )
+    ground_truth: list[Box] = list(layout.target_boxes)
+    other_ground_truth: list[Box] = list(layout.other_boxes)
 
     sample_dir: Path = _prepare_sample_dir(
         context, request_id, floorplan_path, furniture_path, image_size
@@ -317,6 +322,7 @@ def stage_upload(
             suffix=ENSEMBLE_SUFFIX,
             panels=panels,
             ground_truth=ground_truth,
+            other_ground_truth=other_ground_truth,
             ground_truth_path=ground_truth_path,
             is_ensemble=True,
             draw=None,
@@ -333,6 +339,7 @@ def stage_upload(
                 suffix=f"draw_{draw}",
                 panels=panels,
                 ground_truth=ground_truth,
+                other_ground_truth=other_ground_truth,
                 ground_truth_path=ground_truth_path,
                 is_ensemble=False,
                 draw=draw,
@@ -932,6 +939,7 @@ def _render_result(
     suffix: str,
     panels: dict[str, str],
     ground_truth: list[Box],
+    other_ground_truth: list[Box],
     ground_truth_path: Path | None,
     is_ensemble: bool,
     draw: int | None,
@@ -946,7 +954,9 @@ def _render_result(
         generated (torch.Tensor): ``(1, H, W)`` component mask to composite.
         suffix (str): Panel filename suffix, ``"ensemble"`` or ``"draw_<d>"``.
         panels (dict[str, str]): Panel filename map to extend in place.
-        ground_truth (list[Box]): Parsed uploaded ground-truth boxes.
+        ground_truth (list[Box]): Parsed uploaded target-component boxes.
+        other_ground_truth (list[Box]): Parsed uploaded boxes of the other
+            named furniture, used only by the overlap metric.
         ground_truth_path (Path | None): Uploaded labels path, or ``None``.
         is_ensemble (bool): Whether this result is the ensemble.
         draw (int | None): Draw index, or ``None`` for the ensemble.
@@ -1005,6 +1015,7 @@ def _render_result(
             pixel_boxes_to_predictions(found, ontology.yolo_class_id, image_size),
             iou_threshold=float(hyperparams.MATCH_IOU_THRESHOLD),
             image_size=image_size,
+            other_ground_truth=other_ground_truth,
         )
     annotate_composite(
         composite,

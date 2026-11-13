@@ -13,8 +13,9 @@ linear and explicit here:
    truth plus the generated component composite; the probability maps are
    averaged across draws and thresholded into the primary ensemble composite;
 4. **score** every (sample, result) - the dataset's ground-truth box against the
-   detector's box, and the generated channel against the true channel - for each
-   draw and for the ensemble;
+   detector's box, the final detected box against the layout's other furniture,
+   and the generated channel against the true channel - for each draw and for
+   the ensemble;
 5. **validate** the detector over the whole evaluated split, per draw and for the
    ensemble, restricted to the missing component's class;
 6. **visualize** and **report**.
@@ -46,8 +47,14 @@ from evaluator.compositor import (
     build_conditioned_overlay,
     build_ground_truth_overlay,
 )
-from evaluator.dataset_gt import Box, boxes_to_yolo_lines, read_component_boxes
+from evaluator.dataset_gt import (
+    Box,
+    boxes_to_yolo_lines,
+    read_component_boxes,
+    read_other_component_boxes,
+)
 from evaluator.ontology import ComponentOntology, resolve_component_ontology
+from evaluator.overlap_metrics import overlap_for_final_prediction
 from evaluator.report import format_report
 from evaluator.results import (
     ENSEMBLE_RESULT,
@@ -139,6 +146,9 @@ class _BlockState:
         class_names (list[str]): Detector class vocabulary.
         device_str (str): Device string passed to Ultralytics.
         viz_stems (set[str]): Samples that also get a comparison strip.
+        other_ground_truth (dict[str, list[Box]]): Cache of each sample's
+            non-target ground-truth boxes, read once and reused by every draw
+            and the ensemble.
     """
 
     samples: list[SampleFolder]
@@ -158,6 +168,7 @@ class _BlockState:
     class_names: list[str]
     device_str: str
     viz_stems: set[str] = field(default_factory=set)
+    other_ground_truth: dict[str, list[Box]] = field(default_factory=dict)
 
 
 def run_evaluation(
@@ -544,6 +555,29 @@ def _evaluate_block(block_state: _BlockState, start: int, stop: int) -> None:
     )
 
 
+def _other_ground_truth(block_state: _BlockState, sample: SampleFolder) -> list[Box]:
+    """Read and cache the non-target furniture boxes of one sample.
+
+    Args:
+        block_state (_BlockState): Shared state of the block loop.
+        sample (SampleFolder): Sample whose label file is read.
+
+    Returns:
+        list[Box]: Ground-truth boxes of every named object that is not the
+            missing component.
+    """
+    cached: list[Box] | None = block_state.other_ground_truth.get(sample.stem)
+    if cached is not None:
+        return cached
+    boxes: list[Box] = read_other_component_boxes(
+        sample.src_dir,
+        block_state.label_filename,
+        block_state.ontology.label_names,
+    )
+    block_state.other_ground_truth[sample.stem] = boxes
+    return boxes
+
+
 def _score_result(
     block_state: _BlockState,
     start: int,
@@ -573,6 +607,7 @@ def _score_result(
         ground_truth: list[Box] = read_component_boxes(
             sample.src_dir, block_state.label_filename, block_state.ontology.label_names
         )
+        other_ground_truth: list[Box] = _other_ground_truth(block_state, sample)
         generated: Any = masks[offset : offset + 1]
         composite: Any = build_composite(
             conditions["floorplan_ids"][offset : offset + 1],
@@ -595,6 +630,9 @@ def _score_result(
             float(hyperparams.BOX_MATCH_IOU),
             image_size,
         )
+        overlap: float | None = overlap_for_final_prediction(
+            predictions, other_ground_truth
+        )
         scores: tuple[float, float] = channel_scores(
             generated, conditions["furniture_ids"][offset : offset + 1] == sampler.missing_channel
         )
@@ -603,6 +641,8 @@ def _score_result(
             sample=sample,
             result_key=result_key,
             ground_truth=ground_truth,
+            other_ground_truth=other_ground_truth,
+            overlap=overlap,
             outcome=outcome,
             scores=scores,
             image_path=image_path,
@@ -700,6 +740,8 @@ def _record_sample(
     sample: SampleFolder,
     result_key: int,
     ground_truth: list[Box],
+    other_ground_truth: list[Box],
+    overlap: float | None,
     outcome: MatchOutcome,
     scores: tuple[float, float],
     image_path: Path,
@@ -714,7 +756,13 @@ def _record_sample(
         block_state (_BlockState): Shared state of the block loop.
         sample (SampleFolder): Sample being recorded.
         result_key (int): Draw index, or :data:`ENSEMBLE_RESULT`.
-        ground_truth (list[Box]): Dataset ground-truth boxes.
+        ground_truth (list[Box]): Dataset ground-truth boxes of the missing
+            component.
+        other_ground_truth (list[Box]): Dataset ground-truth boxes of every
+            other named object in the layout.
+        overlap (float | None): Fraction of the highest-confidence target
+            prediction covered by other furniture, or ``None`` when no target
+            box was predicted.
         outcome (MatchOutcome): Matched/missed/false-positive outcome.
         scores (tuple[float, float]): Channel ``(dice, iou)``.
         image_path (Path): Written composite image.
@@ -732,15 +780,19 @@ def _record_sample(
     best: BoxLoss | None = (
         max(matched, key=lambda loss: loss.iou) if matched else None
     )
-    block_state.accumulators[result_key].add(ground_truth, outcome, scores)
+    block_state.accumulators[result_key].add(
+        ground_truth, outcome, scores, overlap
+    )
     block_state.telemetry.log(
         stem=sample.stem,
         draw=result_key,
         gt_boxes=len(ground_truth),
+        other_gt_boxes=len(other_ground_truth),
         pred_boxes=len(predictions),
         matched_boxes=len(matched),
         missed_boxes=sum(1 for match in outcome.matches if match.loss is None),
         false_positives=len(outcome.false_positives),
+        overlap=overlap,
         best_iou=best.iou if best is not None else 0.0,
         best_l1_norm=best.l1_norm if best is not None else 0.0,
         best_center_distance=best.center_distance if best is not None else 0.0,

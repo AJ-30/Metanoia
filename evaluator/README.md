@@ -10,7 +10,8 @@ It does that by rebuilding every test sample as **the real layout with the missi
 component erased, plus the component the diffusion generated**, letting a trained
 YOLO look at that image, and scoring **only the missing component**: the
 detector's class-filtered metrics, the box loss against the dataset's own
-ground-truth box, and the generated channel's mask Dice/IoU.
+ground-truth box, the overlap with the layout's other furniture, and the
+generated channel's mask Dice/IoU.
 
 The primary result is an **ensemble**: every sample is generated with
 `DRAWS_PER_SAMPLE` independent chains, the chains' missing-component softmax
@@ -37,6 +38,7 @@ and `debug_logs/evaluator.log` are written to.
 |---|---|---|
 | **Detection** | Can the detector see the generated component at all? | Ultralytics `model.val()` restricted to the component's class |
 | **Localization (the box loss)** | If it sees it, where does it think it is? | The dataset's own `labels.txt` box vs the detector's box |
+| **Overlap** | Did the generated component land on other furniture? | The detector's highest-confidence component box vs the other named `labels.txt` boxes |
 | **Channel** | How much of the true component did the generation cover? | Dice/IoU of the generated channel vs the ground-truth mask channel |
 
 ### The box loss, precisely
@@ -55,6 +57,26 @@ difference of `cx, cy, w, h`) and **`center_distance_px`**. Whatever is left
 unpaired is counted as a **miss** (a ground-truth box nothing reached) or a
 **false positive** (a box the detector invented where the dataset says there is
 none) — which is what makes the *negative* samples worth evaluating.
+
+### The overlap metric, precisely
+
+For one (sample, draw), the **overlap** is the fraction of the detector's
+highest-confidence component box that is covered by the union of every other
+named furniture box in the same `labels.txt`:
+
+```text
+overlap = area(final component box ∩ union(other ground-truth boxes))
+          ------------------------------------------------------------
+                         area(final component box)
+```
+
+`0` is best (the component touches nothing else), `1` means it is completely
+covered by existing furniture. When the detector returns no component box the
+sample contributes no overlap value; when the layout has no other named
+furniture the value is `0`. The union is computed exactly, so two other boxes
+overlapping each other are not counted twice. The metric is reported per sample
+in the telemetry CSV and summarized per draw, for the ensemble and in the
+across-draw aggregate.
 
 ---
 
@@ -109,6 +131,28 @@ supplies both models, and the detector's own class names decide the class id
 (per-component `missing_yolo` detectors have one class, id `0`). An explicit
 `--checkpoint` or `--weights` still wins over the registry row, so an
 unregistered run can be measured without editing a file.
+
+### Batch comparison table
+
+To evaluate every component over the full validation split and collect the
+overlap metric into one table, run:
+
+```bash
+./run_scripts/run_validation_comparison.sh --skip-existing
+```
+
+The runner writes:
+
+| Path | Content |
+|---|---|
+| `evaluator/outputs/validation_comparison/overlap_comparison.html` | Color-coded table for quick reading |
+| `evaluator/outputs/validation_comparison/overlap_comparison.md` | The same tables in Markdown |
+| `evaluator/outputs/validation_comparison/overlap_comparison.csv` | One machine-readable row per component |
+| `evaluator/outputs/validation_comparison/overlap_by_draw.csv` | Per-draw overlap statistics |
+| `evaluator/outputs/validation_comparison/runs.json` | Completed-run manifest used by `--skip-existing` |
+
+The table is rebuilt after each component, so an interrupted batch still leaves
+a usable partial table. Use `--table-only` to regenerate it without evaluating.
 
 ### Cost, measured on this machine (MPS)
 

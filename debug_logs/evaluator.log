@@ -226,3 +226,120 @@
 [major-pigeon] 2026-10-15 17:05:07 | INFO | evaluator.yolo_eval:185 - Running detector validation on missing component 'tv', draw 3 (class 8 only)...
 [major-pigeon] 2026-10-15 17:06:53 | INFO | evaluator.yolo_eval:201 - missing component 'tv', draw 3: mAP@50=0.9124, mAP@50-95=0.5566, precision=0.9238, recall=0.9461
 [major-pigeon] 2026-10-15 17:06:54 | INFO | evaluator.pipeline:266 - Evaluation finished in 8704.2s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_major-pigeon
+[pumped-walrus] 2026-11-12 12:05:25 | INFO | __main__:592 - Batch comparison run_id=pumped-walrus, component=tv, split=/Users/aatmaj/FurnitureArranger/datasets/work/validate, cap=-1, draws=4.
+[pumped-walrus] 2026-11-12 12:05:25 | INFO | evaluator.pipeline:362 - Loaded detector weights from /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt with classes ['TV']
+[pumped-walrus] 2026-11-12 12:05:25 | INFO | mask_diffusion.inference:325 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[pumped-walrus] 2026-11-12 12:05:25 | INFO | evaluator.pipeline:225 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[pumped-walrus] 2026-11-12 12:05:25 | INFO | evaluator.pipeline:241 - Missing component 'tv': mask channel 2, detector class 0 ('TV'), dataset label names ['TV'].
+[pumped-walrus] 2026-11-12 12:05:29 | INFO | evaluator.pipeline:484 - Evaluating 19920 test samples x 4 draws plus the ensemble (block 512).
+[robust-pup] 2026-11-12 12:05:56 | INFO | __main__:592 - Batch comparison run_id=robust-pup, component=tv, split=/Users/aatmaj/FurnitureArranger/datasets/work/test, cap=-1, draws=4.
+[robust-pup] 2026-11-12 12:05:56 | INFO | evaluator.pipeline:362 - Loaded detector weights from /Users/aatmaj/Metanoia/missing_yolo/models/tv_best.pt with classes ['TV']
+[robust-pup] 2026-11-12 12:05:57 | INFO | mask_diffusion.inference:325 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_amused-corgi_epoch__no_tv_700.pt on mps: missing component 'furniture/tv' = channel 2 of 11, image size 256, timesteps 1000.
+[robust-pup] 2026-11-12 12:05:57 | INFO | evaluator.pipeline:225 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=./mask_VAE/models/mask_vae_fair-burro_no_tv__epoch_310.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[robust-pup] 2026-11-12 12:05:57 | INFO | evaluator.pipeline:241 - Missing component 'tv': mask channel 2, detector class 0 ('TV'), dataset label names ['TV'].
+[robust-pup] 2026-11-12 12:05:58 | INFO | evaluator.pipeline:484 - Evaluating 10043 test samples x 4 draws plus the ensemble (block 512).
+[robust-pup] 2026-11-12 12:13:57 | INFO | evaluator.pipeline:491 - Scored samples 1..512 of 10043.
+[robust-pup] 2026-11-12 12:22:22 | INFO | evaluator.pipeline:491 - Scored samples 513..1024 of 10043.
+[robust-pup] 2026-11-12 12:31:06 | INFO | evaluator.pipeline:491 - Scored samples 1025..1536 of 10043.
+[robust-pup] 2026-11-12 12:40:05 | INFO | evaluator.pipeline:491 - Scored samples 1537..2048 of 10043.
+[robust-pup] 2026-11-12 12:48:15 | INFO | evaluator.pipeline:491 - Scored samples 2049..2560 of 10043.
+[robust-pup] 2026-11-12 12:56:52 | INFO | evaluator.pipeline:491 - Scored samples 2561..3072 of 10043.
+[robust-pup] 2026-11-12 13:04:36 | INFO | evaluator.pipeline:491 - Scored samples 3073..3584 of 10043.
+[robust-pup] 2026-11-12 13:12:13 | INFO | evaluator.pipeline:491 - Scored samples 3585..4096 of 10043.
+[robust-pup] 2026-11-12 13:20:26 | INFO | evaluator.pipeline:491 - Scored samples 4097..4608 of 10043.
+[robust-pup] 2026-11-12 13:28:26 | INFO | evaluator.pipeline:491 - Scored samples 4609..5120 of 10043.
+[robust-pup] 2026-11-12 13:36:24 | INFO | evaluator.pipeline:491 - Scored samples 5121..5632 of 10043.
+[robust-pup] 2026-11-12 13:44:24 | INFO | evaluator.pipeline:491 - Scored samples 5633..6144 of 10043.
+[robust-pup] 2026-11-12 13:52:26 | INFO | evaluator.pipeline:491 - Scored samples 6145..6656 of 10043.
+[robust-pup] 2026-11-12 14:00:31 | INFO | evaluator.pipeline:491 - Scored samples 6657..7168 of 10043.
+[robust-pup] 2026-11-12 14:08:53 | INFO | evaluator.pipeline:491 - Scored samples 7169..7680 of 10043.
+[robust-pup] 2026-11-12 14:17:12 | INFO | evaluator.pipeline:491 - Scored samples 7681..8192 of 10043.
+[robust-pup] 2026-11-12 14:25:24 | INFO | evaluator.pipeline:491 - Scored samples 8193..8704 of 10043.
+[robust-pup] 2026-11-12 14:33:15 | INFO | evaluator.pipeline:491 - Scored samples 8705..9216 of 10043.
+[robust-pup] 2026-11-12 14:41:20 | INFO | evaluator.pipeline:491 - Scored samples 9217..9728 of 10043.
+[robust-pup] 2026-11-12 14:46:17 | INFO | evaluator.pipeline:491 - Scored samples 9729..10043 of 10043.
+[robust-pup] 2026-11-12 14:46:17 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'tv', draw 0 (class 0 only)...
+[robust-pup] 2026-11-12 14:47:55 | INFO | evaluator.yolo_eval:243 - missing component 'tv', draw 0: mAP@50=0.9373, mAP@50-95=0.6408, precision=0.9681, recall=0.9271
+[robust-pup] 2026-11-12 14:47:55 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'tv', draw 1 (class 0 only)...
+[robust-pup] 2026-11-12 14:49:31 | INFO | evaluator.yolo_eval:243 - missing component 'tv', draw 1: mAP@50=0.9371, mAP@50-95=0.6387, precision=0.9692, recall=0.9251
+[robust-pup] 2026-11-12 14:49:31 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'tv', draw 2 (class 0 only)...
+[robust-pup] 2026-11-12 14:51:06 | INFO | evaluator.yolo_eval:243 - missing component 'tv', draw 2: mAP@50=0.9370, mAP@50-95=0.6393, precision=0.9656, recall=0.9310
+[robust-pup] 2026-11-12 14:51:06 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'tv', draw 3 (class 0 only)...
+[robust-pup] 2026-11-12 14:52:41 | INFO | evaluator.yolo_eval:243 - missing component 'tv', draw 3: mAP@50=0.9369, mAP@50-95=0.6404, precision=0.9722, recall=0.9246
+[robust-pup] 2026-11-12 14:52:41 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'tv', ensemble (class 0 only)...
+[robust-pup] 2026-11-12 14:54:16 | INFO | evaluator.yolo_eval:243 - missing component 'tv', ensemble: mAP@50=0.9377, mAP@50-95=0.6441, precision=0.9696, recall=0.9298
+[robust-pup] 2026-11-12 14:54:17 | INFO | evaluator.pipeline:325 - Evaluation finished in 10101.1s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_robust-pup
+[grand-quagga] 2026-11-12 14:54:17 | INFO | __main__:592 - Batch comparison run_id=grand-quagga, component=showcase, split=/Users/aatmaj/FurnitureArranger/datasets/work/test, cap=-1, draws=4.
+[grand-quagga] 2026-11-12 14:54:17 | INFO | evaluator.pipeline:362 - Loaded detector weights from /Users/aatmaj/Metanoia/missing_yolo/models/showcase_best.pt with classes ['Showcase']
+[grand-quagga] 2026-11-12 14:54:18 | INFO | mask_diffusion.inference:325 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_kind-worm_epoch_no_showcase_1010.pt on mps: missing component 'furniture/showcase' = channel 5 of 11, image size 256, timesteps 1000.
+[grand-quagga] 2026-11-12 14:54:18 | INFO | evaluator.pipeline:225 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=/Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_top-hyena_epoch_100_no_showcase.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[grand-quagga] 2026-11-12 14:54:18 | INFO | evaluator.pipeline:241 - Missing component 'showcase': mask channel 5, detector class 0 ('Showcase'), dataset label names ['Showcase'].
+[grand-quagga] 2026-11-12 14:54:20 | INFO | evaluator.pipeline:484 - Evaluating 10043 test samples x 4 draws plus the ensemble (block 512).
+[grand-quagga] 2026-11-12 15:01:15 | INFO | evaluator.pipeline:491 - Scored samples 1..512 of 10043.
+[grand-quagga] 2026-11-12 15:08:23 | INFO | evaluator.pipeline:491 - Scored samples 513..1024 of 10043.
+[grand-quagga] 2026-11-12 15:15:35 | INFO | evaluator.pipeline:491 - Scored samples 1025..1536 of 10043.
+[grand-quagga] 2026-11-12 15:22:52 | INFO | evaluator.pipeline:491 - Scored samples 1537..2048 of 10043.
+[grand-quagga] 2026-11-12 15:30:09 | INFO | evaluator.pipeline:491 - Scored samples 2049..2560 of 10043.
+[grand-quagga] 2026-11-12 15:37:04 | INFO | evaluator.pipeline:491 - Scored samples 2561..3072 of 10043.
+[grand-quagga] 2026-11-12 15:44:08 | INFO | evaluator.pipeline:491 - Scored samples 3073..3584 of 10043.
+[grand-quagga] 2026-11-12 15:51:25 | INFO | evaluator.pipeline:491 - Scored samples 3585..4096 of 10043.
+[grand-quagga] 2026-11-12 15:58:37 | INFO | evaluator.pipeline:491 - Scored samples 4097..4608 of 10043.
+[grand-quagga] 2026-11-12 16:06:04 | INFO | evaluator.pipeline:491 - Scored samples 4609..5120 of 10043.
+[grand-quagga] 2026-11-12 16:13:30 | INFO | evaluator.pipeline:491 - Scored samples 5121..5632 of 10043.
+[grand-quagga] 2026-11-12 16:20:55 | INFO | evaluator.pipeline:491 - Scored samples 5633..6144 of 10043.
+[grand-quagga] 2026-11-12 16:28:01 | INFO | evaluator.pipeline:491 - Scored samples 6145..6656 of 10043.
+[grand-quagga] 2026-11-12 16:35:28 | INFO | evaluator.pipeline:491 - Scored samples 6657..7168 of 10043.
+[grand-quagga] 2026-11-12 16:42:28 | INFO | evaluator.pipeline:491 - Scored samples 7169..7680 of 10043.
+[grand-quagga] 2026-11-12 16:49:22 | INFO | evaluator.pipeline:491 - Scored samples 7681..8192 of 10043.
+[grand-quagga] 2026-11-12 16:56:20 | INFO | evaluator.pipeline:491 - Scored samples 8193..8704 of 10043.
+[grand-quagga] 2026-11-12 17:03:30 | INFO | evaluator.pipeline:491 - Scored samples 8705..9216 of 10043.
+[grand-quagga] 2026-11-12 17:10:36 | INFO | evaluator.pipeline:491 - Scored samples 9217..9728 of 10043.
+[grand-quagga] 2026-11-12 17:14:59 | INFO | evaluator.pipeline:491 - Scored samples 9729..10043 of 10043.
+[grand-quagga] 2026-11-12 17:14:59 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'showcase', draw 0 (class 0 only)...
+[grand-quagga] 2026-11-12 17:16:26 | INFO | evaluator.yolo_eval:243 - missing component 'showcase', draw 0: mAP@50=0.3290, mAP@50-95=0.1416, precision=0.5645, recall=0.3801
+[grand-quagga] 2026-11-12 17:16:26 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'showcase', draw 1 (class 0 only)...
+[grand-quagga] 2026-11-12 17:17:53 | INFO | evaluator.yolo_eval:243 - missing component 'showcase', draw 1: mAP@50=0.3247, mAP@50-95=0.1396, precision=0.5684, recall=0.3818
+[grand-quagga] 2026-11-12 17:17:53 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'showcase', draw 2 (class 0 only)...
+[grand-quagga] 2026-11-12 17:19:19 | INFO | evaluator.yolo_eval:243 - missing component 'showcase', draw 2: mAP@50=0.3272, mAP@50-95=0.1396, precision=0.5587, recall=0.3764
+[grand-quagga] 2026-11-12 17:19:19 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'showcase', draw 3 (class 0 only)...
+[grand-quagga] 2026-11-12 17:20:46 | INFO | evaluator.yolo_eval:243 - missing component 'showcase', draw 3: mAP@50=0.3266, mAP@50-95=0.1402, precision=0.5659, recall=0.3821
+[grand-quagga] 2026-11-12 17:20:46 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'showcase', ensemble (class 0 only)...
+[grand-quagga] 2026-11-12 17:22:13 | INFO | evaluator.yolo_eval:243 - missing component 'showcase', ensemble: mAP@50=0.3308, mAP@50-95=0.1456, precision=0.5685, recall=0.3869
+[grand-quagga] 2026-11-12 17:22:14 | INFO | evaluator.pipeline:325 - Evaluation finished in 8876.6s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_grand-quagga
+[epic-hermit] 2026-11-12 17:22:14 | INFO | __main__:592 - Batch comparison run_id=epic-hermit, component=dining_set, split=/Users/aatmaj/FurnitureArranger/datasets/work/test, cap=-1, draws=4.
+[epic-hermit] 2026-11-12 17:22:14 | INFO | evaluator.pipeline:362 - Loaded detector weights from /Users/aatmaj/Metanoia/missing_yolo/models/missing_yolo_dining_set_new-fly_best.pt with classes ['Dining_table']
+[epic-hermit] 2026-11-12 17:22:15 | INFO | mask_diffusion.inference:325 - MaskDiffusionSampler ready from /Users/aatmaj/Metanoia/mask_diffusion/models/mask_diffusion_brief-shark_epoch_710_no_dining.pt on mps: missing component 'furniture/dining_set' = channel 3 of 11, image size 256, timesteps 1000.
+[epic-hermit] 2026-11-12 17:22:15 | INFO | evaluator.pipeline:225 - Sampling with the frozen VAEs the checkpoint recorded: floorplan=./mask_VAE/models/mask_vae_mint-akita_floorplan_epoch_200.pt, partial=/Users/aatmaj/Metanoia/mask_VAE/models/mask_vae_fit-robin_epoch_155_no_dining_Set.pt, target=./mask_VAE/models/mask_vae_chief-yeti_epoch_arrangement_555.pt.
+[epic-hermit] 2026-11-12 17:22:15 | INFO | evaluator.pipeline:241 - Missing component 'dining_set': mask channel 3, detector class 0 ('Dining_table'), dataset label names ['Dining_table_big', 'Dining_table_medium', 'Dining_table_round'].
+[epic-hermit] 2026-11-12 17:22:17 | INFO | evaluator.pipeline:484 - Evaluating 10043 test samples x 4 draws plus the ensemble (block 512).
+[epic-hermit] 2026-11-12 17:28:43 | INFO | evaluator.pipeline:491 - Scored samples 1..512 of 10043.
+[epic-hermit] 2026-11-12 17:35:17 | INFO | evaluator.pipeline:491 - Scored samples 513..1024 of 10043.
+[epic-hermit] 2026-11-12 17:41:44 | INFO | evaluator.pipeline:491 - Scored samples 1025..1536 of 10043.
+[epic-hermit] 2026-11-12 17:48:04 | INFO | evaluator.pipeline:491 - Scored samples 1537..2048 of 10043.
+[epic-hermit] 2026-11-12 17:54:48 | INFO | evaluator.pipeline:491 - Scored samples 2049..2560 of 10043.
+[epic-hermit] 2026-11-12 18:01:16 | INFO | evaluator.pipeline:491 - Scored samples 2561..3072 of 10043.
+[epic-hermit] 2026-11-12 18:07:49 | INFO | evaluator.pipeline:491 - Scored samples 3073..3584 of 10043.
+[epic-hermit] 2026-11-12 18:14:50 | INFO | evaluator.pipeline:491 - Scored samples 3585..4096 of 10043.
+[epic-hermit] 2026-11-12 18:21:36 | INFO | evaluator.pipeline:491 - Scored samples 4097..4608 of 10043.
+[epic-hermit] 2026-11-12 18:28:18 | INFO | evaluator.pipeline:491 - Scored samples 4609..5120 of 10043.
+[epic-hermit] 2026-11-12 18:35:33 | INFO | evaluator.pipeline:491 - Scored samples 5121..5632 of 10043.
+[epic-hermit] 2026-11-12 18:42:22 | INFO | evaluator.pipeline:491 - Scored samples 5633..6144 of 10043.
+[epic-hermit] 2026-11-12 18:49:57 | INFO | evaluator.pipeline:491 - Scored samples 6145..6656 of 10043.
+[epic-hermit] 2026-11-12 18:57:10 | INFO | evaluator.pipeline:491 - Scored samples 6657..7168 of 10043.
+[epic-hermit] 2026-11-12 19:04:03 | INFO | evaluator.pipeline:491 - Scored samples 7169..7680 of 10043.
+[epic-hermit] 2026-11-12 19:10:51 | INFO | evaluator.pipeline:491 - Scored samples 7681..8192 of 10043.
+[epic-hermit] 2026-11-12 19:17:34 | INFO | evaluator.pipeline:491 - Scored samples 8193..8704 of 10043.
+[epic-hermit] 2026-11-12 19:24:14 | INFO | evaluator.pipeline:491 - Scored samples 8705..9216 of 10043.
+[epic-hermit] 2026-11-12 19:30:55 | INFO | evaluator.pipeline:491 - Scored samples 9217..9728 of 10043.
+[epic-hermit] 2026-11-12 19:35:01 | INFO | evaluator.pipeline:491 - Scored samples 9729..10043 of 10043.
+[epic-hermit] 2026-11-12 19:35:01 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'dining_set', draw 0 (class 0 only)...
+[epic-hermit] 2026-11-12 19:36:23 | INFO | evaluator.yolo_eval:243 - missing component 'dining_set', draw 0: mAP@50=0.4316, mAP@50-95=0.1245, precision=0.5809, recall=0.5814
+[epic-hermit] 2026-11-12 19:36:23 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'dining_set', draw 1 (class 0 only)...
+[epic-hermit] 2026-11-12 19:37:45 | INFO | evaluator.yolo_eval:243 - missing component 'dining_set', draw 1: mAP@50=0.4329, mAP@50-95=0.1245, precision=0.6043, recall=0.5551
+[epic-hermit] 2026-11-12 19:37:45 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'dining_set', draw 2 (class 0 only)...
+[epic-hermit] 2026-11-12 19:39:07 | INFO | evaluator.yolo_eval:243 - missing component 'dining_set', draw 2: mAP@50=0.4361, mAP@50-95=0.1238, precision=0.5844, recall=0.5814
+[epic-hermit] 2026-11-12 19:39:07 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'dining_set', draw 3 (class 0 only)...
+[epic-hermit] 2026-11-12 19:40:30 | INFO | evaluator.yolo_eval:243 - missing component 'dining_set', draw 3: mAP@50=0.4386, mAP@50-95=0.1240, precision=0.5970, recall=0.5757
+[epic-hermit] 2026-11-12 19:40:30 | INFO | evaluator.yolo_eval:227 - Running detector validation on missing component 'dining_set', ensemble (class 0 only)...
+[epic-hermit] 2026-11-12 19:41:52 | INFO | evaluator.yolo_eval:243 - missing component 'dining_set', ensemble: mAP@50=0.4437, mAP@50-95=0.1284, precision=0.6240, recall=0.5424
+[epic-hermit] 2026-11-12 19:41:53 | INFO | evaluator.pipeline:325 - Evaluation finished in 8378.6s; artifacts in /Users/aatmaj/Metanoia/evaluator/outputs/eval_epic-hermit

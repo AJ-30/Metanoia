@@ -6,14 +6,15 @@ Covers the failure modes that matter for a measurement stage:
 
 1. A box loss that reports the wrong thing (``box_metrics`` matching, IoU, L1 and
    the center distance in pixels).
-2. Ground truth read from the wrong place or with the wrong names
-   (``dataset_gt``).
+2. Ground truth read from the wrong place or with the wrong names, and other
+   furniture boxes read for the overlap metric (``dataset_gt``).
 3. A component resolved to the wrong class in any of the three vocabularies
    (``ontology``).
 4. A leak of the ground-truth component into the evaluated image, or of an
    excluded channel surviving in the erase rule (``compositor``).
 5. A channel score that disagrees with the masks (``channel_metrics``).
-6. A summary that mis-aggregates the draws (``results``).
+6. A summary that mis-aggregates the draws, including the overlap metric
+   (``results``).
 7. A dataset label written for a class the detector never learned
    (``yolo_eval``).
 8. A report that prints the wrong number (``report``).
@@ -46,8 +47,21 @@ from evaluator.box_metrics import (
 )
 from evaluator.channel_metrics import channel_scores, dice, iou
 from evaluator.compositor import erase_component_channel
-from evaluator.dataset_gt import boxes_to_yolo_lines, parse_label_line, read_component_boxes
+from evaluator.dataset_gt import (
+    boxes_to_yolo_lines,
+    parse_label_line,
+    parse_named_label_line,
+    read_component_boxes,
+    read_other_component_boxes,
+)
 from evaluator.ontology import resolve_component_ontology, resolve_yolo_class_id
+from evaluator.overlap_metrics import (
+    covered_area,
+    highest_confidence_prediction,
+    intersection_area,
+    overlap_for_final_prediction,
+    overlap_fraction,
+)
 from evaluator.report import format_report
 from evaluator.results import (
     ENSEMBLE_RESULT,
@@ -240,6 +254,46 @@ def test_summarize_handles_empty_and_ordered_values() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Overlap with other furniture
+# ---------------------------------------------------------------------------
+
+
+def test_overlap_fraction_uses_the_union_of_other_boxes() -> None:
+    """Two overlapping other boxes must not double-count the shared region."""
+    target = Box(0.5, 0.5, 0.4, 0.4)  # area 0.16
+    first = Box(0.4, 0.5, 0.2, 0.2)  # intersection 0.04
+    second = Box(0.5, 0.5, 0.2, 0.2)  # intersection 0.04, overlapping first
+    assert abs(intersection_area(target, first) - 0.04) < 1e-9
+    assert abs(covered_area(target, [first, second]) - 0.06) < 1e-9
+    assert abs(overlap_fraction(target, [first, second]) - 0.375) < 1e-9
+
+
+def test_overlap_fraction_is_zero_when_disjoint_or_no_other_furniture() -> None:
+    """No collision and no other furniture both mean the best possible score."""
+    target = Box(0.5, 0.5, 0.2, 0.2)
+    assert overlap_fraction(target, []) == 0.0
+    assert overlap_fraction(target, [Box(0.1, 0.1, 0.1, 0.1)]) == 0.0
+
+
+def test_overlap_fraction_reaches_one_when_fully_covered() -> None:
+    """A target box completely inside another furniture box is a full overlap."""
+    target = Box(0.5, 0.5, 0.2, 0.2)
+    assert abs(overlap_fraction(target, [Box(0.5, 0.5, 0.4, 0.4)]) - 1.0) < 1e-9
+
+
+def test_overlap_for_final_prediction_uses_highest_confidence_only() -> None:
+    """The final box is the detector's top-confidence prediction, not the worst."""
+    other = [Box(0.5, 0.5, 0.2, 0.2)]
+    predictions = [
+        PredictedBox(Box(0.1, 0.1, 0.1, 0.1), 0.9),  # no overlap, highest confidence
+        PredictedBox(Box(0.5, 0.5, 0.2, 0.2), 0.4),  # full overlap, lower confidence
+    ]
+    assert highest_confidence_prediction(predictions) == predictions[0]
+    assert overlap_for_final_prediction(predictions, other) == 0.0
+    assert overlap_for_final_prediction([], other) is None
+
+
+# ---------------------------------------------------------------------------
 # Dataset ground truth
 # ---------------------------------------------------------------------------
 
@@ -291,6 +345,38 @@ def test_read_component_boxes_reads_every_instance_and_absences() -> None:
             pass
         else:  # pragma: no cover - failure path
             raise AssertionError("a missing label file was accepted")
+
+
+def test_read_other_component_boxes_reads_the_rest_of_the_layout() -> None:
+    """The overlap reader keeps every named box that is not the target."""
+    with tempfile.TemporaryDirectory() as tmp:
+        sample = Path(tmp) / "sample"
+        sample.mkdir()
+        (sample / "labels.txt").write_text(
+            "TV 0.25 0.25 0.1 0.1\n"
+            "Sofa 0.5 0.5 0.2 0.2\n"
+            "Chair 0.75 0.75 0.1 0.1\n",
+            encoding="utf-8",
+        )
+        boxes = read_other_component_boxes(sample, "labels.txt", LABEL_NAMES["tv"])
+    assert boxes == [
+        Box(cx=0.5, cy=0.5, w=0.2, h=0.2),
+        Box(cx=0.75, cy=0.75, w=0.1, h=0.1),
+    ]
+
+
+def test_parse_named_label_line_validates_every_named_object() -> None:
+    """The whole layout is validated, not only the target component's line."""
+    named = parse_named_label_line("Sofa 0.5 0.5 0.2 0.2")
+    assert named is not None
+    assert named.name == "Sofa"
+    assert named.box == Box(cx=0.5, cy=0.5, w=0.2, h=0.2)
+    try:
+        parse_named_label_line("Sofa 1.5 0.5 0.2 0.2")
+    except ValueError:
+        pass
+    else:  # pragma: no cover - failure path
+        raise AssertionError("an out-of-range other-furniture line was accepted")
 
 
 def test_boxes_to_yolo_lines_uses_the_resolved_class_id() -> None:
@@ -569,6 +655,7 @@ def _draw_summary(matched: int, missed: int, false_positives: int) -> dict:
             "center_distance_px": {"mean": 2.0},
         },
         "channel_scores": {"dice": {"mean": 0.9}, "iou": {"mean": 0.85}},
+        "overlap": {"fraction": {"mean": 0.2, "count": 4.0}},
         "outcomes": {
             "ground_truth_boxes": matched + missed,
             "matched": matched,
@@ -586,6 +673,7 @@ def test_aggregate_per_draw_averages_distributions_and_sums_counts() -> None:
     assert aggregate["outcomes"]["matched"] == 10
     assert aggregate["outcomes"]["ground_truth_boxes"] == 11
     assert aggregate["box_loss"]["box_iou"]["mean"] == 0.8
+    assert aggregate["overlap"]["fraction"]["mean"] == 0.2
     assert aggregate["detector_metrics"]["mAP50"] == 0.5
     assert aggregate_per_draw([]) == {}
 
@@ -600,8 +688,9 @@ def test_draw_accumulator_counts_every_outcome() -> None:
         0.5,
         256,
     )
-    accumulator.add(ground_truth, outcome, (0.5, 0.5))
+    accumulator.add(ground_truth, outcome, (0.5, 0.5), 0.25)
     summary = accumulator.summary(None)
+    assert summary["overlap"]["fraction"]["mean"] == 0.25
     assert summary["outcomes"]["ground_truth_boxes"] == 1
     assert summary["outcomes"]["matched"] == 0
     assert summary["outcomes"]["missed"] == 1
@@ -834,6 +923,8 @@ def test_format_report_renders_numbers_and_handles_missing_metrics() -> None:
     assert "PER-DRAW DIAGNOSTICS" in text
     assert "0.5000" in text  # the aggregate mAP@50
     assert "n/a" in text  # the skipped draw
+    assert "overlap (other GT)" in text
+    assert "overlap mean       0.2000" in text
     assert "matched=5" in text  # the ensemble's outcome line
     assert "matched=4" in text  # a per-draw outcome line
 

@@ -20,7 +20,7 @@ is also shown as a per-draw diagnostic section.
 If you also upload the layout's ground-truth YOLO `labels.txt`, the page draws
 the ground truth in **green** and the predictions in **red**, adds a ground-truth
 only overlay, and reports IoU, TP/FP/FN, precision, recall, F1, Jaccard, centre
-distance and box error for every draw.
+distance, box error and overlap with the other named furniture for every draw.
 
 The component selector drives **both** models: the dropdown chooses a row of
 `components.toml` at the repository root, which pairs the component's
@@ -64,7 +64,7 @@ mode. `Ctrl-C` stops it. Nothing is trained, and nothing outside
 | **Missing component** | yes | Dropdown of every row in `components.toml`; selects the generator **and** the detector together. |
 | **Floor-plan mask** | yes | `floorplan_segmentation.png` — single-channel class-id PNG (mode `L`), floorplan classes 0–17. Any pixel size; it is nearest-neighbour resized to the model's native square size. |
 | **Furniture mask** | no | `furniture_segmentation.png` — the layout the component has to fit into. Leave empty to generate into an empty floor plan. Its classes are 0–10; any instance of the selected component already in it is ignored, because that is exactly what the model was trained on. |
-| **Ground-truth labels** | no | `labels.txt` — the layout's boxes for the selected component. One `cls cx cy w h` line per box (numeric YOLO class id), one `Name cx cy w h` line (the dataset's own form, e.g. `TV 0.5 0.5 0.2 0.2`), or `cx cy w h` when the class is implicit; all values normalized to 0–1 on the same square render domain. A numeric class id must match the selected detector's component class; named lines for other furniture are ignored, so the dataset's multi-class `labels.txt` can be uploaded unchanged. Blank lines and an empty file mean “no component here”. |
+| **Ground-truth labels** | no | `labels.txt` — the layout's boxes for the selected component. One `cls cx cy w h` line per box (numeric YOLO class id), one `Name cx cy w h` line (the dataset's own form, e.g. `TV 0.5 0.5 0.2 0.2`), or `cx cy w h` when the class is implicit; all values normalized to 0–1 on the same square render domain. A numeric class id must match the selected detector's component class; named lines for other furniture are not scored as the target but are used by the overlap metric, so the dataset's multi-class `labels.txt` can be uploaded unchanged. Blank lines and an empty file mean “no component here”. |
 
 An upload that is not a class-id mask (a colour render, a JPEG photo, a random
 file) is refused on the form with a message about the upload, never a stack trace
@@ -97,6 +97,15 @@ still gets its own diagnostic panel set below the ensemble.
 * Precision = `TP/(TP+FP)`, recall = `TP/(TP+FN)`, F1 = `2PR/(P+R)`, Jaccard =
   `TP/(TP+FP+FN)`. “Mean IoU over union” divides the sum of matched IoUs by the
   union count, so FP and FN boxes contribute zero.
+* **Overlap with other GT furniture** asks whether the generated component was
+  placed on top of furniture that is already in the layout. It is the fraction
+  of the detector's highest-confidence target-component box covered by the
+  union of the other named furniture boxes in the uploaded labels. `0` is best
+  (no collision), `1` means the predicted box is completely covered. `n/a`
+  means no target box was predicted; `0` with a prediction means the upload had
+  no other named furniture to collide with. The metric needs the dataset's
+  named `Name cx cy w h` labels to identify other furniture; a numeric
+  target-only YOLO file has no other boxes, so it reports `0`.
 * The localization table reports mean, median, p10, p90, min and max of the
   matched IoUs, centre distances (pixels and normalized by the render side) and
   the L1 error of the four normalized box parameters.
@@ -158,7 +167,7 @@ the per-component and merged composites.
 | `settings.py` | Per-component context building and caching (one load per component) |
 | `pipeline.py` | Upload → validate → encode → sample → average probabilities → threshold → composite → detect → compare; plus the three-component inpainting pipeline |
 | `inpainting.py` | Pure inpainting rules: legal-edit validation, palette loading, component merge and overlap resolution |
-| `comparison.py` | Parse uploaded YOLO labels, match them to predictions, compute IoU/rates/localization |
+| `comparison.py` | Parse uploaded YOLO labels, match them to predictions, compute IoU/rates/localization and overlap with other furniture |
 | `../components.toml` | Component → diffusion checkpoint + `missing_yolo` detector, shared with the evaluator |
 | `templates/index.html` | The single-component upload form |
 | `templates/result.html` | The panels, ground-truth comparison, metrics and detection table |

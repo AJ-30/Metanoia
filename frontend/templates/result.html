@@ -122,6 +122,7 @@
     <h3>Detection metrics</h3>
     <div class="metric-grid">
       {{ metric('Ground-truth boxes', c.ground_truth_boxes) }}
+      {{ metric('Other GT furniture boxes', c.other_ground_truth_boxes) }}
       {{ metric('Predictions', c.predicted_boxes) }}
       {{ metric('Matched (TP)', c.matched_boxes) }}
       {{ metric('False positives (FP)', c.false_positive_boxes) }}
@@ -132,6 +133,7 @@
       {{ metric('Jaccard (TP / union)', c.jaccard|metric) }}
       {{ metric('Mean IoU over union', c.mean_iou_over_union|metric) }}
       {{ metric('Best IoU', c.best_iou|metric) }}
+      {{ metric('Overlap with other GT furniture', c.overlap|metric) }}
       {{ metric('Mean matched IoU', (c.matched_iou.mean if c.matched_iou else none)|metric) }}
       {{ metric('Median matched IoU', (c.matched_iou.median if c.matched_iou else none)|metric) }}
       {{ metric('Mean centre distance (px)', (c.center_distance_px.mean if c.center_distance_px else none)|metric) }}
@@ -140,6 +142,11 @@
       {{ metric('Mean TP confidence', c.mean_tp_confidence|metric) }}
       {{ metric('Mean FP confidence', c.mean_fp_confidence|metric) }}
     </div>
+    <p class="meta">
+      Overlap is the fraction of the highest-confidence predicted
+      {{ component_label }} box covered by other ground-truth furniture.
+      0 is best; n/a means the detector predicted no {{ component_label }} box.
+    </p>
     <div class="status">
       <strong>{{ c.status|replace('_', ' ') }}</strong> &mdash; {{ c.status_caption }}.
     </div>

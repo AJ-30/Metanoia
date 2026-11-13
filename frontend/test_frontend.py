@@ -19,7 +19,7 @@ sees instead of the result:
 7. Uploaded labels must be parsed strictly (numeric YOLO lines, named dataset
    lines and class-less lines, empty file as a negative, another numeric
    class/out-of-range/zero-area rejected), and the comparison must count
-   TP/FP/FN, IoU and confidence correctly.
+   TP/FP/FN, IoU, confidence and overlap with other furniture correctly.
 8. Inpainting must only erase the three component classes, must merge generated
    pixels deterministically, must resolve overlaps by ensemble probability, and
    must render both the editor and result pages.
@@ -53,6 +53,7 @@ from frontend.comparison import (
     STATUS_MISSED,
     compare_boxes,
     read_ground_truth_labels,
+    read_ground_truth_layout,
 )
 from frontend.inpainting import (  # noqa: E402
     erasable_channels_from_palette,
@@ -270,6 +271,26 @@ def test_read_ground_truth_labels_accepts_dataset_component_names() -> None:
     assert boxes == [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)]
 
 
+def test_read_ground_truth_layout_separates_target_and_other_furniture() -> None:
+    """A raw dataset labels file yields both the target and the rest of the layout."""
+    text = (
+        "Sofa 0.1 0.1 0.1 0.1\n"
+        "TV 0.5 0.5 0.2 0.2\n"
+        "Chair 0.8 0.8 0.1 0.1\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "labels.txt"
+        _write_text(path, text)
+        layout = read_ground_truth_layout(
+            path, class_id=0, max_boxes=10, label_names=("TV",)
+        )
+    assert layout.target_boxes == (Box(cx=0.5, cy=0.5, w=0.2, h=0.2),)
+    assert layout.other_boxes == (
+        Box(cx=0.1, cy=0.1, w=0.1, h=0.1),
+        Box(cx=0.8, cy=0.8, w=0.1, h=0.1),
+    )
+
+
 def test_read_ground_truth_labels_named_form_keeps_numeric_class_strict() -> None:
     """A numeric line for another class is still refused when names are known."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -405,6 +426,8 @@ def test_compare_boxes_perfect_match_reports_full_agreement() -> None:
     assert comparison.center_distance_px is not None
     assert comparison.center_distance_px.mean == 0.0
     assert comparison.mean_tp_confidence == 0.9
+    assert comparison.other_ground_truth_boxes == 0
+    assert comparison.overlap == 0.0
     assert comparison.pairs[0].prediction is not None
 
 
@@ -432,6 +455,37 @@ def test_compare_boxes_counts_partial_match_and_false_positive() -> None:
     assert comparison.false_positives[0].best_iou < 0.5
 
 
+def test_compare_boxes_reports_overlap_with_other_furniture() -> None:
+    """The final target box is measured against the rest of the uploaded layout."""
+    gt = [Box(cx=0.1, cy=0.1, w=0.1, h=0.1)]
+    predictions = [
+        PredictedBox(box=Box(cx=0.5, cy=0.5, w=0.2, h=0.2), confidence=0.9)
+    ]
+    other = [Box(cx=0.5, cy=0.5, w=0.1, h=0.1)]
+    comparison = compare_boxes(
+        gt,
+        predictions,
+        iou_threshold=0.5,
+        image_size=256,
+        other_ground_truth=other,
+    )
+    assert comparison.other_ground_truth_boxes == 1
+    assert comparison.overlap is not None
+    assert abs(comparison.overlap - 0.25) < 1e-9
+
+
+def test_compare_boxes_overlap_is_none_without_a_target_prediction() -> None:
+    """A miss has no final box, so overlap is undefined rather than a good zero."""
+    comparison = compare_boxes(
+        [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)],
+        [],
+        iou_threshold=0.5,
+        image_size=256,
+        other_ground_truth=[Box(cx=0.5, cy=0.5, w=0.1, h=0.1)],
+    )
+    assert comparison.overlap is None
+
+
 def test_compare_boxes_all_missed_is_not_a_match() -> None:
     """A prediction below the IoU threshold is both a miss and a false positive."""
     gt = [Box(cx=0.5, cy=0.5, w=0.2, h=0.2)]
@@ -455,9 +509,11 @@ def test_compare_boxes_distinguishes_false_alarm_from_correct_empty() -> None:
     assert false_alarm.status == STATUS_FALSE_ALARM
     assert false_alarm.precision == 0.0
     assert false_alarm.recall is None
+    assert false_alarm.overlap == 0.0
     assert correct_empty.status == STATUS_CORRECT_EMPTY
     assert correct_empty.precision is None
     assert correct_empty.f1 is None
+    assert correct_empty.overlap is None
 
 
 def test_compare_boxes_rejects_invalid_parameters() -> None:
@@ -573,6 +629,7 @@ def test_result_template_renders_both_comparison_branches() -> None:
     assert "Draw 0 (diagnostic)" in with_labels
     assert "ground truth only (green overlay)" in with_labels
     assert "Mean matched IoU" in with_labels
+    assert "Overlap with other GT furniture" in with_labels
     assert "nothing to score" in without_labels
 
 
