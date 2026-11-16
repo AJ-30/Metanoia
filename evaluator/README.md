@@ -154,6 +154,21 @@ The runner writes:
 The table is rebuilt after each component, so an interrupted batch still leaves
 a usable partial table. Use `--table-only` to regenerate it without evaluating.
 
+### Collision IoU post-processing
+
+The evaluator summary already holds matched-box IoU. Collision IoU needs the raw
+final target box, which telemetry does not store, so the post-processing script
+re-runs each component's detector on the saved ensemble composites:
+
+```bash
+./venv/bin/python evaluator/analyze_collision_iou.py \
+    --manifest evaluator/outputs/test_comparison/runs.json
+```
+
+It writes `collision_iou_pairs.csv` (one row per target-other furniture pair),
+`collision_iou_samples.csv` (one row per sample), `collision_iou_summary.csv`,
+`collision_iou_results.md`, and `collision_iou_table.tex` beside the manifest.
+
 ### Cost, measured on this machine (MPS)
 
 A 1000-step reverse chain costs **~140 ms** at `GENERATION_CHUNK = 32`. The
