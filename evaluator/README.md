@@ -165,7 +165,8 @@ re-runs each component's detector on the saved ensemble composites:
     --manifest evaluator/outputs/test_comparison/runs.json
 ```
 
-It writes `collision_iou_pairs.csv` (one row per target-other furniture pair),
+It writes `collision_iou_pairs.csv` (one row per target-other furniture pair,
+with the sample's `matched_boxes` and `best_iou` for filtering),
 `collision_iou_samples.csv` (one row per sample), `collision_iou_summary.csv`,
 `collision_iou_results.md`, and `collision_iou_table.tex` beside the manifest.
 

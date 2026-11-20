@@ -19,7 +19,9 @@ Definitions
 
 The script writes:
 
-* ``collision_iou_pairs.csv`` - one row per target-other furniture pair.
+* ``collision_iou_pairs.csv`` - one row per target-other furniture pair,
+  including the sample's ``matched_boxes`` and ``best_iou`` so callers can
+  filter to samples with a matched target box.
 * ``collision_iou_samples.csv`` - one row per ensemble sample.
 * ``collision_iou_summary.csv`` - one row per component.
 * ``collision_iou_results.md`` - human-readable tables and notes.
@@ -103,6 +105,9 @@ class CollisionPair:
             box, in normalized coordinates.
         overlap_fraction (float | None): The evaluator's union-coverage overlap
             for the same sample, copied for context.
+        matched_boxes (int): Evaluator matched target-box count for the sample.
+        best_iou (float | None): Evaluator best matched target IoU for the
+            sample. ``0.0`` means the sample had no matched target box.
     """
 
     component: str
@@ -112,6 +117,8 @@ class CollisionPair:
     other_name: str
     collision_iou: float
     overlap_fraction: float | None
+    matched_boxes: int
+    best_iou: float | None
 
 
 @dataclass(frozen=True)
@@ -508,6 +515,8 @@ def _write_pair_row(writer: csv.DictWriter, pair: CollisionPair) -> None:
             "other_name": pair.other_name,
             "collision_iou": pair.collision_iou,
             "overlap_fraction": pair.overlap_fraction,
+            "matched_boxes": pair.matched_boxes,
+            "best_iou": pair.best_iou,
         }
     )
 
@@ -711,6 +720,8 @@ def _summarize_component(
                         other_name=named.name,
                         collision_iou=collision_iou,
                         overlap_fraction=overlap_value,
+                        matched_boxes=int(row["matched_boxes"]),
+                        best_iou=_float_or_none(row.get("best_iou")),
                     ),
                 )
 
@@ -932,6 +943,8 @@ def _build_markdown(summaries: list[ComponentSummary]) -> str:
         "box. A pair is counted when IoU > 0.",
         "- **Collision samples** counts predicted samples with at least one "
         "positive collision IoU. **Collision boxes** counts target–other pairs.",
+        "- The pair CSV carries `matched_boxes` and `best_iou`, so collision "
+        "rows can be filtered to samples with a matched target box.",
         "",
         "## Matched target boxes",
         "",
@@ -1049,6 +1062,22 @@ def _build_markdown(summaries: list[ComponentSummary]) -> str:
     return "\n".join(lines)
 
 
+def _split_label(summaries: list[ComponentSummary]) -> str:
+    """Return a human-readable split name for table captions.
+
+    Args:
+        summaries (list[ComponentSummary]): Component results.
+
+    Returns:
+        str: ``validation`` for a ``validate`` directory, otherwise the
+            directory's own name, or ``evaluated`` when there are no rows.
+    """
+    if not summaries:
+        return "evaluated"
+    name: str = Path(summaries[0].split_dir).name
+    return "validation" if name in {"validate", "validation"} else name
+
+
 def _build_latex(summaries: list[ComponentSummary]) -> str:
     """Build the two LaTeX tables.
 
@@ -1058,6 +1087,7 @@ def _build_latex(summaries: list[ComponentSummary]) -> str:
     Returns:
         str: LaTeX source with the matched-box and collision-IoU tables.
     """
+    split_label: str = _split_label(summaries)
     matched_rows: list[str] = []
     collision_rows: list[str] = []
     for summary in summaries:
@@ -1088,8 +1118,8 @@ def _build_latex(summaries: list[ComponentSummary]) -> str:
             *matched_rows,
             r"        \hline",
             r"    \end{tabular}",
-            r"    \caption{Intersection over Union (IoU) statistics for matched "
-            r"target-component bounding boxes at IoU $\ge 0.5$ on the test split.}",
+            f"    \\caption{{Intersection over Union (IoU) statistics for matched "
+            f"target-component bounding boxes at IoU $\\ge 0.5$ on the {split_label} split.}}",
             r"    \label{tab:iou_statistics}",
             r"\end{table}",
             "",
@@ -1102,10 +1132,11 @@ def _build_latex(summaries: list[ComponentSummary]) -> str:
             *collision_rows,
             r"        \hline",
             r"    \end{tabular}",
-            r"    \caption{Collision IoU between the final target-component "
-            r"prediction and each other ground-truth furniture box with IoU $>0$ "
-            r"on the test split. Collision boxes counts target--other pairs; "
-            r"statistics are over those pairs.}",
+            f"    \\caption{{Collision IoU between the final target-component "
+            f"prediction and each other ground-truth furniture box with IoU $>0$ "
+            f"on the {split_label} split. Collision samples counts predicted "
+            f"samples with at least one positive pair; collision boxes counts "
+            f"target--other pairs. Statistics are over those pairs.}}",
             r"    \label{tab:collision_iou}",
             r"\end{table}",
             "",
@@ -1172,6 +1203,8 @@ def main(argv: list[str] | None = None) -> int:
                 "other_name",
                 "collision_iou",
                 "overlap_fraction",
+                "matched_boxes",
+                "best_iou",
             ],
         )
         sample_writer = csv.DictWriter(
