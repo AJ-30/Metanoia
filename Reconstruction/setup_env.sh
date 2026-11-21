@@ -9,7 +9,9 @@ set -eo pipefail  # no -u: conda activation scripts read unset variables
 ENV_NAME="${1:-recon}"
 # PyTorch build matching the cluster's NVIDIA driver (CUDA 12.8). Newer
 # default builds (CUDA 13) silently fall back to CPU on these GPUs.
-TORCH_INDEX_URL="https://download.pytorch.org/whl/cu128"
+# Override for other machines, e.g. TORCH_INDEX_URL=https://download.pytorch.org/whl/cu130
+# for Blackwell GPUs such as the GB10 (DGX Spark).
+TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu128}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Make `conda activate` available in this non-interactive shell.

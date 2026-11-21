@@ -35,6 +35,15 @@ one at a time and merge their reconstructions. See section 4.
 
 ---
 
+## 0. Step 0: complete the plan first (`/complete`)
+
+A plan with a missing wall, door or window can be completed before the furniture step. `frontend/completion.py` runs the wall/door/window
+model (`Reconstruction/serve`, a FastAPI app) inside this process, mounts its API under `/api` and serves its page at `/complete`. The page's
+**Next: furniture** step (`complete/handoff_step.js`) posts the completed plan to `/handoff`, which converts it with `handoff.py`
+(class ids and output size in `handoff.toml`) to `floorplan_segmentation.png` and `furniture_segmentation.png`, stores them under
+`uploads/handoff_<id>/` and opens `/?plan=<id>` or `/inpaint?plan=<id>` with both files already chosen. The furniture pages themselves are
+the same with or without this step. The plan model's default checkpoint and profiles are configured in `Reconstruction/serve/`.
+
 ## 1. Running it
 
 ```bash

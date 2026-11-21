@@ -1,0 +1,34 @@
+# Run configuration for data preparation (paths, run size, logging).
+# Relative paths are resolved against the repository root.
+# Select a table with `--mode debug|prod`; it overrides [default].
+
+[default]
+# Original ResPlan release. Opened read-only; never modified.
+RESPLAN_PICKLE_PATH = "./datasets/resplan/12/ResPlan.pkl"
+RESPLAN_SPLIT_PATH = "./datasets/resplan/12/split.json"
+# ResPlan's 683 "augmented" plans are rotated/flipped/scaled copies of other
+# plans, possibly of val/test originals. Keep false to avoid leakage.
+INCLUDE_AUGMENTED_IN_TRAIN = false
+# Original CubiCasa5K release, read directly from the zip (never extracted).
+CUBICASA_ZIP_PATH = "./datasets/cubicasa5k.zip"
+# Outputs go to PROCESSED_ROOT/<dataset>/ (rasterized plans, frozen
+# evaluation cases, summaries).
+PROCESSED_ROOT = "./datasets/processed"
+LOG_FILE_PATH = "./Reconstruction/logs/data_prep.log"
+# Default output directory for comparison grids made by visualize.py.
+VISUALIZATION_DIR = "./Reconstruction/outputs/data_prep"
+# Master seed: evaluation-case sampling and visualization sampling derive from it.
+SEED = 42
+# Worker processes for rasterization (<= 0 means all CPUs).
+NUM_WORKERS = 16
+
+[debug]
+IS_DEBUG = true
+# Small subset per split for a fast end-to-end check (-1 = everything).
+# Items are plans (ResPlan) or houses (CubiCasa, 1-3 floors each).
+MAX_ITEMS_PER_SPLIT = 200
+PROCESSED_ROOT = "./datasets/processed_debug"
+
+[prod]
+IS_DEBUG = false
+MAX_ITEMS_PER_SPLIT = -1

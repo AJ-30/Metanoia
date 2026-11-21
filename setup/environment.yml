@@ -21,3 +21,11 @@ dependencies:
   - loguru
   - tqdm  # progress bars for the YOLO augmentation loop
   - ultralytics>=8.3.0  # YOLO26 finetune (Mac MPS/CPU compatible, Roboflow-supported)
+  # Wall/door/window completion step of the demo (Reconstruction package, mounted by frontend/completion.py)
+  - scipy
+  - shapely
+  - scikit-image
+  - fastapi
+  - uvicorn
+  - python-multipart
+  - a2wsgi

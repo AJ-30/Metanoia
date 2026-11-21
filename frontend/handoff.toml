@@ -1,0 +1,40 @@
+# Hand-off from the wall/door/window model (Reconstruction) to the furniture models: how a completed plan becomes the two
+# class-id masks the furniture pages read (floorplan_segmentation.png, furniture_segmentation.png).
+
+[export]
+# The furniture models' masks are tight crops of the plan (98.5% pixel agreement with the stored masks of the
+# FurnitureArranger samples at margin 0, much worse with a margin), squeezed to the model's square without keeping the
+# aspect ratio. Crop to the plan's bounding box, then resize (nearest) to SIZE x SIZE.
+SIZE = 256
+
+[mask_ids]
+background = 0
+living = 1
+bedroom = 2
+bathroom = 3
+kitchen = 4
+door = 5
+window = 6
+wall = 7
+front_door = 8
+balcony = 9
+storage = 10
+stair = 11
+# The wall/door/window model has one door class, so front_door is never written. No counterpart in the furniture
+# models' taxonomy for the next three; railings and columns are drawn as wall, other rooms as "inner".
+railing = 7
+column = 7
+other_room = 13
+
+# Class ids of the furniture mask (Color-index/furniture_color_index.json) for the plan model's furniture classes.
+# sofa_cum_bed (10) has no counterpart there.
+[furniture_ids]
+sofa = 1
+tv = 2
+dining_set = 3
+side_table = 4
+showcase = 5
+couch = 6
+chair = 7
+center_table = 8
+vase_table = 9

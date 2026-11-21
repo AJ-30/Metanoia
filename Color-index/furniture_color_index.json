@@ -1,0 +1,46 @@
+{
+  "0": {
+    "name": "background",
+    "color": "#000000"
+  },
+  "1": {
+    "name": "sofa",
+    "color": "#f472b6"
+  },
+  "2": {
+    "name": "tv",
+    "color": "#a78bfa"
+  },
+  "3": {
+    "name": "dining_set",
+    "color": "#fb923c"
+  },
+  "4": {
+    "name": "side_table",
+    "color": "#facc15"
+  },
+  "5": {
+    "name": "showcase",
+    "color": "#34d399"
+  },
+  "6": {
+    "name": "couch",
+    "color": "#f472b6"
+  },
+  "7": {
+    "name": "chair",
+    "color": "#f472b6"
+  },
+  "8": {
+    "name": "center_table",
+    "color": "#60a5fa"
+  },
+  "9": {
+    "name": "vase_table",
+    "color": "#94a3b8"
+  },
+  "10": {
+    "name": "sofa_cum_bed",
+    "color": "#818cf8"
+  }
+}

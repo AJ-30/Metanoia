@@ -1,0 +1,259 @@
+# Data-preparation parameters for the FurnitureArranger dataset (a copy of
+# params.toml extended with furniture classes). All pixel values are in canvas
+# pixels unless stated otherwise.
+#
+# Differences to the ResPlan params.toml:
+#  * canvas.FIXED_SCALE_PX_PER_UNIT: every plan is drawn at the same scale, so a
+#    5-unit wall is always 5 px and a 40x20 TV is always 40x20 px (plans are
+#    80-220 units wide and the furniture sizes are fixed per type).
+#  * 9 furniture classes (component type "furniture"), kept in the structure layer.
+#  * "furniture" is a removable component type with its own sampling weight.
+
+[canvas]
+# Square raster size (H = W).
+SIZE = 256
+# Empty border kept around every plan after fitting it to the canvas.
+PADDING_PX = 8
+# Sub-pixel precision bits for cv2.fillPoly (coordinates * 2**SHIFT).
+FILL_SHIFT_BITS = 4
+# Instances smaller than this after rasterization are dropped.
+MIN_INSTANCE_AREA_PX = 4
+# > 0: draw every plan at this many pixels per plan unit (centred, no per-plan
+# fitting). The plan must fit into SIZE - 2 * PADDING_PX pixels (checked).
+FIXED_SCALE_PX_PER_UNIT = 1.0
+
+[taxonomy]
+# Channel order of the semantic maps = STRUCTURE_CLASSES + ROOM_CLASSES.
+# Structure classes are drawn on top of room classes. Within the structure
+# layer, later classes overwrite earlier ones (openings over walls).
+# The taxonomy is shared by all datasets so they can be mixed in training;
+# classes a dataset lacks (e.g. railing/column in ResPlan) stay empty.
+# Furniture comes FIRST: evaluation composes predictions by taxonomy priority
+# (later = higher), so a predicted piece of furniture can never replace a wall,
+# window or door of the input plan. Furniture never overlaps walls/openings in
+# this dataset (checked on 600 plans), so drawing order does not matter.
+STRUCTURE_CLASSES = ["side_table", "couch", "vase_table", "showcase", "tv", "center_table", "dining_set", "sofa", "chair",
+                     "wall", "railing", "column", "window", "door"]
+ROOM_CLASSES = ["living", "bedroom", "bathroom", "kitchen", "storage", "balcony", "other_room", "stair"]
+
+# Component type of each class. Types drive sampling balance, removal rules
+# and the per-type evaluation breakdown.
+[taxonomy.component_type]
+wall = "wall"
+railing = "other"
+column = "other"
+door = "door"
+window = "window"
+living = "room"
+bedroom = "room"
+bathroom = "room"
+kitchen = "room"
+storage = "room"
+balcony = "room"
+other_room = "room"
+stair = "other"
+side_table = "furniture"
+couch = "furniture"
+vase_table = "furniture"
+showcase = "furniture"
+tv = "furniture"
+center_table = "furniture"
+dining_set = "furniture"
+sofa = "furniture"
+chair = "furniture"
+
+# ResPlan key -> our class. Keys not listed (inner, land, garden, parking,
+# pool, neighbor) are context only and are not rasterized.
+[taxonomy.resplan_class_map]
+wall = "wall"
+door = "door"
+front_door = "door"
+window = "window"
+living = "living"
+bedroom = "bedroom"
+bathroom = "bathroom"
+kitchen = "kitchen"
+storage = "storage"
+balcony = "balcony"
+stair = "stair"
+
+# FurnitureArranger floorplan key -> our class (same keys as ResPlan). Both door
+# kinds become "door". Furniture is mapped by its own "type" field and needs no
+# entry here (every furniture type must be a class above; checked on load).
+[taxonomy.furniture_class_map]
+wall = "wall"
+door = "door"
+front_door = "door"
+window = "window"
+living = "living"
+bedroom = "bedroom"
+bathroom = "bathroom"
+kitchen = "kitchen"
+balcony = "balcony"
+
+# CubiCasa5K SVG element class (first token of the `class` attribute) -> our
+# class. Rooms are handled by [taxonomy.cubicasa_space_map]. Unlisted
+# elements (FixedFurniture, labels, controls, ...) are ignored.
+[taxonomy.cubicasa_class_map]
+Wall = "wall"
+Railing = "railing"
+Column = "column"
+Door = "door"
+Window = "window"
+Stairs = "stair"
+
+# CubiCasa "Space <Type> ..." -> room class, keyed by the first type token
+# (e.g. "Outdoor Balcony Glazed" -> "Outdoor"). Unlisted tokens map to
+# cubicasa.UNKNOWN_SPACE_CLASS.
+[taxonomy.cubicasa_space_map]
+LivingRoom = "living"
+Dining = "living"
+Den = "living"
+Entry = "living"
+DraughtLobby = "living"
+Hall = "living"
+Alcove = "living"
+RecreationRoom = "living"
+Library = "living"
+Bedroom = "bedroom"
+Bath = "bathroom"
+Sauna = "bathroom"
+Kitchen = "kitchen"
+Storage = "storage"
+Closet = "storage"
+DressingRoom = "storage"
+Utility = "storage"
+Outdoor = "balcony"
+Undefined = "other_room"
+UserDefined = "other_room"
+Room = "other_room"
+Office = "other_room"
+Garage = "other_room"
+CarPort = "other_room"
+TechnicalRoom = "other_room"
+Attic = "other_room"
+Basement = "other_room"
+Elevated = "other_room"
+OpenToBelow = "other_room"
+
+# RGB hex colours used by every visualization.
+[colors]
+background = "#ffffff"
+wall = "#2b2b2b"
+railing = "#8c6d31"
+column = "#5b2a86"
+door = "#d62728"
+window = "#1f9bd6"
+other_room = "#e0e0e0"
+living = "#e8e1cf"
+bedroom = "#b9dcb1"
+bathroom = "#f6c28b"
+kitchen = "#c3b6e0"
+storage = "#d9c2a3"
+balcony = "#cfd8dc"
+stair = "#f2a7c3"
+side_table = "#e6ab02"
+couch = "#66a61e"
+vase_table = "#a6761d"
+showcase = "#7570b3"
+tv = "#1b9e77"
+center_table = "#e7298a"
+dining_set = "#d95f02"
+sofa = "#386cb0"
+chair = "#666666"
+mask_outline = "#ff00ff"
+
+[wall_split]
+# Walls are split into segments at T/X junctions of their skeleton. The
+# skeleton is computed at SIZE * UPSCALE for smoother centre lines.
+UPSCALE = 2
+# Radius (canvas px) cleared around every junction before labelling segments.
+JUNCTION_CLEAR_RADIUS_PX = 3
+# Skeleton pieces shorter than this (canvas px) are spurs, not segments;
+# their pixels are absorbed by the nearest real segment.
+MIN_SEGMENT_LENGTH_PX = 6
+
+[cubicasa]
+# SVG units per metre. Verified on the release: every plan carrying metric
+# room labels gives 100.0 (p5-p95: 99.9-100.3), and door widths scaled this
+# way have a median of 0.80 m.
+SVG_UNITS_PER_METRE = 100.0
+# Room class for Space types missing from [taxonomy.cubicasa_space_map].
+UNKNOWN_SPACE_CLASS = "other_room"
+# Floors with fewer walls / rooms than this are skipped (e.g. empty attics).
+MIN_WALLS_PER_FLOOR = 4
+MIN_ROOMS_PER_FLOOR = 1
+# Plausible median door width (m); floors outside are logged as suspicious.
+DOOR_WIDTH_RANGE_M = [0.5, 1.2]
+# Plan id = house id * FLOOR_ID_FACTOR + floor index (unique per floor).
+FLOOR_ID_FACTOR = 10
+
+[missing]
+# Component types that can be removed. "other" = stairs, railings, columns.
+COMPONENT_TYPES = ["wall", "door", "window", "room", "furniture"]
+# Types that also support the "hard" removal mode (see README).
+# No hard mode for "room": every plan has ONE living room spanning the whole
+# interior, so hard room removal (room + all walls/openings) would ask the model
+# to invent the whole building shell from the furniture alone.
+HARD_MODE_TYPES = ["wall", "door", "window"]
+# Margins (px) of extra context erased around the removed component.
+MARGINS_PX = [0, 4, 8, 16]
+# Radius (px) for adjacency between instances (touching = within radius).
+NEIGHBOR_RADIUS_PX = 2
+# Radius (px) within which a component counts as touching the exterior.
+EXTERIOR_RADIUS_PX = 6
+# Area quantiles (computed on TRAIN only) separating small/medium/large.
+SIZE_BIN_QUANTILES = [0.3333, 0.6667]
+SIZE_BIN_NAMES = ["small", "medium", "large"]
+
+[missing.train]
+# On-the-fly sampling probabilities for training cases.
+HARD_MODE_PROB = 0.3
+# One probability per entry of MARGINS_PX.
+MARGIN_PROBS = [0.7, 0.1, 0.1, 0.1]
+# Probability of a complete plan with an empty target ("nothing missing").
+EMPTY_CASE_PROB = 0.0
+
+# Random 90-degree rotations / flips applied to training cases.
+DIHEDRAL_AUGMENT = true
+
+[missing.train.type_probs]
+# Sampling weight of each component type (renormalized over the types present
+# in the plan). Furniture is the main content of this dataset; "room" (fill the
+# single living room) is nearly trivial.
+wall = 0.22
+door = 0.14
+window = 0.14
+room = 0.05
+furniture = 0.45
+
+[missing.eval]
+# Per val/test plan and per available type: one easy and (if supported) one
+# hard case at margin 0. For this fraction of plans, extra easy cases at every
+# margin > 0 are added for the missing-region-size sweep.
+MARGIN_SWEEP_FRACTION = 0.25
+
+[missing.eval.instances_per_type]
+# Instances per plan used for each type in the frozen val/test cases (default 1).
+# Plans hold ~9 furniture pieces, so use several.
+furniture = 3
+
+[furniture]
+# Metric size of one plan unit in metres. UNKNOWN for this dataset (the SVGs carry
+# no scale); 0.03 is an assumption (sofa 80 units ~ 2.4 m, door 20 units ~ 0.6 m)
+# and only affects metre-valued metrics, never pixels or training.
+METRES_PER_UNIT = 0.03
+# Train/val/test split by plan *group* (identical floor plan => same split), by
+# deterministic hash of the group, so adding files never reshuffles old plans.
+VAL_FRACTION = 0.06
+TEST_FRACTION = 0.06
+SPLIT_SALT = "furniture-v1"
+
+[dedup]
+# Near-duplicate filtering of val/test plans against train (ResPlan reports
+# listings republished across splits). A val/test plan is excluded when its
+# label thumbnail agrees with some train plan on at least THRESHOLD of the
+# occupied pixels.
+ENABLED = true
+THUMB_SIZE = 64
+THRESHOLD = 0.95

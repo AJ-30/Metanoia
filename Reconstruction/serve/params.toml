@@ -1,0 +1,43 @@
+# Web demo parameters: upload limits, inference options and caches.
+
+[upload]
+# Largest accepted upload.
+MAX_BYTES = 8_000_000
+# Plan JSON: at most this many polygon vertices over all geometries.
+MAX_VERTICES = 200_000
+# Raster images: decompression-bomb guard (pixels) before resizing to the canvas.
+MAX_IMAGE_PIXELS = 16_000_000
+# A raster pixel takes the nearest palette colour if it is within this RGB
+# distance; anything farther (anti-aliasing, text, furniture) is background.
+COLOUR_TOLERANCE = 60.0
+# Scale assumed for raster uploads without one (ResPlan train median, m/px).
+DEFAULT_METRES_PER_PX = 0.0612
+
+[inference]
+# Samples per request (K), fused by per-pixel vote (postprocess [aggregate]).
+DEFAULT_SAMPLES = 1
+MAX_SAMPLES = 4
+# DDIM steps: the model was validated with 50; fewer is faster but rougher.
+DEFAULT_STEPS = 50
+MIN_STEPS = 10
+MAX_STEPS = 50
+DEFAULT_PIPELINE = "none"
+# Timesteps whose x0 estimate is shown as the "how it formed" strip.
+SNAPSHOT_TIMESTEPS = [999, 800, 600, 400, 200, 0]
+# Requests allowed to wait for the GPU before new ones are turned away.
+MAX_WAITING = 3
+
+[erase]
+# Largest share of the canvas one eraser request may clear (the model needs context).
+MAX_FRACTION = 0.5
+# With "only change the erased area", additions are kept within this many px of it.
+KEEP_RIM_PX = 3
+
+[render]
+# Panels are upscaled by this integer factor (nearest) for crisp display.
+UPSCALE = 2
+
+[cache]
+# Parsed plans are kept in memory this long (seconds), at most this many.
+PLAN_TTL_S = 3600
+MAX_PLANS = 64

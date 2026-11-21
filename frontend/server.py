@@ -512,6 +512,11 @@ def create_app(mode: str = "debug") -> Flask:
             abort(404)
         return send_from_directory(str(directory), filename)
 
+    # Step 0 of the combined pipeline: complete a plan with a missing wall, door or window, then hand it to the pages above.
+    from frontend.completion import register_completion  # noqa: E402
+
+    register_completion(app, upload_root, mode)
+
     return app
 
 

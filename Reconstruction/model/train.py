@@ -78,18 +78,31 @@ def setup_distributed() -> tuple[int, int, torch.device]:
     return dist.get_rank(), dist.get_world_size(), torch.device("cuda", local_rank)
 
 
-def learning_rate(step: int, cfg) -> float:
-    """Linear warmup, then cosine decay to a fraction=MIN_LR_FRACTION of the peak.
+def learning_rate(step: int, cfg: SimpleNamespace) -> float:
+    """Linear warmup, then cosine decay to ``MIN_LR_FRACTION`` of the peak.
+
+    Args:
+        step (int): Optimizer step.
+        cfg (SimpleNamespace): ``[train]`` hyperparameters.
+
+    Returns:
+        float: Learning rate.
     """
     if step < cfg.WARMUP_STEPS:
         return cfg.LEARNING_RATE * (step + 1) / cfg.WARMUP_STEPS
-    decay_prog= min(1.0, (step - cfg.WARMUP_STEPS) / max(1, cfg.TOTAL_STEPS - cfg.WARMUP_STEPS))
-    floor= cfg.MIN_LR_FRACTION
-    return cfg.LEARNING_RATE * (floor + (1 - floor) * 0.5 * (1 + math.cos(math.pi * decay_prog)))
+    progress: float = min(1.0, (step - cfg.WARMUP_STEPS) / max(1, cfg.TOTAL_STEPS - cfg.WARMUP_STEPS))
+    floor: float = cfg.MIN_LR_FRACTION
+    return cfg.LEARNING_RATE * (floor + (1 - floor) * 0.5 * (1 + math.cos(math.pi * progress)))
 
 
 def append_csv(path: Path, row: dict[str, Any]) -> None:
-    new=not path.exists()
+    """Append a row to a CSV file, writing the header when the file is new.
+
+    Args:
+        path (Path): CSV file.
+        row (dict[str, Any]): Column -> value.
+    """
+    new: bool = not path.exists()
     with open(path, "a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(row))
         if new:
@@ -145,17 +158,18 @@ class Trainer:
             world (int): World size.
             device (torch.device): Device.
         """
-        self.config = load_run_config(CONFIG_FILE, args.mode)
+        self.config: SimpleNamespace = load_run_config(CONFIG_FILE, args.mode)
         if device.type != "cuda" and not self.config.IS_DEBUG:
             raise RuntimeError("No usable CUDA device; prod training on CPU is refused (check the driver / PyTorch CUDA build)")
-        self.hyper = load_params(HYPER_FILE, args.mode if args.mode == "debug" else None)
+        self.hyper: SimpleNamespace = load_params(HYPER_FILE, args.mode if args.mode == "debug" else None)
         self.rank, self.world, self.device = rank, world, device
         self.is_main: bool = rank == 0
         self.run_dir: Path = resolve_path(self.config.RUNS_DIR) / args.run_name
         self.max_seconds: float | None = args.max_hours * 3600 - STOP_MARGIN_S if args.max_hours else None
         self.started: float = time.time()
         run_id: str = make_run_id(f"train-{args.run_name}")
-        self.log: logging.Logger = setup_logger(f"train.rank{rank}", resolve_path(self.config.LOG_FILE_PATH), run_id, self.config.IS_DEBUG and self.is_main)
+        self.log: logging.Logger = setup_logger(f"train.rank{rank}", resolve_path(self.config.LOG_FILE_PATH), run_id,
+                                                self.config.IS_DEBUG and self.is_main)
         if not self.is_main:
             self.log.setLevel(logging.WARNING)
         torch.manual_seed(self.hyper.train.SEED + rank)
@@ -165,7 +179,8 @@ class Trainer:
         schema = self.loader.dataset.source.schema
         self.model = ConditionalUNet(schema.num_channels, self.loader.dataset.source.params.canvas.SIZE, self.hyper.model).to(device)
         self.ema = EMA(self.model, self.hyper.train.EMA_DECAY)
-        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.hyper.train.LEARNING_RATE, betas=tuple(self.hyper.train.ADAM_BETAS), weight_decay=self.hyper.train.WEIGHT_DECAY)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.hyper.train.LEARNING_RATE,
+                                           betas=tuple(self.hyper.train.ADAM_BETAS), weight_decay=self.hyper.train.WEIGHT_DECAY)
         self.diffusion = GaussianDiffusion(self.hyper.diffusion.TIMESTEPS, self.hyper.diffusion.MAX_BETA)
         self.autocast_dtype: torch.dtype | None = torch.bfloat16 if self.hyper.train.PRECISION == "bf16" else None
         self.step, self.epoch = self._resume()
@@ -175,7 +190,10 @@ class Trainer:
             self._write_run_info(args, run_id)
 
     def _resume(self) -> tuple[int, int]:
-        """Load run's latest checkpoint if it exists and return tuple (step, epoch) to continue from.
+        """Load the run's latest checkpoint if it exists.
+
+        Returns:
+            tuple[int, int]: (step, epoch) to continue from.
         """
         latest: Path = self.run_dir / "checkpoints" / LATEST
         if not latest.is_file():
@@ -188,6 +206,12 @@ class Trainer:
         return int(state["step"]), int(state["epoch"])
 
     def _write_run_info(self, args: argparse.Namespace, run_id: str) -> None:
+        """Save run provenance (appends a new entry on every (re)start).
+
+        Args:
+            args (argparse.Namespace): Command-line arguments.
+            run_id (str): Run identifier of this process start.
+        """
         self.run_dir.mkdir(parents=True, exist_ok=True)
         commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=SCRIPT_DIR, capture_output=True, text=True, check=False)
         path: Path = self.run_dir / "run_info.json"
@@ -211,11 +235,12 @@ class Trainer:
         """
         for group in self.optimizer.param_groups:
             group["lr"] = learning_rate(self.step, self.hyper.train)
-        incomplete = batch["incomplete"].to(self.device, non_blocking=True)
-        target = batch["target"].to(self.device, non_blocking=True)
-        labels = type_labels(batch["info"], self.hyper.model.TYPE_CLASSES, self.device)
-        # without changing the optimizer batch Gradient accumulation over micro batches bounds activation memory DDP syncs only on the last one.
-        micro= self.hyper.train.MICRO_BATCH_SIZE or len(target)
+        incomplete: torch.Tensor = batch["incomplete"].to(self.device, non_blocking=True)
+        target: torch.Tensor = batch["target"].to(self.device, non_blocking=True)
+        labels: torch.Tensor = type_labels(batch["info"], self.hyper.model.TYPE_CLASSES, self.device)
+        # Gradient accumulation over micro-batches bounds activation memory
+        # without changing the optimizer batch; DDP syncs only on the last one.
+        micro: int = self.hyper.train.MICRO_BATCH_SIZE or len(target)
         chunks = list(zip(incomplete.split(micro), target.split(micro), labels.split(micro)))
         self.optimizer.zero_grad(set_to_none=True)
         parts: list[LossTerms] = []
@@ -223,11 +248,13 @@ class Trainer:
             share: float = len(tgt) / len(target)
             last: bool = index == len(chunks) - 1
             with (self.ddp.no_sync() if self.world > 1 and not last else contextlib.nullcontext()):
-                with torch.autocast(device_type=self.device.type, dtype=self.autocast_dtype or torch.float32, enabled=self.autocast_dtype is not None):
-                    part: LossTerms = compute_loss(self.ddp, self.diffusion, inc, tgt, lab, self.hyper.loss)(part.total * share).backward()
+                with torch.autocast(device_type=self.device.type, dtype=self.autocast_dtype or torch.float32,
+                                    enabled=self.autocast_dtype is not None):
+                    part: LossTerms = compute_loss(self.ddp, self.diffusion, inc, tgt, lab, self.hyper.loss)
+                (part.total * share).backward()
             parts.append(LossTerms(*(value.detach() * share for value in vars(part).values())))
-        terms= LossTerms(*(sum(values) for values in zip(*(vars(part).values() for part in parts))))
-        grad_norm= float(torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.hyper.train.GRAD_CLIP_NORM))
+        terms: LossTerms = LossTerms(*(sum(values) for values in zip(*(vars(part).values() for part in parts))))
+        grad_norm: float = float(torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.hyper.train.GRAD_CLIP_NORM))
         self.optimizer.step()
         self.ema.update(self.model, self.step)
         self.step += 1
@@ -235,10 +262,12 @@ class Trainer:
 
     def _reduce_mean(self, values: list[float]) -> list[float]:
         """Average values over all ranks.
+
         Args:
             values (list[float]): Local values.
+
         Returns:
-            list: Global means.
+            list[float]: Global means.
         """
         tensor = torch.tensor(values, device=self.device, dtype=torch.float64)
         if self.world > 1:
@@ -247,13 +276,20 @@ class Trainer:
         return tensor.tolist()
 
     def _should_stop(self) -> bool:
-        """based on if the wall-time budget is used up.
+        """Whether the wall-time budget is used up (agreed by all ranks).
+
+        Returns:
+            bool: True to stop now.
         """
         local: float = float(self.max_seconds is not None and time.time() - self.started > self.max_seconds)
         return self._reduce_mean([local])[0] > 0
 
     def _log_window(self, window: list[list[float]], window_start: float) -> None:
-        """Write averages of last log
+        """Write averaged telemetry of the last logging window.
+
+        Args:
+            window (list[list[float]]): Per-step [loss, diffusion, type_ce, type_acc, grad_norm].
+            window_start (float): Time the window started.
         """
         means: list[float] = self._reduce_mean([sum(col) / len(col) for col in zip(*window)])
         if not self.is_main:
@@ -270,7 +306,7 @@ class Trainer:
         self.log.info(" | ".join(f"{k}={v:.4g}" if isinstance(v, float) else f"{k}={v}" for k, v in row.items()))
 
     def _checkpoint(self) -> None:
-        """Save model checkpoint"""
+        """Save a checkpoint on rank 0; all ranks wait for it."""
         if self.is_main:
             path: Path = save_checkpoint(self.run_dir / "checkpoints", self.step, self.epoch, self.model, self.ema,
                                          self.optimizer, self.hyper, self.hyper.logging.KEEP_CHECKPOINTS,
@@ -283,26 +319,29 @@ class Trainer:
         """Validate the EMA model on rank 0; all ranks wait for it."""
         if self.is_main:
             start: float = time.time()
-            metrics = self.validator.run(self.ema.model, self.diffusion, self.autocast_dtype, self.run_dir / "val_grids", f"step_{self.step:07d}")
+            metrics = self.validator.run(self.ema.model, self.diffusion, self.autocast_dtype,
+                                         self.run_dir / "val_grids", f"step_{self.step:07d}")
             append_csv(self.run_dir / "val_log.csv", {"step": self.step, **metrics})
-            self.log.info(f"Validation at step {self.step} ({time.time() - start:.0f}s): "+ ", ".join(f"{k}={v:.3f}" for k, v in metrics.items()))
+            self.log.info(f"Validation at step {self.step} ({time.time() - start:.0f}s): "
+                          + ", ".join(f"{k}={v:.3f}" for k, v in metrics.items()))
         if self.world > 1:
             dist.barrier()
 
     def fit(self) -> None:
         """Run the training loop until TOTAL_STEPS or the wall-time budget."""
-        cfg= self.hyper.logging
+        cfg: SimpleNamespace = self.hyper.logging
         self.model.train()
         window: list[list[float]] = []
-        window_start = time.time()
-        stop = False
+        window_start: float = time.time()
+        stop: bool = False
         while self.step < self.hyper.train.TOTAL_STEPS and not stop:
             if self.sampler is not None:
                 self.sampler.set_epoch(self.epoch)
             self.loader.dataset.set_epoch(self.epoch)
             for batch in self.loader:
                 terms, grad_norm = self._train_step(batch)
-                window.append([float(terms.total.detach()), float(terms.diffusion), float(terms.type_ce), float(terms.type_accuracy), grad_norm])
+                window.append([float(terms.total.detach()), float(terms.diffusion), float(terms.type_ce),
+                               float(terms.type_accuracy), grad_norm])
                 if self.step % cfg.LOG_EVERY_STEPS == 0:
                     self._log_window(window, window_start)
                     window, window_start = [], time.time()
@@ -325,6 +364,7 @@ class Trainer:
 
 
 def main() -> None:
+    """Entry point (see module docstring)."""
     args: argparse.Namespace = parse_args()
     rank, world, device = setup_distributed()
     try:

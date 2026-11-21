@@ -1,1 +1,0 @@
-timestamp,runtime,epoch,train_loss,bce_loss,kl_loss,kl_per_dim,test_loss,test_bce,test_kl,test_fg_iou,test_fg_dice

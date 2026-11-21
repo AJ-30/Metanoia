@@ -1,8 +1,8 @@
 # Reconstruction: diffusion-based completion of missing floor-plan components
 
 Self-contained package for the project *Diffusion-Based Reconstruction of
-Missing Architectural Floor Plan Components*. It does **not** import or modify
-the `VAE/` and `Diffusion/` experiments elsewhere in this repository.
+Missing Architectural Floor Plan Components*. Everything it needs lives in this
+repository (see the top-level README for data and weights).
 
 Task setting: at test time the model gets only a floor plan with one component
 missing (wall, door, window, room or other element) and must generate that
@@ -15,7 +15,10 @@ component. Where it is missing and what type it is are unknown to the model.
 | 1. Data: ResPlan + CubiCasa5K loading, rasterization, wall splitting, splits, leakage control | done (`data_prep/`) |
 | 2. Missing-component generation, frozen val/test cases, comparison visualizer | done (`data_prep/`) |
 | 3. Evaluation: component extraction, matching, metrics, baselines | done (`evaluation/`) |
-| 4+. Diffusion model, constraints, learned baselines, ablations | next |
+| 4. Conditional diffusion model, training, prediction | done (`model/`), checkpoint at step 150k |
+| 5. Structure-aware post-processing (K-sample fusion, clean-up ablation) | done (`postprocess/`) |
+| 6. Web demo: upload a plan, get the reconstruction | done (`serve/`) |
+| Structural-constraint losses / sampling guidance, robustness study | next |
 
 ## Layout
 
@@ -27,14 +30,18 @@ Reconstruction/
 ├── common/              TOML config loading, logger
 ├── data_prep/           milestones 1-2 (see data_prep/README.md)
 ├── evaluation/          milestone 3 (see evaluation/README.md)
+├── model/               milestone 4 (see model/README.md)
+├── postprocess/         milestone 5 (see postprocess/README.md)
+├── serve/               milestone 6: web demo (see serve/README.md)
+├── slurm/               cluster job scripts
 └── tests/               unit tests (synthetic data, no dataset needed)
 ```
 
 ## Quick start (from the repository root)
 
 ```bash
-bash Reconstruction/setup_env.sh metanoia            # once
-conda activate metanoia
+bash Reconstruction/setup_env.sh archpainting        # once
+conda activate archpainting
 
 # Build the processed datasets (add --mode debug for a 200-item smoke test)
 python -m Reconstruction.data_prep.build_dataset --dataset resplan --mode prod

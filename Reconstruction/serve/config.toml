@@ -1,0 +1,23 @@
+# Run configuration for the web demo (serve/). Relative paths are resolved
+# against the repository root. Select a table with `--mode debug|prod`.
+
+[default]
+PROCESSED_ROOT = "./datasets/processed"
+# Dataset whose build-time params/size bins define the taxonomy and the
+# missing-component rules; its test split provides the example plans.
+DATASET = "resplan"
+EXAMPLE_SPLIT = "test"
+# Checkpoint served: RUNS_DIR/<RUN_NAME>/checkpoints/ selector (step or 'latest').
+RUNS_DIR = "./Reconstruction/runs"
+RUN_NAME = "run2-a40"
+CHECKPOINT = "150000"
+LOG_FILE_PATH = "./Reconstruction/logs/serve.log"
+# The standalone app (python -m Reconstruction.serve.app) only listens locally.
+HOST = "127.0.0.1"
+PORT = 8090
+
+[debug]
+IS_DEBUG = true
+
+[prod]
+IS_DEBUG = false

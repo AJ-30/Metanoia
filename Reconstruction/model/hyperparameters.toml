@@ -2,7 +2,7 @@
 
 [model]
 # Conditional U-Net. Input: noisy target + incomplete plan + 2 coordinate channels.
-output: v-prediction of the target.
+# output: v-prediction of the target.
 
 BASE_CHANNELS = 128
 CHANNEL_MULTS = [1, 2, 2, 4, 4]      # resolutions 256, 128, 64, 32, 16
@@ -13,7 +13,8 @@ GROUP_NORM_GROUPS = 32
 DROPOUT = 0.0
 USE_COORDINATES = true
 # Auxiliary head predics the missing component type from the bottleneck.
-# TYPE_CLASSES = ["wall", "door", "window", "room", "other", "none"] Order defines class indices; "none" = nothing missing.
+# Order defines class indices; "none" = nothing missing.
+TYPE_CLASSES = ["wall", "door", "window", "room", "other", "none"]
 
 
 [diffusion]

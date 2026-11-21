@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 -25 150 180" role="img">
+  <title>Furniture layout</title>
+  <metadata id="furniture-arranger-layout" type="application/json">{"arrangement": {"furniture": [{"type": "tv", "x": 140.0, "y": 19.999999999999996, "angle": 90.0, "bbox_size_x": 40.0, "bbox_size_y": 20.0, "annotation": "TV1", "name": "TV", "inventory_id": "1", "instance_id": "1", "locked": false, "min_bbox_size_x": 40.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 50.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 40.0, "default_bbox_size_y": 20.0}, {"type": "side_table", "x": 140.0, "y": 50.0, "angle": 90.0, "bbox_size_x": 20.0, "bbox_size_y": 20.0, "annotation": "Side table1", "name": "Side table", "inventory_id": "8", "instance_id": "1", "locked": false, "min_bbox_size_x": 10.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 30.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "side_table", "x": 140.0, "y": -10.000000000000004, "angle": 90.0, "bbox_size_x": 20.0, "bbox_size_y": 20.0, "annotation": "Side table2", "name": "Side table", "inventory_id": "8", "instance_id": "2", "locked": false, "min_bbox_size_x": 10.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 30.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "vase_table", "x": 30.0, "y": -9.999999999999996, "angle": 270.0, "bbox_size_x": 20.0, "bbox_size_y": 20.0, "annotation": "Vase table1", "name": "Vase table", "inventory_id": "9", "instance_id": "1", "locked": false, "min_bbox_size_x": 10.0, "min_bbox_size_y": 10.0, "max_bbox_size_x": 30.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "chair", "x": 30.0, "y": 40.0, "angle": 270.0, "bbox_size_x": 20.0, "bbox_size_y": 20.0, "annotation": "Chair1", "name": "Chair", "inventory_id": "2", "instance_id": "1", "locked": false, "min_bbox_size_x": 20.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 20.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "couch", "x": 30.0, "y": 15.000000000000004, "angle": 270.0, "bbox_size_x": 30.0, "bbox_size_y": 20.0, "annotation": "Couch1", "name": "Couch", "inventory_id": "3", "instance_id": "1", "locked": false, "min_bbox_size_x": 30.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 30.0, "max_bbox_size_y": 20.0, "default_bbox_size_x": 30.0, "default_bbox_size_y": 20.0}, {"type": "vase_table", "x": 30.0, "y": 60.0, "angle": 270.0, "bbox_size_x": 20.0, "bbox_size_y": 20.0, "annotation": "Vase table2", "name": "Vase table", "inventory_id": "9", "instance_id": "2", "locked": false, "min_bbox_size_x": 10.0, "min_bbox_size_y": 10.0, "max_bbox_size_x": 30.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "couch", "x": 65.0, "y": -9.999999999999998, "angle": 0.0, "bbox_size_x": 50.0, "bbox_size_y": 20.0, "annotation": "Sofa1", "name": "Sofa", "inventory_id": "4", "instance_id": "1", "locked": false, "min_bbox_size_x": 50.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 80.0, "max_bbox_size_y": 20.0, "default_bbox_size_x": 60.0, "default_bbox_size_y": 20.0}, {"type": "center_table", "x": 70.0, "y": 35.0, "angle": 270.0, "bbox_size_x": 30.0, "bbox_size_y": 20.0, "annotation": "Center table1", "name": "Center table", "inventory_id": "7", "instance_id": "1", "locked": false, "min_bbox_size_x": 20.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 40.0, "max_bbox_size_y": 40.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "side_table", "x": 30.0, "y": 80.0, "angle": 270.0, "bbox_size_x": 20.0, "bbox_size_y": 20.0, "annotation": "Side table3", "name": "Side table", "inventory_id": "8", "instance_id": "3", "locked": false, "min_bbox_size_x": 10.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 30.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "showcase", "x": 30.0, "y": 105.0, "angle": 270.0, "bbox_size_x": 30.0, "bbox_size_y": 20.0, "annotation": "Showcase1", "name": "Showcase", "inventory_id": "6", "instance_id": "1", "locked": false, "min_bbox_size_x": 20.0, "min_bbox_size_y": 20.0, "max_bbox_size_x": 90.0, "max_bbox_size_y": 30.0, "default_bbox_size_x": 20.0, "default_bbox_size_y": 20.0}, {"type": "dining_set", "x": 110.0, "y": 120.0, "angle": 270.0, "bbox_size_x": 30.0, "bbox_size_y": 50.0, "annotation": "Dining table medium1", "name": "Dining table medium", "inventory_id": "11", "instance_id": "1", "locked": false, "min_bbox_size_x": 30.0, "min_bbox_size_y": 50.0, "max_bbox_size_x": 40.0, "max_bbox_size_y": 60.0, "default_bbox_size_x": 30.0, "default_bbox_size_y": 50.0}]}, "floorplan": {"balcony": "MULTIPOLYGON EMPTY", "bathroom": "MULTIPOLYGON EMPTY", "bedroom": "MULTIPOLYGON EMPTY", "door": "MULTIPOLYGON (((10 130, 10 150, 20 150, 20 130, 10 130)))", "wall": "MULTIPOLYGON (((150 -20, 150 60, 155 60, 155 -20, 155 -20, 150 -20)), ((100 -25, 100 -20, 150 -20, 150 -20, 150 -25, 100 -25)), ((90 150, 90 155, 150 155, 150 155, 150 150, 90 150)), ((20 150, 20 150, 20 155, 60 155, 60 150, 20 150)), ((20 -25, 20 -25, 20 -20, 70 -20, 70 -25, 20 -25)), ((150 90, 150 150, 155 150, 155 90, 150 90)), ((15 -20, 15 130, 20 130, 20 -20, 15 -20)))", "window": "MULTIPOLYGON (((60 150, 60 150, 60 155, 90 155, 90 150, 60 150)), ((70 -25, 70 -20, 100 -20, 100 -25, 70 -25)))", "front_door": "MULTIPOLYGON (((150 60, 150 90, 160 90, 160 60, 150 60)))", "kitchen": "MULTIPOLYGON EMPTY", "living": "MULTIPOLYGON (((20 -20, 20 -20, 20 150, 150 150, 150 -20, 20 -20)))", "id": 14433, "wall_depth": 5}, "comment": "", "current_used_inventory": [{"inventory_id": "1", "instance_id": "1", "name": "TV", "type": "tv"}, {"inventory_id": "8", "instance_id": "1", "name": "Side table", "type": "side_table"}, {"inventory_id": "8", "instance_id": "2", "name": "Side table", "type": "side_table"}, {"inventory_id": "9", "instance_id": "1", "name": "Vase table", "type": "vase_table"}, {"inventory_id": "2", "instance_id": "1", "name": "Chair", "type": "chair"}, {"inventory_id": "3", "instance_id": "1", "name": "Couch", "type": "couch"}, {"inventory_id": "9", "instance_id": "2", "name": "Vase table", "type": "vase_table"}, {"inventory_id": "4", "instance_id": "1", "name": "Sofa", "type": "couch"}, {"inventory_id": "7", "instance_id": "1", "name": "Center table", "type": "center_table"}, {"inventory_id": "8", "instance_id": "3", "name": "Side table", "type": "side_table"}, {"inventory_id": "6", "instance_id": "1", "name": "Showcase", "type": "showcase"}, {"inventory_id": "11", "instance_id": "1", "name": "Dining table medium", "type": "dining_set"}], "meta": {"author_details": {"username": "Raj01", "mode": "augmented", "ip": null, "created_date": "2026-09-30", "created_time": "19:32:40", "editor_version": 1, "backend_version": 1, "extra": []}, "uid": "0b1fb1ec38f347f0b024c971c497db35", "last_edit_details": {"edited": true, "username": "Raj01", "mode": "augmented", "ip": null, "created_date": "2026-09-30", "created_time": "19:32:40", "extra": []}, "reviewer_details": {"reviewed": false, "reviewer_comment": "", "reviewers": [{"reviewed": false, "username": null, "ip": null, "reviewed_by_username": null, "reviewed_by_ip": null, "reviewed_date": null, "reviewed_time": null, "extra": [], "action": null, "reviewer_comment": null, "score": null, "reason": null}]}, "thrashed": {"isThrashed": false, "thrashing_reason": null, "thrashing_method": null, "thrashed_by_username": null, "thrashed_by_ip": null, "thrashed_date": null, "thrashed_time": null}, "other": {}}, "furniture_locks": [false, false, false, false, false, false, false, false, false, false, false, false], "augmented": {"parent_uid": "6b014674-4330-48da-bb62-480f056a0efc", "parent_file": "0a13192085954c929b80d4e6aad99efb_accepted.svg", "parent_path": "/Users/aatmaj/Downloads/FurnitureArrangerDataset-main 4/accepted/Raj01/0a13192085954c929b80d4e6aad99efb_accepted.svg", "augmentation_comments": ["Reduced center table size", "Reduced showcase length", "Reduced sitable furniture length", "Replaced sofa with two touching couches and a table", "Flipped layout horizontally (left-right mirror)", "Flipped layout vertically (top-bottom mirror)", "Rotated layout by a multiple of 90 degrees"], "augmentation_level": 0.7, "seed": 1, "generated_at": {"date": "2026-09-30", "time": "19:32:40"}}}</metadata>
+  <g transform="translate(0 130) scale(1 -1)">
+    <path d="M 20 -20 L 20 -20 L 20 150 L 150 150 L 150 -20 L 20 -20 Z" fill="#d9d9d9" fill-opacity="0.22" stroke="#d9d9d9" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>living</title></path>
+    <path d="M 10 130 L 10 150 L 20 150 L 20 130 L 10 130 Z" fill="#e78ac3" fill-opacity="0.22" stroke="#e78ac3" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>door</title></path>
+    <path d="M 60 150 L 60 150 L 60 155 L 90 155 L 90 150 L 60 150 Z" fill="#a6d854" fill-opacity="0.22" stroke="#a6d854" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>window</title></path>
+    <path d="M 70 -25 L 70 -20 L 100 -20 L 100 -25 L 70 -25 Z" fill="#a6d854" fill-opacity="0.22" stroke="#a6d854" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>window</title></path>
+    <path d="M 150 -20 L 150 60 L 155 60 L 155 -20 L 155 -20 L 150 -20 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 100 -25 L 100 -20 L 150 -20 L 150 -20 L 150 -25 L 100 -25 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 90 150 L 90 155 L 150 155 L 150 155 L 150 150 L 90 150 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 20 150 L 20 150 L 20 155 L 60 155 L 60 150 L 20 150 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 20 -25 L 20 -25 L 20 -20 L 70 -20 L 70 -25 L 20 -25 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 150 90 L 150 150 L 155 150 L 155 90 L 150 90 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 15 -20 L 15 130 L 20 130 L 20 -20 L 15 -20 Z" fill="#ffd92f" fill-opacity="0.22" stroke="#ffd92f" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>wall</title></path>
+    <path d="M 150 60 L 150 90 L 160 90 L 160 60 L 150 60 Z" fill="#a63603" fill-opacity="0.22" stroke="#a63603" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>front_door</title></path>
+    <g transform="translate(15 140) rotate(90) scale(1 -1)">
+      <svg x="-10" y="-20.4938" width="20" height="40.9877" viewBox="-0.5 -0.5 81 166" preserveAspectRatio="none">
+        
+    <defs/>
+    <g>
+        <g>
+            <rect x="0" y="80" width="80" height="5" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <path d="M 80 85 C 80 129.18 44.18 165 0 165 L 0 85" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <path d="M 80 80 C 80 35.82 44.18 0 0 0 L 0 80" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3 3" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <g transform="translate(155 75) rotate(270) scale(1 -1)">
+      <svg x="-15" y="-30.7407" width="30" height="61.4815" viewBox="-0.5 -0.5 81 166" preserveAspectRatio="none">
+        
+    <defs/>
+    <g>
+        <g>
+            <rect x="0" y="80" width="80" height="5" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <path d="M 80 85 C 80 129.18 44.18 165 0 165 L 0 85" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <path d="M 80 80 C 80 35.82 44.18 0 0 0 L 0 80" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3 3" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <g transform="translate(140 20) rotate(90) scale(1 -1)">
+      <svg x="-20" y="-10" width="40" height="20" viewBox="-0.5 -0.5 151 52" preserveAspectRatio="none">
+        <path fill="none" stroke="#000" d="M0 0h150v50H0z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><rect width="110" height="20" x="20" y="15" fill="none" stroke="#000" pointer-events="all" rx="3" ry="3" style="stroke:light-dark(#000,#fff)"/><path fill="none" stroke="#000" d="M45 15h60v5H45z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="none" stroke="#000" stroke-miterlimit="10" d="M50 20 40 10m20 10L49.95 10M80 20l10-10m10 10 10-10M90 20l10-10M70 20 60 10" pointer-events="stroke" style="stroke:light-dark(#000,#fff)"/>
+      </svg>
+    </g>
+    <path d="M 130 -2.94039e-15 L 150 -4.16504e-15 L 150 40 L 130 40 L 130 -2.94039e-15 Z" fill="#a78bfa" fill-opacity="0.36" stroke="#a78bfa" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>TV (tv)</title></path>
+    <g transform="translate(140 50) rotate(90) scale(1 -1)">
+      <svg x="-10" y="-10" width="20" height="20" viewBox="-0.5 -0.5 101 101" preserveAspectRatio="none">
+        <path fill="none" stroke="#000" d="M0 10h100v90H0zM0 0h50v10H0zm50 0h50v10H50z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="none" stroke="#000" d="M47.5 0h5v10h-5z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="#fff" stroke="#000" d="M20 0h10v3H20zm50 0h10v3H70z" pointer-events="all" style="fill:light-dark(#fff,var(--ge-dark-color, #121212));stroke:light-dark(#000,#fff)"/>
+      </svg>
+    </g>
+    <path d="M 130 40 L 150 40 L 150 60 L 130 60 L 130 40 Z" fill="#facc15" fill-opacity="0.36" stroke="#facc15" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Side table (side_table)</title></path>
+    <g transform="translate(140 -10) rotate(90) scale(1 -1)">
+      <svg x="-10" y="-10" width="20" height="20" viewBox="-0.5 -0.5 101 101" preserveAspectRatio="none">
+        <path fill="none" stroke="#000" d="M0 10h100v90H0zM0 0h50v10H0zm50 0h50v10H50z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="none" stroke="#000" d="M47.5 0h5v10h-5z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="#fff" stroke="#000" d="M20 0h10v3H20zm50 0h10v3H70z" pointer-events="all" style="fill:light-dark(#fff,var(--ge-dark-color, #121212));stroke:light-dark(#000,#fff)"/>
+      </svg>
+    </g>
+    <path d="M 130 -20 L 150 -20 L 150 -4.16504e-15 L 130 -2.94039e-15 L 130 -20 Z" fill="#facc15" fill-opacity="0.36" stroke="#facc15" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Side table (side_table)</title></path>
+    <g transform="translate(30 -10) rotate(270) scale(1 -1)">
+      <svg x="-10" y="-10" width="20" height="20" viewBox="-0.5 -0.5 101 101" preserveAspectRatio="none">
+        
+    <defs/>
+    <g>
+        <g>
+            <rect x="0" y="0" width="100" height="100" fill="#ffffff" stroke="#000000" stroke-width="0.5" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <rect x="27.5" y="27.5" width="45" height="45" fill="#ffffff" stroke="#000000" transform="rotate(-45,50,50)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <rect x="25" y="25" width="50" height="50" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <ellipse cx="50" cy="50" rx="25" ry="25" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <path d="M 20 -20 L 40 -20 L 40 1.71574e-15 L 20 5.38968e-15 L 20 -20 Z" fill="#94a3b8" fill-opacity="0.36" stroke="#94a3b8" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Vase table (vase_table)</title></path>
+    <g transform="translate(30 40) rotate(270) scale(1 -1)">
+      <svg x="-10" y="-10" width="20" height="20" viewBox="-0.5 -0.5 151 151" preserveAspectRatio="none">
+        <path fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="10" d="m137.02 50.83 10.91 68.77c2.08 10.11-3.63 20.23-14.55 25.79-37.36 4.61-75.4 4.61-112.76 0C9.7 139.83 3.99 129.71 6.07 119.6l10.92-68.77c2.09-7.61 12.49-13.46 25.46-14.33h69.1c12.97.87 23.37 6.72 25.47 14.33ZM39.46 36.5 20.77 18.34M60.23 36.5l-6.22-20.74M85.15 36.5l8.29-20.74m12.48 20.74 20.77-18.16m6.21.97c-38.45-4.71-77.82-4.71-116.28 0L0 7.85C49.2.01 100.33.01 149.53 7.85Z" pointer-events="all" style="stroke:light-dark(#000,#fff)" transform="rotate(-180 75 75)"/>
+      </svg>
+    </g>
+    <path d="M 20 30 L 40 30 L 40 50 L 20 50 L 20 30 Z" fill="#f472b6" fill-opacity="0.36" stroke="#f472b6" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Chair (chair)</title></path>
+    <g transform="translate(30 15) rotate(270) scale(1 -1)">
+      <svg x="-15" y="-10" width="30" height="20" viewBox="-0.5 -0.5 151 151" preserveAspectRatio="none">
+        
+    <defs/>
+    <g>
+        <g>
+            <rect x="16.67" y="18.75" width="116.67" height="18.75" fill="#ffffff" stroke="#000000" transform="rotate(-180,75,75)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="0" y="0" width="25" height="150" rx="5" ry="5" fill="#ffffff" stroke="#000000" transform="rotate(-180,75,75)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="25" y="0" width="100" height="28.13" rx="5.63" ry="5.63" fill="#ffffff" stroke="#000000" transform="rotate(-180,75,75)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="25" y="28.13" width="100" height="121.88" rx="5" ry="5" fill="#ffffff" stroke="#000000" transform="rotate(-180,75,75)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="125" y="0" width="25" height="150" rx="5" ry="5" fill="#ffffff" stroke="#000000" transform="rotate(-180,75,75)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <path d="M 20 5.38968e-15 L 40 1.71574e-15 L 40 30 L 20 30 L 20 5.38968e-15 Z" fill="#f472b6" fill-opacity="0.36" stroke="#f472b6" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Couch (couch)</title></path>
+    <g transform="translate(30 60) rotate(270) scale(1 -1)">
+      <svg x="-10" y="-10" width="20" height="20" viewBox="-0.5 -0.5 101 101" preserveAspectRatio="none">
+        
+    <defs/>
+    <g>
+        <g>
+            <rect x="0" y="0" width="100" height="100" fill="#ffffff" stroke="#000000" stroke-width="0.5" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <rect x="27.5" y="27.5" width="45" height="45" fill="#ffffff" stroke="#000000" transform="rotate(-45,50,50)" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <rect x="25" y="25" width="50" height="50" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <ellipse cx="50" cy="50" rx="25" ry="25" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <path d="M 20 50 L 40 50 L 40 70 L 20 70 L 20 50 Z" fill="#94a3b8" fill-opacity="0.36" stroke="#94a3b8" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Vase table (vase_table)</title></path>
+    <g transform="translate(65 -10) rotate(0) scale(1 -1)">
+      <svg x="-25" y="-10" width="50" height="20" viewBox="-0.5 -0.5 201 101" preserveAspectRatio="none">
+        <path fill="none" stroke="#000" d="M0 0h200v100H0z" pointer-events="all" style="stroke:light-dark(#000,#fff)" transform="rotate(180 100 50)"/><rect width="95" height="76" x="102" y="4" fill="none" stroke="#000" pointer-events="all" rx="11.4" ry="11.4" style="stroke:light-dark(#000,#fff)" transform="rotate(180 149.5 42)"/><rect width="95" height="76" x="4" y="4" fill="none" stroke="#000" pointer-events="all" rx="11.4" ry="11.4" style="stroke:light-dark(#000,#fff)" transform="rotate(180 51.5 42)"/>
+      </svg>
+    </g>
+    <path d="M 40 -20 L 90 -20 L 90 1.77636e-15 L 40 1.77636e-15 L 40 -20 Z" fill="#f472b6" fill-opacity="0.36" stroke="#f472b6" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Sofa (couch)</title></path>
+    <g transform="translate(70 35) rotate(270) scale(1 -1)">
+      <svg x="-15" y="-10" width="30" height="20" viewBox="-0.5 -0.5 201 201" preserveAspectRatio="none">
+        
+    <defs/>
+    <g>
+        <g>
+            <rect x="0" y="0" width="200" height="200" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="0" y="0" width="22.22" height="28" fill="none" stroke="#000000" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="0" y="172" width="22.22" height="28" fill="none" stroke="#000000" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="177.78" y="0" width="22.22" height="28" fill="none" stroke="#000000" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="177.78" y="172" width="22.22" height="28" fill="none" stroke="#000000" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <path d="M 60 20 L 80 20 L 80 50 L 60 50 L 60 20 Z" fill="#60a5fa" fill-opacity="0.36" stroke="#60a5fa" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Center table (center_table)</title></path>
+    <g transform="translate(30 80) rotate(270) scale(1 -1)">
+      <svg x="-10" y="-10" width="20" height="20" viewBox="-0.5 -0.5 101 101" preserveAspectRatio="none">
+        <path fill="none" stroke="#000" d="M0 10h100v90H0zM0 0h50v10H0zm50 0h50v10H50z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="none" stroke="#000" d="M47.5 0h5v10h-5z" pointer-events="all" style="stroke:light-dark(#000,#fff)"/><path fill="#fff" stroke="#000" d="M20 0h10v3H20zm50 0h10v3H70z" pointer-events="all" style="fill:light-dark(#fff,var(--ge-dark-color, #121212));stroke:light-dark(#000,#fff)"/>
+      </svg>
+    </g>
+    <path d="M 20 70 L 40 70 L 40 90 L 20 90 L 20 70 Z" fill="#facc15" fill-opacity="0.36" stroke="#facc15" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Side table (side_table)</title></path>
+    <g transform="translate(30 105) rotate(270) scale(1 -1)">
+      <svg x="-15" y="-10" width="30" height="20" viewBox="-0.5 -0.5 161 81" preserveAspectRatio="none">
+        
+    <defs>
+        <pattern patternUnits="userSpaceOnUse" width="11.5" height="11.5" x="0" y="0" patternTransform="rotate(45)" id="mx-pattern-hatch-1-000000-0">
+            <line x1="0" y1="0" x2="0" y2="11.5" stroke="#4d4d4d" stroke-width="1.5" style="stroke: light-dark(rgb(77, 77, 77), rgb(171, 171, 171));"/>
+        </pattern>
+    </defs>
+    <g>
+        <g>
+            <rect x="0" y="0" width="160" height="80" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <rect x="37.81" y="-27.18" width="10" height="69.37" fill="url(#mx-pattern-hatch-1-000000-0)" stroke="#000000" transform="rotate(-90,42.81,7.5)" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+        <g>
+            <rect x="110" y="-27.18" width="10" height="69.37" fill="url(#mx-pattern-hatch-1-000000-0)" stroke="#000000" transform="rotate(-90,115,7.5)" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+        </g>
+    </g>
+
+      </svg>
+    </g>
+    <path d="M 20 90 L 40 90 L 40 120 L 20 120 L 20 90 Z" fill="#34d399" fill-opacity="0.36" stroke="#34d399" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Showcase (showcase)</title></path>
+    <g transform="translate(110 120) rotate(270) scale(1 -1)">
+      <svg x="-15" y="-25" width="30" height="50" viewBox="0 0 202 142" preserveAspectRatio="none">
+        <style type="text/css">@supports (color: light-dark(#000, #fff)) { #ge-svg-2AmHPlkdTCRLImy5cHGG { --ge-adaptive-bg: light-dark(#ffffff, var(--ge-dark-color, #121212)); } }</style><defs/><g><g data-cell-id="0"><g data-cell-id="1"><g data-cell-id="H4axWMAA_IoD2OqsUFO0-1"><g transform="translate(0.5,0.5)"><path d="M 86.54 17.62 L 89.45 41.46 C 90 44.97 88.48 48.47 85.57 50.4 C 75.61 52 65.46 52 55.5 50.4 C 52.59 48.47 51.06 44.97 51.62 41.46 L 54.53 17.62 C 55.09 14.98 57.86 12.95 61.32 12.65 L 79.75 12.65 C 83.2 12.95 85.98 14.98 86.54 17.62 Z M 60.52 12.65 L 55.54 6.36 M 66.06 12.65 L 64.4 5.46 M 72.71 12.65 L 74.92 5.46 M 78.24 12.65 L 83.78 6.36 M 85.44 6.69 C 75.19 5.06 64.69 5.06 54.43 6.69 L 50 2.72 C 63.12 0.01 76.76 0.01 89.87 2.72 Z" fill="#ffffff" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g><g data-cell-id="H4axWMAA_IoD2OqsUFO0-2"><g transform="translate(0.5,0.5)"><path d="M 86.54 105.62 L 89.45 129.46 C 90 132.97 88.48 136.47 85.57 138.4 C 75.61 140 65.46 140 55.5 138.4 C 52.59 136.47 51.06 132.97 51.62 129.46 L 54.53 105.62 C 55.09 102.98 57.86 100.95 61.32 100.65 L 79.75 100.65 C 83.2 100.95 85.98 102.98 86.54 105.62 Z M 60.52 100.65 L 55.54 94.36 M 66.06 100.65 L 64.4 93.46 M 72.71 100.65 L 74.92 93.46 M 78.24 100.65 L 83.78 94.36 M 85.44 94.69 C 75.19 93.06 64.69 93.06 54.43 94.69 L 50 90.72 C 63.12 88.01 76.76 88.01 89.87 90.72 Z" fill="#ffffff" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" transform="rotate(180,70,114)" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g><g data-cell-id="H4axWMAA_IoD2OqsUFO0-3"><g transform="translate(0.5,0.5)"><path d="M 42.54 61.62 L 45.45 85.46 C 46 88.97 44.48 92.47 41.57 94.4 C 31.61 96 21.46 96 11.5 94.4 C 8.59 92.47 7.06 88.97 7.62 85.46 L 10.53 61.62 C 11.09 58.98 13.86 56.95 17.32 56.65 L 35.75 56.65 C 39.2 56.95 41.98 58.98 42.54 61.62 Z M 16.52 56.65 L 11.54 50.36 M 22.06 56.65 L 20.4 49.46 M 28.71 56.65 L 30.92 49.46 M 34.24 56.65 L 39.78 50.36 M 41.44 50.69 C 31.19 49.06 20.69 49.06 10.43 50.69 L 6 46.72 C 19.12 44.01 32.76 44.01 45.87 46.72 Z" fill="#ffffff" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" transform="rotate(270,26,70)" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g><g data-cell-id="H4axWMAA_IoD2OqsUFO0-4"><g transform="translate(0.5,0.5)"><path d="M 190.54 61.62 L 193.45 85.46 C 194 88.97 192.48 92.47 189.57 94.4 C 179.61 96 169.46 96 159.5 94.4 C 156.59 92.47 155.06 88.97 155.62 85.46 L 158.53 61.62 C 159.09 58.98 161.86 56.95 165.32 56.65 L 183.75 56.65 C 187.2 56.95 189.98 58.98 190.54 61.62 Z M 164.52 56.65 L 159.54 50.36 M 170.06 56.65 L 168.4 49.46 M 176.71 56.65 L 178.92 49.46 M 182.24 56.65 L 187.78 50.36 M 189.44 50.69 C 179.19 49.06 168.69 49.06 158.43 50.69 L 154 46.72 C 167.12 44.01 180.76 44.01 193.87 46.72 Z" fill="#ffffff" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" transform="rotate(90,174,70)" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g><g data-cell-id="H4axWMAA_IoD2OqsUFO0-5"><g transform="translate(0.5,0.5)"><path d="M 146.54 17.62 L 149.45 41.46 C 150 44.97 148.48 48.47 145.57 50.4 C 135.61 52 125.46 52 115.5 50.4 C 112.59 48.47 111.06 44.97 111.62 41.46 L 114.53 17.62 C 115.09 14.98 117.86 12.95 121.32 12.65 L 139.75 12.65 C 143.2 12.95 145.98 14.98 146.54 17.62 Z M 120.52 12.65 L 115.54 6.36 M 126.06 12.65 L 124.4 5.46 M 132.71 12.65 L 134.92 5.46 M 138.24 12.65 L 143.78 6.36 M 145.44 6.69 C 135.19 5.06 124.69 5.06 114.43 6.69 L 110 2.72 C 123.12 0.01 136.76 0.01 149.87 2.72 Z" fill="#ffffff" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g><g data-cell-id="H4axWMAA_IoD2OqsUFO0-6"><g transform="translate(0.5,0.5)"><path d="M 146.54 105.62 L 149.45 129.46 C 150 132.97 148.48 136.47 145.57 138.4 C 135.61 140 125.46 140 115.5 138.4 C 112.59 136.47 111.06 132.97 111.62 129.46 L 114.53 105.62 C 115.09 102.98 117.86 100.95 121.32 100.65 L 139.75 100.65 C 143.2 100.95 145.98 102.98 146.54 105.62 Z M 120.52 100.65 L 115.54 94.36 M 126.06 100.65 L 124.4 93.46 M 132.71 100.65 L 134.92 93.46 M 138.24 100.65 L 143.78 94.36 M 145.44 94.69 C 135.19 93.06 124.69 93.06 114.43 94.69 L 110 90.72 C 123.12 88.01 136.76 88.01 149.87 90.72 Z" fill="#ffffff" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" transform="rotate(180,130,114)" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g><g data-cell-id="H4axWMAA_IoD2OqsUFO0-7"><g transform="translate(0.5,0.5)"><rect x="20" y="20" width="160" height="100" fill="#ffffff" stroke="#000000" pointer-events="all" style="fill: var(--ge-adaptive-bg, #ffffff); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g></g></g></g></g>
+      </svg>
+    </g>
+    <path d="M 85 105 L 135 105 L 135 135 L 85 135 L 85 105 Z" fill="#fb923c" fill-opacity="0.36" stroke="#fb923c" stroke-width="0.06" vector-effect="non-scaling-stroke" fill-rule="evenodd"><title>Dining table medium (dining_set)</title></path>
+  </g>
+</svg>

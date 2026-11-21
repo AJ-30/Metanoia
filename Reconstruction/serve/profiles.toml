@@ -1,0 +1,37 @@
+# Extra model profiles of the web demo (the page's "Model" selector).
+#
+# The ResPlan profile ("resplan") is built from config.toml exactly as before and
+# is always the default. Every table below adds one selectable profile; a profile
+# whose files are missing is left out of the selector (with a log warning) and
+# never stops the ResPlan demo from starting. Models load on first use.
+#
+# Paths are relative to the repository root. Keys:
+#   label            name shown in the selector
+#   description      sentence shown under the title
+#   dataset          datasets/processed/<dataset>: build-time params.toml and size_bins.json
+#   example_split    sub-folder of that dataset holding the example plans
+#   checkpoint       serve-only checkpoint (see serve/export_assets.py)
+#   input            upload parser: "furniture" (FurnitureArranger SVG / JSON, plus images and
+#                    arrays) or "resplan"
+#   removable_types  component types "Remove and restore" may remove (the ones the model was trained on)
+#   protected_types  component types the eraser never clears (context the model was never asked to redraw)
+
+[furniture_shell]
+label = "FurnitureArranger: walls, doors and windows (shell only)"
+description = "A diffusion model trained on FurnitureArranger living rooms redraws the wall, door or window a plan is missing. This version sees the plan without furniture."
+dataset = "furniture_shell"
+example_split = "examples"
+checkpoint = "./Reconstruction/serve/weights/furniture_shell_step18000.pt"
+input = "furniture"
+removable_types = ["wall", "door", "window"]
+protected_types = []
+
+[furniture_walls]
+label = "FurnitureArranger: walls, doors and windows (with furniture)"
+description = "The same task on FurnitureArranger living rooms, with the furniture left in the plan as context. Furniture is never erased or redrawn."
+dataset = "furniture"
+example_split = "examples"
+checkpoint = "./Reconstruction/serve/weights/furniture_walls_step18000.pt"
+input = "furniture"
+removable_types = ["wall", "door", "window"]
+protected_types = ["furniture"]

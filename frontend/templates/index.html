@@ -34,6 +34,9 @@
 <body>
 <main>
   <h1>Missing component generator</h1>
+  <p style="margin:0 0 10px;"><a href="/complete" style="color:var(--accent); text-decoration:none; font-weight:600;">
+  Start from an incomplete plan: complete its walls, doors and windows first &rarr;</a></p>
+
   <p style="margin:0 0 18px;"><a href="/inpaint" style="color:var(--accent); text-decoration:none; font-weight:600;">
   Inpaint mode: erase TV, showcase or dining-set pixels and reconstruct all three &rarr;</a></p>
   <p class="sub">Choose the missing component, then upload a floor-plan class-id mask (and, if you have
@@ -87,5 +90,28 @@
     <code>frontend/uploads</code> and <code>frontend/outputs</code>.</p>
   </form>
 </main>
+<script>
+// Opened from the completion page with ?plan=<id>: choose the completed plan's two masks in the file inputs.
+(async () => {
+  const id = new URLSearchParams(window.location.search).get('plan');
+  if (!id) return;
+  try {
+    const transfer = {};
+    for (const [field, name] of [['floorplan', 'floorplan_segmentation.png'], ['furniture', 'furniture_segmentation.png']]) {
+      const response = await fetch(`/handoff/${encodeURIComponent(id)}/${name}`);
+      if (!response.ok) throw new Error(name + ' not found');
+      const list = new DataTransfer();
+      list.items.add(new File([await response.blob()], name, { type: 'image/png' }));
+      document.getElementById(field).files = list.files;
+      transfer[field] = document.getElementById(field);
+    }
+    for (const input of Object.values(transfer)) input.dispatchEvent(new Event('change', { bubbles: true }));
+    const note = document.createElement('p');
+    note.className = 'sub';
+    note.innerHTML = 'The completed plan from the wall/door/window step is loaded below. <a href="/complete">Complete another plan</a>';
+    document.querySelector('form').before(note);
+  } catch (error) { console.warn('Could not load the completed plan:', error); }
+})();
+</script>
 </body>
 </html>

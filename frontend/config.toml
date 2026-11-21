@@ -14,7 +14,7 @@
 DEBUG_LOG_FILE_PATH = "./debug_logs/frontend.log"
 UPLOAD_DIRECTORY = "./frontend/uploads/"
 OUTPUT_DIRECTORY = "./frontend/outputs/"
-DEVICE = "mps"
+DEVICE = "cuda"
 
 # ---------------------------------------------------------------------------
 # The missing-component run that answers an upload.
@@ -35,7 +35,7 @@ FURNITURE_MASK_FILE = "furniture_segmentation.png"
 
 # Color index JSONs describing each mask's classes (used for rendering and for
 # validating that an upload is a class-id mask of the expected range).
-MASK_COLOR_INDEX_DIR = "/Users/aatmaj/FurnitureArranger/datasets/work"
+MASK_COLOR_INDEX_DIR = "./Color-index"
 FLOORPLAN_COLOR_INDEX_FILE = "floorplan_color_index.json"
 FURNITURE_COLOR_INDEX_FILE = "furniture_color_index.json"
 

@@ -192,21 +192,19 @@ def load_class_ids(mask_path: Path, image_size: int) -> torch.Tensor:
 
 
 def _anchor_path(path: str) -> str:
-    """Resolve one path against the repository root when it is relative.
+    """Resolve one recorded path against the repository root.
 
-    The stages of this project record their checkpoint paths relative to the
-    repository root, so anchoring is what makes a recorded path launchable from
-    any working directory without changing which file is opened.
-
-    Args:
-        path (str): Absolute path (returned unchanged) or a repository-root
-            relative path such as ``./mask_VAE/models/....pt``.
-
-    Returns:
-        str: Absolute path string.
+    Relative paths are anchored at the root. An absolute path that does not exist here but sits under the machine the
+    checkpoint was trained on (``/Users/aatmaj/Metanoia``) is re-rooted at this checkout (two checkpoints
+    record such absolute VAE paths).
     """
     candidate: Path = Path(path)
-    return str(candidate if candidate.is_absolute() else ROOT_DIR / candidate)
+    if not candidate.is_absolute():
+        return str(ROOT_DIR / candidate)
+    recorded_root: str = "/Users/aatmaj/Metanoia/"
+    if not candidate.exists() and str(candidate).startswith(recorded_root):
+        return str(ROOT_DIR / str(candidate)[len(recorded_root):])
+    return str(candidate)
 
 
 def load_checkpoint(checkpoint_path: str) -> dict[str, Any]:

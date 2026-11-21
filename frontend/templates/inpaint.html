@@ -48,6 +48,9 @@
 <main>
   <p><a href="/" style="color:var(--accent); text-decoration:none; font-weight:600;">&larr; standard generation</a></p>
   <h1>Inpaint the three furniture components</h1>
+  <p style="margin:0 0 10px;"><a href="/complete" style="color:var(--accent); text-decoration:none; font-weight:600;">
+  Start from an incomplete plan: complete its walls, doors and windows first &rarr;</a></p>
+
   <p class="sub">Upload the floor-plan mask and the original furniture mask, then erase parts of the
   component classes the registry declares: <strong>{% for name in components %}{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}</strong>.
   The edited mask is the only furniture layout the models see: erased pixels are background class
@@ -392,6 +395,29 @@
   }
 
   renderPreview();
+</script>
+<script>
+// Opened from the completion page with ?plan=<id>: choose the completed plan's two masks in the file inputs.
+(async () => {
+  const id = new URLSearchParams(window.location.search).get('plan');
+  if (!id) return;
+  try {
+    const transfer = {};
+    for (const [field, name] of [['floorplan', 'floorplan_segmentation.png'], ['furniture', 'furniture_segmentation.png']]) {
+      const response = await fetch(`/handoff/${encodeURIComponent(id)}/${name}`);
+      if (!response.ok) throw new Error(name + ' not found');
+      const list = new DataTransfer();
+      list.items.add(new File([await response.blob()], name, { type: 'image/png' }));
+      document.getElementById(field).files = list.files;
+      transfer[field] = document.getElementById(field);
+    }
+    for (const input of Object.values(transfer)) input.dispatchEvent(new Event('change', { bubbles: true }));
+    const note = document.createElement('p');
+    note.className = 'sub';
+    note.innerHTML = 'The completed plan from the wall/door/window step is loaded below. <a href="/complete">Complete another plan</a>';
+    document.querySelector('form').before(note);
+  } catch (error) { console.warn('Could not load the completed plan:', error); }
+})();
 </script>
 </body>
 </html>
