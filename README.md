@@ -90,12 +90,12 @@ python -m pytest Reconstruction/tests -q                        # method 1 (synt
 python -m pytest frontend evaluator missing_yolo test_index_maker.py -q   # method 2 and the demo
 ```
 
-## Known gaps
+<!-- ## Known gaps
 
 * `Reconstruction/furniture_model/` (training of the FurnitureArranger models) needs `config.toml`, `hyperparameters.toml` and
   `data_prep/params_furniture.toml`, which are not in this repository; `Reconstruction/tests/test_furniture.py` depends on them.
   The hyperparameters of the shipped checkpoints are stored inside the `.pt` files.
-* `missing_yolo/test_missing_yolo.py::test_read_sample_labels_malformed_component_line_raises` fails (it did before this reorganisation).
+* `missing_yolo/test_missing_yolo.py::test_read_sample_labels_malformed_component_line_raises` fails (it did before this reorganisation). -->
 
 ## Utilities
 
